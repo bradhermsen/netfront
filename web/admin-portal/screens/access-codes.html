@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Access Codes</title>
+    <link rel="stylesheet" href="../css/access-codes.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">NetFront Game Manager</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
+                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
+                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
+                <div class="sidebar-item" onclick="location.href='./rosters.html'">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item" onclick="location.href='./users.html'">👤 Users & Roles</div>
+                <div class="sidebar-item" onclick="location.href='./permissions.html'">🔐 Permissions Matrix</div>
+                <div class="sidebar-item-active">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
+                <div class="sidebar-item" onclick="location.href='./audit-log.html'">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <div class="header-row">
+                <div>
+                    <p class="page-title">🔑 Access Codes</p>
+                    <p class="page-subtitle">Manage Scorekeeper and Stat Manager codes for each team</p>
+                </div>
+            </div>
+
+            <!-- Access Codes Table -->
+            <table class="admin-table codes-table">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Organization</th>
+                        <th style="text-align:center;">Scorekeeper Code</th>
+                        <th style="text-align:center;">Stat Manager Code</th>
+                        <th style="text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Edit Access Codes Modal -->
+<div class="modal hidden" id="code-modal">
+    <div class="modal-content">
+        <p class="modal-title" id="modal-title">Edit Access Codes</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Scorekeeper Code</label>
+                    <input id="score-code" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Stat Manager Code</label>
+                    <input id="stat-code" class="form-field">
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancel-modal">Cancel</button>
+            <button class="btn-primary" id="save-code-btn">Save</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/access-codes.js"></script>
+</body>
+</html>

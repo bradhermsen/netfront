@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Game Score Sheet</title>
+    <link rel="stylesheet" href="../css/game-score-sheet.css">
+</head>
+<body>
+
+<div class="phone-frame">
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <span></span>
+        <span></span>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-left">
+            <span class="logo-text">NF</span>
+            <span class="app-name">NetFront Game Manager</span>
+        </div>
+        <div class="top-right"></div>
+    </div>
+
+    <div class="screen-body">
+
+        <!-- SCOREBOARD -->
+        <div class="section-title">Scoreboard</div>
+        <div class="card scoreboard">
+
+            <!-- Home quick actions -->
+            <div class="side-actions">
+                <button class="pill pill-goal" data-team="home">
+                    <span class="pill-icon">🏒</span>
+                    <span class="pill-label">+ Goal</span>
+                </button>
+                <button class="pill pill-penalty" data-team="home">
+                    <span class="pill-icon">⚠️</span>
+                    <span class="pill-label">+ Pen</span>
+                </button>
+            </div>
+
+            <!-- Home period breakdown -->
+            <div class="period-breakdown period-breakdown-home"></div>
+
+            <!-- Home score -->
+            <div class="score-block score-block-home">
+                <span class="team-badge team-badge-home home-team-name"></span>
+                <span class="score-value score-home"></span>
+            </div>
+
+            <!-- Divider -->
+            <div class="score-divider"></div>
+
+            <!-- Away score -->
+            <div class="score-block score-block-away">
+                <span class="team-badge team-badge-away away-team-name"></span>
+                <span class="score-value score-away"></span>
+            </div>
+
+            <!-- Away period breakdown -->
+            <div class="period-breakdown period-breakdown-away"></div>
+
+            <!-- Away quick actions -->
+            <div class="side-actions">
+                <button class="pill pill-goal" data-team="away">
+                    <span class="pill-icon">🏒</span>
+                    <span class="pill-label">+ Goal</span>
+                </button>
+                <button class="pill pill-penalty" data-team="away">
+                    <span class="pill-icon">⚠️</span>
+                    <span class="pill-label">+ Pen</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Scoreboard status line -->
+        <div class="scoreboard-status"></div>
+
+        <!-- GAME CLOCK -->
+        <div class="section-title">Game Clock</div>
+        <div class="card clock-card">
+
+            <div class="clock-row">
+
+                <!-- Home penalties -->
+                <div class="penalty-column penalty-column-home"></div>
+
+                <!-- Center clock -->
+                <div class="clock-center">
+                    <p class="period-dots"></p>
+                    <p class="clock-display"></p>
+                    <p class="clock-mode"></p>
+                    <p class="power-play-label"></p>
+                    <p class="power-play-note"></p>
+                </div>
+
+                <!-- Away penalties -->
+                <div class="penalty-column penalty-column-away"></div>
+
+            </div>
+
+            <!-- Clock controls row 1 -->
+            <div class="clock-controls-row">
+                <button class="control-button control-start">
+                    <span class="control-icon">▶</span>
+                    <span class="control-label">Start</span>
+                </button>
+                <button class="control-button control-stop">
+                    <span class="control-icon">■</span>
+                    <span class="control-label">Stop</span>
+                </button>
+                <button class="control-button control-horn">
+                    <span class="control-icon">📣</span>
+                    <span class="control-label">Horn</span>
+                </button>
+            </div>
+
+            <!-- Clock controls row 2 -->
+            <div class="clock-controls-row">
+                <button class="control-button control-secondary set-clock">
+                    <span class="control-icon">🕒</span>
+                    <span class="control-label">Set/Edit Clock</span>
+                </button>
+
+                <div class="period-selector">
+                    <p class="period-selector-label">Period</p>
+                    <div class="period-selector-main">
+                        <button class="period-arrow period-arrow-down">▼</button>
+                        <span class="period-number"></span>
+                        <button class="period-arrow period-arrow-up">▲</button>
+                    </div>
+                    <button class="period-intermission">
+                        <span>Intermission</span>
+                    </button>
+                </div>
+
+                <button class="control-button control-secondary goalie-change">
+                    <span class="control-icon">🥅</span>
+                    <span class="control-label">Goalie</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SHOT COUNTER -->
+        <div class="section-title">Shot Counter</div>
+        <div class="card shots-card">
+
+            <div class="shots-period shots-period-home"></div>
+
+            <div class="shots-counter shots-counter-home">
+                <p class="shots-team home-team-name"></p>
+                <p class="shots-total shots-total-home"></p>
+                <div class="shots-buttons">
+                    <button class="shots-btn shots-btn-minus" data-team="home">−</button>
+                    <button class="shots-btn shots-btn-plus" data-team="home">+</button>
+                </div>
+            </div>
+
+            <div class="shots-divider"></div>
+
+            <div class="shots-counter shots-counter-away">
+                <p class="shots-team away-team-name"></p>
+                <p class="shots-total shots-total-away"></p>
+                <div class="shots-buttons">
+                    <button class="shots-btn shots-btn-minus" data-team="away">−</button>
+                    <button class="shots-btn shots-btn-plus" data-team="away">+</button>
+                </div>
+            </div>
+
+            <div class="shots-period shots-period-away"></div>
+        </div>
+
+        <!-- GAME EVENTS -->
+        <div class="card events-card">
+            <div class="card-header-row">
+                <div class="card-title-inline">Game Events</div>
+                <div class="card-subtitle-inline">Tap any event to modify</div>
+            </div>
+
+            <div class="events-list"></div>
+        </div>
+
+        <!-- END GAME -->
+        <div class="end-game-wrapper">
+            <button class="end-game-button">
+                <span class="end-game-label">⬛ End Game</span>
+                <span class="end-game-subtext">Finalize game</span>
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<script type="module" src="../js/game-score-sheet.js"></script>
+</body>
+</html>

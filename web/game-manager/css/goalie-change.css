@@ -1,0 +1,126 @@
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #f2f2f2;
+}
+
+.phone-frame {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: white;
+    min-height: 100vh;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: #222;
+    color: white;
+}
+
+.logo-text {
+    font-weight: bold;
+    margin-right: 6px;
+}
+
+.screen-body {
+    padding: 16px;
+}
+
+.team-toggle {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.team-btn {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #aaa;
+    background: #eee;
+    font-size: 16px;
+}
+
+.team-btn.selected {
+    background: #0078ff;
+    color: white;
+    border-color: #005fcc;
+}
+
+.card {
+    background: white;
+    padding: 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.goalie-out {
+    padding: 12px;
+    border-radius: 8px;
+    background: #ffe5e5;
+    border: 1px solid #ffb3b3;
+}
+
+.input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+}
+
+.form-row {
+    margin-bottom: 16px;
+}
+
+.reason-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.reason-btn {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #aaa;
+    background: #eee;
+    font-size: 14px;
+}
+
+.reason-btn.selected {
+    background: #ff9800;
+    color: white;
+    border-color: #cc7a00;
+}
+
+.action-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.cancel-btn,
+.submit-btn {
+    width: 48%;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    border: none;
+}
+
+.cancel-btn {
+    background: #ccc;
+}
+
+.submit-btn {
+    background: #0078ff;
+    color: white;
+}

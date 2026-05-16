@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Audit Log</title>
+    <link rel="stylesheet" href="../css/audit-log.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">🏒 NetFront</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
+                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
+                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
+                <div class="sidebar-item" onclick="location.href='./rosters.html'">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item" onclick="location.href='./users.html'">👤 Users & Roles</div>
+                <div class="sidebar-item" onclick="location.href='./permissions.html'">🔐 Permissions Matrix</div>
+                <div class="sidebar-item" onclick="location.href='./access-codes.html'">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
+                <div class="sidebar-item-active">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <p class="page-title">📄 Audit Log</p>
+            <p class="page-subtitle">Track all system activity across the NetFront platform</p>
+
+            <!-- Filters -->
+            <div class="filter-bar">
+                <input type="date" id="filter-start" class="form-field">
+                <input type="date" id="filter-end" class="form-field">
+                <button class="btn-sm">User: All ▼</button>
+                <button class="btn-sm">Action: All ▼</button>
+                <input class="form-field search-input" placeholder="🔍 Search logs...">
+            </div>
+
+            <!-- Audit Log Table -->
+            <table class="admin-table audit-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Entity</th>
+                        <th>Details</th>
+                        <th>IP</th>
+                        <th style="text-align:center;">View</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Audit Detail Modal -->
+<div class="modal hidden" id="audit-modal">
+    <div class="modal-content">
+        <p class="modal-title">Audit Log Details</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Timestamp</label>
+                    <input id="detail-time" class="form-field" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">User</label>
+                    <input id="detail-user" class="form-field" disabled>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Action</label>
+                    <input id="detail-action" class="form-field" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Entity</label>
+                    <input id="detail-entity" class="form-field" disabled>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Details</label>
+                    <textarea id="detail-info" class="form-field" rows="4" disabled></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">IP Address</label>
+                    <input id="detail-ip" class="form-field" disabled>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-primary" id="close-modal">Close</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/audit-log.js"></script>
+</body>
+</html>

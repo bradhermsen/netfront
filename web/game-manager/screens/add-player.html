@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Player</title>
+    <link rel="stylesheet" href="../css/add-player.css">
+</head>
+<body>
+
+<div class="phone-frame">
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-left">
+            <span class="logo-text">NF</span>
+            <span class="app-name">Add Player</span>
+        </div>
+        <div class="top-right"></div>
+    </div>
+
+    <div class="screen-body">
+
+        <!-- ADD PLAYER FORM -->
+        <div class="card add-card">
+
+            <div class="form-row">
+                <label>Name</label>
+                <input class="input name-input" placeholder="Player Name">
+            </div>
+
+            <div class="form-row">
+                <label>Jersey Number</label>
+                <input class="input jersey-input" type="number" placeholder="00">
+            </div>
+
+            <div class="form-row">
+                <label>Position</label>
+                <select class="input position-select">
+                    <option value="">Select Position</option>
+                    <option value="F">Forward</option>
+                    <option value="D">Defense</option>
+                    <option value="G">Goalie</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>Shoots</label>
+                <select class="input shoots-select">
+                    <option value="">Select</option>
+                    <option value="L">Left</option>
+                    <option value="R">Right</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>Graduation Year</label>
+                <input class="input gradyear-input" type="number" placeholder="2027">
+            </div>
+
+            <div class="form-row">
+                <label>Height (e.g., 5'8")</label>
+                <input class="input height-input" placeholder="5'8&quot;">
+            </div>
+
+            <div class="form-row">
+                <label>Weight (lbs)</label>
+                <input class="input weight-input" type="number" placeholder="150">
+            </div>
+
+            <div class="form-row toggle-row">
+                <label>Active</label>
+                <button class="toggle-btn active-toggle"></button>
+            </div>
+
+            <div class="form-row toggle-row goalie-only">
+                <label>Starter Goalie</label>
+                <button class="toggle-btn starter-toggle"></button>
+            </div>
+
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-row">
+            <button class="back-btn">Cancel</button>
+            <button class="save-btn">Add Player</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script type="module" src="../js/add-player.js"></script>
+</body>
+</html>

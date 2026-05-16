@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Player Profile</title>
+    <link rel="stylesheet" href="../css/player-profile.css">
+</head>
+<body>
+
+<div class="phone-frame">
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-left">
+            <span class="logo-text">NF</span>
+            <span class="app-name">Player Profile</span>
+        </div>
+        <div class="top-right"></div>
+    </div>
+
+    <div class="screen-body">
+
+        <!-- PLAYER HEADER -->
+        <div class="card player-header-card">
+            <div class="player-header-row">
+                <div class="player-jersey"></div>
+                <div class="player-info">
+                    <div class="player-name"></div>
+                    <div class="player-meta"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEASON STATS -->
+        <div class="card stats-card">
+            <div class="card-title">Season Stats</div>
+            <div class="stats-grid season-stats"></div>
+        </div>
+
+        <!-- CAREER STATS -->
+        <div class="card stats-card">
+            <div class="card-title">Career Stats</div>
+            <div class="stats-grid career-stats"></div>
+        </div>
+
+        <!-- SPECIAL TEAMS -->
+        <div class="card special-card">
+            <div class="card-title">Special Teams</div>
+            <div class="special-list"></div>
+        </div>
+
+        <!-- COACH NOTES -->
+        <div class="card notes-card">
+            <div class="card-title">Coach Notes</div>
+            <textarea class="notes-input" placeholder="Enter notes..."></textarea>
+            <button class="save-notes-btn">Save Notes</button>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-row">
+            <button class="back-btn">Back</button>
+            <button class="edit-btn">Edit Player</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script type="module" src="../js/player-profile.js"></script>
+</body>
+</html>

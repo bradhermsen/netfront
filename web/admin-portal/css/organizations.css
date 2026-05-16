@@ -1,0 +1,318 @@
+/* -----------------------------------------
+   GLOBAL LAYOUT
+----------------------------------------- */
+
+body {
+    margin: 0;
+    font-family: Calibri, sans-serif;
+    background-color: #0d1b30;
+}
+
+.web-frame {
+    border: 3px solid #1a2744;
+    background-color: #0d1b30;
+    margin: 24px auto;
+    max-width: 1100px;
+    min-height: 600px;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+}
+
+.admin-layout {
+    display: flex;
+    height: 100%;
+}
+
+/* -----------------------------------------
+   SIDEBAR
+----------------------------------------- */
+
+.sidebar {
+    width: 230px;
+    background-color: #1a2744;
+    border-right: 2px solid #2a3a5b;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+}
+
+.sidebar-logo {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.logo-title {
+    font-size: 16pt;
+    font-weight: bold;
+    color: #FF8C00;
+    margin: 0;
+}
+
+.logo-subtitle {
+    font-size: 9pt;
+    color: #b0bec5;
+    margin: 0;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 16px;
+}
+
+.sidebar-section {
+    font-size: 8pt;
+    color: #78909c;
+    margin-top: 14px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.sidebar-item,
+.sidebar-item-active {
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 10pt;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sidebar-item {
+    color: #b0bec5;
+}
+
+.sidebar-item:hover {
+    background-color: #162a4a;
+}
+
+.sidebar-item-active {
+    background-color: #FF8C00;
+    color: #0d1b30;
+    font-weight: bold;
+}
+
+.logout {
+    margin-top: 20px;
+    color: #ff6b6b;
+}
+
+/* -----------------------------------------
+   MAIN CONTENT
+----------------------------------------- */
+
+.main-content {
+    flex: 1;
+    padding: 20px 28px;
+    background-color: #0d1b30;
+}
+
+.page-title {
+    font-size: 16pt;
+    font-weight: bold;
+    color: #ffffff;
+    margin: 0;
+}
+
+.page-subtitle {
+    font-size: 8pt;
+    color: #78909c;
+    margin: 0 0 16px 0;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* -----------------------------------------
+   BUTTONS
+----------------------------------------- */
+
+.btn-primary {
+    background-color: #FF8C00;
+    color: #0d1b30;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 10pt;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-primary:hover {
+    background-color: #ffa733;
+}
+
+.btn-secondary {
+    background-color: #162a4a;
+    color: #ffffff;
+    border: 1px solid #2a3a5b;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 10pt;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background-color: #1f355a;
+}
+
+.btn-sm {
+    background-color: #162a4a;
+    color: #ffffff;
+    border: 1px solid #2a3a5b;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 9pt;
+    cursor: pointer;
+}
+
+.btn-sm:hover {
+    background-color: #1f355a;
+}
+
+/* -----------------------------------------
+   FILTER BAR
+----------------------------------------- */
+
+.filter-bar {
+    background-color: #162a4a;
+    border: 1px solid #2a3a5b;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+}
+
+/* -----------------------------------------
+   FORM FIELDS
+----------------------------------------- */
+
+.form-field {
+    background-color: #0d1b30;
+    border: 1px solid #FF8C00;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #ffffff;
+    font-size: 9pt;
+}
+
+.form-label {
+    font-size: 9pt;
+    color: #ffffff;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.form-row {
+    display: flex;
+    gap: 12px;
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* -----------------------------------------
+   TABLE
+----------------------------------------- */
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th {
+    background-color: #1a2744;
+    color: #FF8C00;
+    font-size: 8pt;
+    padding: 8px 12px;
+    border: 1px solid #2a3a5b;
+    text-align: left;
+}
+
+.admin-table td {
+    background-color: #0d1b30;
+    color: #b0bec5;
+    font-size: 9pt;
+    padding: 8px 12px;
+    border: 1px solid #2a3a5b;
+}
+
+/* -----------------------------------------
+   MODALS
+----------------------------------------- */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background-color: #1a2744;
+    border: 1px solid #2a3a5b;
+    border-radius: 10px;
+    padding: 28px;
+    width: 520px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.6);
+}
+
+.modal-title {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #FF8C00;
+    margin-bottom: 18px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* -----------------------------------------
+   BULK PREVIEW TABLE
+----------------------------------------- */
+
+.preview-table {
+    margin-top: 14px;
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid #2a3a5b;
+    border-radius: 6px;
+}
+
+.template-link {
+    color: #FF8C00;
+    font-size: 9pt;
+    margin-top: 6px;
+    display: inline-block;
+}

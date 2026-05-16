@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Users & Roles</title>
+    <link rel="stylesheet" href="../css/users.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">NetFront Game Manager</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
+                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
+                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
+                <div class="sidebar-item" onclick="location.href='./rosters.html'">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item-active">👤 Users & Roles</div>
+                <div class="sidebar-item" onclick="location.href='./permissions.html'">🔐 Permissions</div>
+                <div class="sidebar-item" onclick="location.href='./access-codes.html'">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
+                <div class="sidebar-item" onclick="location.href='./audit-log.html'">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <div class="header-row">
+                <div>
+                    <p class="page-title">👤 Users & Roles</p>
+                    <p class="page-subtitle">Manage user accounts, roles, and team assignments</p>
+                </div>
+                <button class="btn-primary" id="add-user-btn">+ Add User</button>
+            </div>
+
+            <!-- Search / Filters -->
+            <div class="filter-bar">
+                <button class="btn-sm">Role: All ▼</button>
+                <button class="btn-sm">Organization: All ▼</button>
+                <button class="btn-sm">Team: All ▼</button>
+                <input class="form-field search-input" placeholder="🔍 Search users...">
+            </div>
+
+            <!-- Users Table -->
+            <table class="admin-table users-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Organization</th>
+                        <th>Team</th>
+                        <th style="text-align:center;">Status</th>
+                        <th style="text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit User Modal -->
+<div class="modal hidden" id="user-modal">
+    <div class="modal-content">
+        <p class="modal-title" id="modal-title">Add User</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input id="user-first" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input id="user-last" class="form-field">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input id="user-email" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select id="user-role" class="form-field">
+                        <option>NetFront Admin</option>
+                        <option>Org Admin</option>
+                        <option>Coach</option>
+                        <option>Scorekeeper</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Organization</label>
+                    <select id="user-org" class="form-field"></select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Team</label>
+                    <select id="user-team" class="form-field"></select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Status</label>
+                    <select id="user-status" class="form-field">
+                        <option>Active</option>
+                        <option>Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancel-modal">Cancel</button>
+            <button class="btn-primary" id="save-user-btn">Save</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/users.js"></script>
+</body>
+</html>

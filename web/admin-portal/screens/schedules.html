@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Schedules</title>
+    <link rel="stylesheet" href="../css/schedules.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">NetFront Game Manager</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
+                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
+                <div class="sidebar-item-active">📅 Schedules</div>
+                <div class="sidebar-item" onclick="location.href='./rosters.html'">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item" onclick="location.href='./users.html'">👤 Users & Roles</div>
+                <div class="sidebar-item" onclick="location.href='./permissions.html'">🔐 Permissions Matrix</div>
+                <div class="sidebar-item" onclick="location.href='./access-codes.html'">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
+                <div class="sidebar-item" onclick="location.href='./audit-log.html'">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <div class="header-row">
+                <div>
+                    <p class="page-title">📅 Schedules</p>
+                    <p class="page-subtitle">Manage games for each team</p>
+                </div>
+                <div>
+                    <button class="btn-primary" id="add-game-btn">+ Add Game</button>
+                    <button class="btn-secondary" id="bulk-schedule-btn">Bulk Add</button>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <button class="btn-sm" id="filter-team">Team: All ▼</button>
+                <input class="form-field" type="date" id="filter-date-start">
+                <input class="form-field" type="date" id="filter-date-end">
+                <input class="form-field search-input" id="schedule-search" placeholder="🔍 Search games...">
+            </div>
+
+            <!-- Schedules Table -->
+            <table class="admin-table schedule-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Home</th>
+                        <th>Away</th>
+                        <th>Location</th>
+                        <th>Type</th>
+                        <th style="text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Game Modal -->
+<div class="modal hidden" id="game-modal">
+    <div class="modal-content">
+        <p class="modal-title" id="game-modal-title">Add Game</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" id="game-date" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Time</label>
+                    <input type="time" id="game-time" class="form-field">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Home Team</label>
+                    <select id="game-home" class="form-field"></select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Away Team</label>
+                    <select id="game-away" class="form-field"></select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Location</label>
+                    <input id="game-location" class="form-field">
+                </div>
+            </div>
+
+            <!-- NEW: Game Type Dropdown -->
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Game Type</label>
+                    <select id="game-type" class="form-field">
+                        <option value="Conference">Conference</option>
+                        <option value="Exhibition">Exhibition</option>
+                        <option value="Tournament">Tournament</option>
+                    </select>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="game-cancel">Cancel</button>
+            <button class="btn-primary" id="game-save">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Add Schedules Modal -->
+<div class="modal hidden" id="bulk-schedule-modal">
+    <div class="modal-content" style="width:600px;">
+        <p class="modal-title">Bulk Add Games</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Upload CSV/Excel</label>
+                    <input type="file" id="bulk-schedule-file" class="form-field">
+                </div>
+            </div>
+
+            <a href="../templates/schedules-template.csv" class="template-link" download>
+                Download CSV Template
+            </a>
+
+            <div id="bulk-schedule-preview" class="preview-table"></div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="bulk-schedule-cancel">Cancel</button>
+            <button class="btn-primary" id="bulk-schedule-import">Import Games</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/schedules.js"></script>
+</body>
+</html>

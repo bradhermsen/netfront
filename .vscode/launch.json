@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Azure Functions (.NET Isolated)",
+      "type": "coreclr",
+      "request": "attach",
+      "processName": "dotnet",
+      "processCommandLineFilter": "NetFrontAPI.dll",
+      "justMyCode": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Start Functions + Attach Debugger",
+      "configurations": [
+        "Attach to Azure Functions (.NET Isolated)"
+      ],
+      "preLaunchTask": "Run Functions Host"
+    }
+  ]
+}

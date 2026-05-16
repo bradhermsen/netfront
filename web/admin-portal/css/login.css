@@ -1,0 +1,123 @@
+:root {
+    color-scheme: light only;
+}
+
+body {
+    margin: 0;
+    font-family: Calibri, system-ui, sans-serif;
+    font-size: 11pt;
+    background-color: #0d1b30;
+    color: #ffffff;
+}
+
+.login-frame {
+    border: 3px solid #1a2744;
+    background-color: #0d1b30;
+    margin: 40px auto;
+    max-width: 1100px;
+    min-height: 500px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-box {
+    background-color: #162a4a;
+    border: 1px solid #2a3a5b;
+    border-radius: 12px;
+    padding: 40px 50px;
+    width: 380px;
+    text-align: center;
+}
+
+.login-logo {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #FF8C00;
+    margin: 0 0 4px 0;
+}
+
+.login-subtitle {
+    font-size: 10pt;
+    color: #78909c;
+    margin: 0 0 24px 0;
+}
+
+.form-label {
+    font-size: 8pt;
+    color: #78909c;
+    font-weight: bold;
+    margin-bottom: 3px;
+    display: block;
+    text-align: left;
+}
+
+.form-field {
+    background-color: #0d1b30;
+    border: 1px solid #2a3a5b;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #b0bec5;
+    font-size: 9pt;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+}
+
+.form-field:focus {
+    outline: none;
+    border-color: #FF8C00;
+}
+
+.forgot-row {
+    text-align: right;
+    margin-bottom: 20px;
+}
+
+.forgot-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 8pt;
+    color: #FF8C00;
+    cursor: pointer;
+}
+
+.btn-primary {
+    display: block;
+    width: 100%;
+    background-color: #FF8C00;
+    color: #0d1b30;
+    font-size: 11pt;
+    font-weight: bold;
+    padding: 10px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #ffa733;
+}
+
+.login-error {
+    margin-top: 10px;
+    font-size: 8pt;
+    color: #e53935;
+}
+
+.hidden {
+    display: none;
+}
+
+.login-role-box {
+    background-color: #0d1b30;
+    border: 1px solid #2a3a5b;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 16px;
+    font-size: 7pt;
+    color: #546e7a;
+    text-align: left;
+}

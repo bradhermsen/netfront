@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DQ Penalty Report</title>
+    <link rel="stylesheet" href="../css/dq-report.css">
+</head>
+<body>
+
+<div class="phone-frame">
+
+    <!-- TOP BAR -->
+    <div class="top-bar">
+        <div class="top-left">
+            <span class="logo-text">NF</span>
+            <span class="app-name">DQ Report</span>
+        </div>
+        <div class="top-right"></div>
+    </div>
+
+    <div class="screen-body">
+
+        <!-- ALERT -->
+        <div class="dq-alert">
+            ⚠️ A Disqualification penalty was assessed.  
+            A referee report is required before finalizing the game.
+        </div>
+
+        <!-- AUTO-FILLED DETAILS -->
+        <div class="card">
+            <div class="card-title">Penalty Details</div>
+
+            <div class="detail-row">
+                <span>Player</span>
+                <span class="dq-player"></span>
+            </div>
+
+            <div class="detail-row">
+                <span>Team</span>
+                <span class="dq-team"></span>
+            </div>
+
+            <div class="detail-row">
+                <span>Period</span>
+                <span class="dq-period"></span>
+            </div>
+
+            <div class="detail-row">
+                <span>Time</span>
+                <span class="dq-time"></span>
+            </div>
+
+            <div class="detail-row">
+                <span>Infraction</span>
+                <span class="dq-infraction"></span>
+            </div>
+
+            <div class="detail-row">
+                <span>Duration</span>
+                <span class="dq-duration"></span>
+            </div>
+        </div>
+
+        <!-- REFEREE SELECTION -->
+        <div class="card">
+            <div class="card-title">Reporting Official</div>
+            <select class="input official-select"></select>
+        </div>
+
+        <!-- SIGNATURE -->
+        <div class="card">
+            <div class="card-title">Signature</div>
+            <canvas class="signature-pad"></canvas>
+            <button class="clear-signature-btn">Clear</button>
+        </div>
+
+        <!-- NOTES -->
+        <div class="card">
+            <div class="card-title">Incident Notes</div>
+            <textarea class="input notes-input" placeholder="Describe the incident..."></textarea>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-row">
+            <button class="cancel-btn">Cancel</button>
+            <button class="submit-btn">Submit DQ Report</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script type="module" src="../js/dq-report.js"></script>
+</body>
+</html>

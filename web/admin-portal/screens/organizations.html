@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Organizations</title>
+    <link rel="stylesheet" href="../css/organizations.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">NetFront Game Manager</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item-active">🏫 Organizations</div>
+                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
+                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
+                <div class="sidebar-item" onclick="location.href='./rosters.html'">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item" onclick="location.href='./users.html'">👤 Users & Roles</div>
+                <div class="sidebar-item" onclick="location.href='./permissions.html'">🔐 Permissions Matrix</div>
+                <div class="sidebar-item" onclick="location.href='./access-codes.html'">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
+                <div class="sidebar-item" onclick="location.href='./audit-log.html'">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <div class="header-row">
+                <div>
+                    <p class="page-title">🏫 Organizations</p>
+                    <p class="page-subtitle">Manage schools, clubs, and associations</p>
+                </div>
+                <div>
+                    <button class="btn-primary" id="add-org-btn">+ Add Organization</button>
+                    <button class="btn-secondary" id="bulk-org-btn">Bulk Add</button>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <input class="form-field search-input" id="org-search" placeholder="🔍 Search organizations...">
+            </div>
+
+            <!-- Organizations Table -->
+            <table class="admin-table org-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Abbrev</th>
+                        <th>City</th>
+                        <th>State</th>
+                        <th>Primary Contact</th>
+                        <th>Email</th>
+                        <th style="text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Organization Modal -->
+<div class="modal hidden" id="org-modal">
+    <div class="modal-content">
+        <p class="modal-title" id="org-modal-title">Add Organization</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Organization Name</label>
+                    <input id="org-name" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Abbreviation</label>
+                    <input id="org-abbrev" class="form-field">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input id="org-city" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">State</label>
+                    <input id="org-state" class="form-field">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Country</label>
+                    <input id="org-country" class="form-field" value="USA">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Primary Contact Email</label>
+                    <input id="org-email" class="form-field">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Primary Contact First Name</label>
+                    <input id="org-contact-first" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Primary Contact Last Name</label>
+                    <input id="org-contact-last" class="form-field">
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="org-cancel">Cancel</button>
+            <button class="btn-primary" id="org-save">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Add Organizations Modal -->
+<div class="modal hidden" id="bulk-org-modal">
+    <div class="modal-content" style="width:600px;">
+        <p class="modal-title">Bulk Add Organizations</p>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Upload CSV/Excel</label>
+                    <input type="file" id="bulk-org-file" class="form-field">
+                </div>
+            </div>
+
+            <a href="../templates/organizations-template.csv" class="template-link" download>
+                Download CSV Template
+            </a>
+
+            <div id="bulk-org-preview" class="preview-table"></div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="bulk-org-cancel">Cancel</button>
+            <button class="btn-primary" id="bulk-org-import">Import Organizations</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/organizations.js"></script>
+</body>
+</html>

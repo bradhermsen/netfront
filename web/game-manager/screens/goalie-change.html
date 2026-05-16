@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Goalie Change</title>
+    <link rel="stylesheet" href="../css/goalie-change.css">
+</head>
+<body>
+
+<div class="phone-frame">
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-left">
+            <span class="logo-text">NF</span>
+            <span class="app-name">Goalie Change</span>
+        </div>
+        <div class="top-right"></div>
+    </div>
+
+    <div class="screen-body">
+
+        <!-- TEAM TOGGLE -->
+        <div class="team-toggle">
+            <button class="team-btn team-home selected" data-team="home">HOME</button>
+            <button class="team-btn team-away" data-team="away">AWAY</button>
+        </div>
+
+        <!-- CURRENT GOALIE OUT -->
+        <div class="card goalie-card">
+            <div class="card-title">Current Goalie (OUT)</div>
+            <div class="goalie-out"></div>
+        </div>
+
+        <!-- NEW GOALIE IN -->
+        <div class="card goalie-card">
+            <div class="card-title">Replacement Goalie (IN)</div>
+            <select class="input goalie-select"></select>
+        </div>
+
+        <!-- PERIOD + TIME -->
+        <div class="card time-card">
+            <div class="form-row">
+                <label>Period</label>
+                <select class="input period-select"></select>
+            </div>
+
+            <div class="form-row">
+                <label>Time of Change (MM:SS)</label>
+                <input class="input time-input" placeholder="00:00">
+            </div>
+        </div>
+
+        <!-- REASON -->
+        <div class="card reason-card">
+            <div class="card-title">Reason</div>
+            <div class="reason-grid">
+                <button class="reason-btn" data-reason="pulled">Pulled</button>
+                <button class="reason-btn" data-reason="injury">Injury</button>
+                <button class="reason-btn" data-reason="scheduled">Scheduled</button>
+                <button class="reason-btn" data-reason="extraAttacker">Extra Attacker</button>
+            </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-row">
+            <button class="cancel-btn">Cancel</button>
+            <button class="submit-btn">Confirm Change</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script type="module" src="../js/goalie-change.js"></script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Teams</title>
+    <link rel="stylesheet" href="../css/teams.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">🏒 NetFront</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
+                <div class="sidebar-item-active">🏒 Teams</div>
+                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
+                <div class="sidebar-item" onclick="location.href='./rosters.html'">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item" onclick="location.href='./users.html'">👤 Users & Roles</div>
+                <div class="sidebar-item" onclick="location.href='./permissions.html'">🔐 Permissions Matrix</div>
+                <div class="sidebar-item" onclick="location.href='./access-codes.html'">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
+                <div class="sidebar-item" onclick="location.href='./audit-log.html'">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <div class="header-row">
+                <div>
+                    <p class="page-title">🏒 Teams</p>
+                    <p class="page-subtitle">Manage teams for each organization</p>
+                </div>
+                <div>
+                    <button class="btn-primary" id="add-team-btn">+ Add Team</button>
+                    <button class="btn-secondary" id="bulk-team-btn">Bulk Add</button>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <input class="form-field search-input" id="team-search" placeholder="🔍 Search teams...">
+            </div>
+
+            <!-- Teams Table -->
+            <table class="admin-table team-table">
+                <thead>
+                    <tr>
+                        <th>Team Name</th>
+                        <th>Level</th>
+                        <th>Gender</th>
+                        <th>Organization</th>
+                        <th>Scorekeeper Code</th>
+                        <th>Stat Manager Code</th>
+                        <th style="text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Team Modal -->
+<div class="modal hidden" id="team-modal">
+    <div class="modal-content">
+        <p class="modal-title" id="team-modal-title">Add Team</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Team Name</label>
+                    <input id="team-name" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Level</label>
+                    <select id="team-level" class="form-field">
+                        <option>Varsity</option>
+                        <option>JV</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Gender</label>
+                    <select id="team-gender" class="form-field">
+                        <option>Boys</option>
+                        <option>Girls</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Organization</label>
+                    <select id="team-org" class="form-field"></select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Scorekeeper Code</label>
+                    <input id="team-score-code" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Stat Manager Code</label>
+                    <input id="team-stat-code" class="form-field">
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="team-cancel">Cancel</button>
+            <button class="btn-primary" id="team-save">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Add Teams Modal -->
+<div class="modal hidden" id="bulk-team-modal">
+    <div class="modal-content" style="width:600px;">
+        <p class="modal-title">Bulk Add Teams</p>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Upload CSV/Excel</label>
+                    <input type="file" id="bulk-team-file" class="form-field">
+                </div>
+            </div>
+
+            <a href="../templates/teams-template.csv" class="template-link" download>
+                Download CSV Template
+            </a>
+
+            <div id="bulk-team-preview" class="preview-table"></div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="bulk-team-cancel">Cancel</button>
+            <button class="btn-primary" id="bulk-team-import">Import Teams</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/teams.js"></script>
+</body>
+</html>

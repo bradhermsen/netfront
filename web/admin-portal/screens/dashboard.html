@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Dashboard</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">NetFront Game Manager</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item-active">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
+                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
+                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
+                <div class="sidebar-item" onclick="location.href='./rosters.html'">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item">👤 Users & Roles</div>
+                <div class="sidebar-item">🔐 Permissions</div>
+                <div class="sidebar-item">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item">⚙️ Settings</div>
+                <div class="sidebar-item">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <p class="page-title">📊 Dashboard</p>
+            <p class="page-subtitle">System overview • Last updated: <span class="last-updated"></span></p>
+
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="admin-card stat-card">
+                    <p class="stat-number org-count">0</p>
+                    <p class="stat-label">Organizations</p>
+                </div>
+
+                <div class="admin-card stat-card">
+                    <p class="stat-number team-count">0</p>
+                    <p class="stat-label">Teams</p>
+                </div>
+
+                <div class="admin-card stat-card">
+                    <p class="stat-number active-games">0</p>
+                    <p class="stat-label">Active Games</p>
+                </div>
+
+                <div class="admin-card stat-card">
+                    <p class="stat-number user-count">0</p>
+                    <p class="stat-label">Users</p>
+                </div>
+
+                <div class="admin-card stat-card">
+                    <p class="stat-number access-codes">0</p>
+                    <p class="stat-label">Access Codes</p>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="admin-card-accent">
+                <div class="card-title">📦 Recent Activity</div>
+                <table class="admin-table recent-activity-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Organizations Overview -->
+            <div class="admin-card">
+                <div class="card-title">🏫 Organizations Overview</div>
+                <table class="admin-table org-overview-table">
+                    <thead>
+                        <tr>
+                            <th>Organization</th>
+                            <th style="text-align:center;">Teams</th>
+                            <th style="text-align:center;">Users</th>
+                            <th style="text-align:center;">Games</th>
+                            <th style="text-align:center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/dashboard.js"></script>
+</body>
+</html>

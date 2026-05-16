@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal - Login</title>
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+
+<div class="login-frame">
+    <div class="login-box">
+        <p class="login-logo">🏒 NetFront</p>
+        <p class="login-subtitle">Admin Portal</p>
+
+        <form class="login-form">
+            <label class="form-label" for="email">Email Address</label>
+            <input id="email" class="form-field" type="email" autocomplete="username" required>
+
+            <label class="form-label" for="password">Password</label>
+            <input id="password" class="form-field" type="password" autocomplete="current-password" required>
+
+            <div class="forgot-row">
+                <button type="button" class="forgot-link">Forgot Password?</button>
+            </div>
+
+            <button type="submit" class="btn-primary login-btn">Sign In</button>
+
+            <p class="login-error hidden"></p>
+        </form>
+
+        <div class="login-role-box">
+            <p>🔒 Role assigned at login based on account permissions</p>
+            <p>NetFront Admin • Org Admin • Coach</p>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/login.js"></script>
+</body>
+</html>

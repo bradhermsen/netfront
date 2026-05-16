@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Penalty</title>
+    <link rel="stylesheet" href="../css/add-penalty.css">
+</head>
+<body>
+
+<div class="phone-frame">
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-left">
+            <span class="logo-text">NF</span>
+            <span class="app-name">Record Penalty</span>
+        </div>
+        <div class="top-right"></div>
+    </div>
+
+    <div class="screen-body">
+
+        <!-- TEAM HEADER -->
+        <div class="team-header">
+            <span class="team-name"></span>
+        </div>
+
+        <!-- PENALTY FORM -->
+        <div class="card penalty-card">
+
+            <!-- Player -->
+            <div class="form-row">
+                <label>Player</label>
+                <select class="input player-select"></select>
+            </div>
+
+            <!-- Infraction -->
+            <div class="form-row">
+                <label>Infraction</label>
+                <select class="input infraction-select"></select>
+            </div>
+
+            <!-- Penalty Type -->
+            <div class="form-row">
+                <label>Penalty Type</label>
+                <div class="penalty-type-grid">
+                    <button class="penalty-type-btn" data-type="minor">Minor</button>
+                    <button class="penalty-type-btn" data-type="doubleminor">Double Minor</button>
+                    <button class="penalty-type-btn" data-type="major">Major</button>
+                    <button class="penalty-type-btn" data-type="misconduct">Misconduct</button>
+                    <button class="penalty-type-btn" data-type="dq">Game DQ</button>
+                </div>
+            </div>
+
+            <!-- Duration -->
+            <div class="form-row">
+                <label>Duration (minutes)</label>
+                <input class="input duration-input" placeholder="">
+            </div>
+
+            <!-- Period -->
+            <div class="form-row">
+                <label>Period</label>
+                <select class="input period-select"></select>
+            </div>
+
+            <!-- Time -->
+            <div class="form-row">
+                <label>Time (MM:SS)</label>
+                <input class="input time-input" placeholder="00:00">
+            </div>
+
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-row">
+            <button class="cancel-btn">Cancel</button>
+            <button class="submit-btn">Record Penalty</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script type="module" src="../js/add-penalty.js"></script>
+</body>
+</html>

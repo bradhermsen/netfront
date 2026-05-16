@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Rosters</title>
+    <link rel="stylesheet" href="../css/rosters.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">🏒 NetFront</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
+                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
+                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
+                <div class="sidebar-item-active">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item" onclick="location.href='./users.html'">👤 Users & Roles</div>
+                <div class="sidebar-item" onclick="location.href='./permissions.html'">🔐 Permissions Matrix</div>
+                <div class="sidebar-item" onclick="location.href='./access-codes.html'">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
+                <div class="sidebar-item" onclick="location.href='./audit-log.html'">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <div class="header-row">
+                <div>
+                    <p class="page-title">📋 Rosters</p>
+                    <p class="page-subtitle">Manage players for each team</p>
+                </div>
+                <div>
+                    <button class="btn-primary" id="add-player-btn">+ Add Player</button>
+                    <button class="btn-secondary" id="bulk-roster-btn">Bulk Add</button>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <input class="form-field search-input" id="roster-search" placeholder="🔍 Search players...">
+            </div>
+
+            <!-- Rosters Table -->
+            <table class="admin-table roster-table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Jersey</th>
+                        <th>Position</th>
+                        <th>Shoots</th>
+                        <th>Status</th>
+                        <th>Team</th>
+                        <th style="text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Player Modal -->
+<div class="modal hidden" id="player-modal">
+    <div class="modal-content">
+        <p class="modal-title" id="player-modal-title">Add Player</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input id="player-first" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input id="player-last" class="form-field">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Jersey Number</label>
+                    <input id="player-jersey" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Position</label>
+                    <select id="player-position" class="form-field">
+                        <option>F</option>
+                        <option>D</option>
+                        <option>G</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Shoots</label>
+                    <select id="player-shoots" class="form-field">
+                        <option>Left</option>
+                        <option>Right</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="player-status" class="form-field">
+                        <option>Active</option>
+                        <option>Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Team</label>
+                    <select id="player-team" class="form-field"></select>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="player-cancel">Cancel</button>
+            <button class="btn-primary" id="player-save">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Add Rosters Modal -->
+<div class="modal hidden" id="bulk-roster-modal">
+    <div class="modal-content" style="width:600px;">
+        <p class="modal-title">Bulk Add Players</p>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Upload CSV/Excel</label>
+                    <input type="file" id="bulk-roster-file" class="form-field">
+                </div>
+            </div>
+
+            <a href="../templates/roster-template.csv" class="template-link" download>
+                Download CSV Template
+            </a>
+
+            <div id="bulk-roster-preview" class="preview-table"></div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="bulk-roster-cancel">Cancel</button>
+            <button class="btn-primary" id="bulk-roster-import">Import Players</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/rosters.js"></script>
+</body>
+</html>

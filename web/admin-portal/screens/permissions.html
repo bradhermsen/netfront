@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NetFront Admin Portal – Permissions Matrix</title>
+    <link rel="stylesheet" href="../css/permissions.css">
+</head>
+<body>
+
+<div class="web-frame">
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <p class="logo-title">NetFront Game Manager</p>
+                <p class="logo-subtitle">Admin Portal</p>
+            </div>
+
+            <div class="sidebar-nav">
+
+                <div class="sidebar-section">Main</div>
+                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
+
+                <div class="sidebar-section">Management</div>
+                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
+                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
+                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
+                <div class="sidebar-item" onclick="location.href='./rosters.html'">📋 Rosters</div>
+
+                <div class="sidebar-section">Access Control</div>
+                <div class="sidebar-item" onclick="location.href='./users.html'">👤 Users & Roles</div>
+                <div class="sidebar-item-active">🔐 Permissions Matrix</div>
+                <div class="sidebar-item" onclick="location.href='./access-codes.html'">🔑 Access Codes</div>
+
+                <div class="sidebar-section">System</div>
+                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
+                <div class="sidebar-item" onclick="location.href='./audit-log.html'">📄 Audit Log</div>
+                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
+
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <div class="header-row">
+                <div>
+                    <p class="page-title">🔐 Permissions Matrix</p>
+                    <p class="page-subtitle">Control access for all roles across the NetFront platform</p>
+                </div>
+                <button class="btn-primary" id="add-permission-btn">+ Add Permission</button>
+            </div>
+
+            <!-- Permissions Table -->
+            <table class="admin-table permissions-table">
+                <thead>
+                    <tr>
+                        <th>Permission</th>
+                        <th style="text-align:center;">NetFront Admin</th>
+                        <th style="text-align:center;">Org Admin</th>
+                        <th style="text-align:center;">Coach</th>
+                        <th style="text-align:center;">Scorekeeper</th>
+                        <th style="text-align:center;">Stat Manager</th>
+                        <th style="text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Permission Modal -->
+<div class="modal hidden" id="permission-modal">
+    <div class="modal-content">
+        <p class="modal-title" id="modal-title">Add Permission</p>
+
+        <div class="form-grid">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Permission Name</label>
+                    <input id="perm-name" class="form-field">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input id="perm-desc" class="form-field">
+                </div>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" id="cancel-modal">Cancel</button>
+            <button class="btn-primary" id="save-permission-btn">Save</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../js/permissions.js"></script>
+</body>
+</html>

@@ -6,15 +6,35 @@ const tbody = document.querySelector(".org-table tbody");
 const orgModal = document.getElementById("org-modal");
 const orgModalTitle = document.getElementById("org-modal-title");
 
+// Core fields
 const orgNameInput = document.getElementById("org-name");
 const orgAbbrevInput = document.getElementById("org-abbrev");
 const orgCityInput = document.getElementById("org-city");
 const orgStateInput = document.getElementById("org-state");
 const orgCountryInput = document.getElementById("org-country");
+
+// Physical Address
+const orgStreetInput = document.getElementById("org-street");
+const orgZipInput = document.getElementById("org-zip");
+
+// League / District
+const orgLeagueInput = document.getElementById("org-league");
+const orgDistrictInput = document.getElementById("org-district");
+
+// Primary contact
 const orgEmailInput = document.getElementById("org-email");
 const orgContactFirstInput = document.getElementById("org-contact-first");
 const orgContactLastInput = document.getElementById("org-contact-last");
 
+// Billing fields
+const billingStreetInput = document.getElementById("org-billing-street");
+const billingCityInput = document.getElementById("org-billing-city");
+const billingStateInput = document.getElementById("org-billing-state");
+const billingZipInput = document.getElementById("org-billing-zip");
+const billingContactNameInput = document.getElementById("org-billing-contact-name");
+const billingContactEmailInput = document.getElementById("org-billing-contact-email");
+
+// Buttons
 const addOrgBtn = document.getElementById("add-org-btn");
 const orgCancelBtn = document.getElementById("org-cancel");
 const orgSaveBtn = document.getElementById("org-save");
@@ -48,21 +68,18 @@ function renderOrganizations(orgs) {
     orgs.forEach(o => {
         const tr = document.createElement("tr");
 
-        const contactName =
-            o.primaryContactFirstName && o.primaryContactLastName
-                ? `${o.primaryContactFirstName} ${o.primaryContactLastName}`
-                : "";
+        const contactName = `${o.primaryContactFirstName ?? ""} ${o.primaryContactLastName ?? ""}`.trim();
 
         tr.innerHTML = `
             <td>${o.name}</td>
-            <td>${o.abbreviation}</td>
+            <td>${o.abbreviation ?? ""}</td>
             <td>${o.city ?? ""}</td>
             <td>${o.state ?? ""}</td>
             <td>${contactName}</td>
             <td>${o.primaryContactEmail ?? ""}</td>
             <td style="text-align:center;">
-                <button class="btn-sm edit-btn" data-id="${o.id}">✏️ Edit</button>
-                <button class="btn-sm delete-btn" data-id="${o.id}">🗑️ Delete</button>
+                <button class="btn-sm edit-btn" data-id="${o.organizationId}">✏️ Edit</button>
+                <button class="btn-sm delete-btn" data-id="${o.organizationId}">🗑️ Delete</button>
             </td>
         `;
 
@@ -85,16 +102,7 @@ function renderOrganizations(orgs) {
 function openAddModal() {
     editingOrgId = null;
     orgModalTitle.textContent = "Add Organization";
-
-    orgNameInput.value = "";
-    orgAbbrevInput.value = "";
-    orgCityInput.value = "";
-    orgStateInput.value = "";
-    orgCountryInput.value = "USA";
-    orgEmailInput.value = "";
-    orgContactFirstInput.value = "";
-    orgContactLastInput.value = "";
-
+    clearForm();
     orgModal.classList.remove("hidden");
 }
 
@@ -106,14 +114,33 @@ async function openEditModal(id) {
 
     orgModalTitle.textContent = "Edit Organization";
 
-    orgNameInput.value = o.name;
-    orgAbbrevInput.value = o.abbreviation;
+    // Core
+    orgNameInput.value = o.name ?? "";
+    orgAbbrevInput.value = o.abbreviation ?? "";
     orgCityInput.value = o.city ?? "";
     orgStateInput.value = o.state ?? "";
     orgCountryInput.value = o.country ?? "USA";
+
+    // Physical Address
+    orgStreetInput.value = o.streetAddress ?? "";
+    orgZipInput.value = o.zipCode ?? "";
+
+    // League / District
+    orgLeagueInput.value = o.league ?? "";
+    orgDistrictInput.value = o.districtConference ?? "";
+
+    // Primary Contact
     orgEmailInput.value = o.primaryContactEmail ?? "";
     orgContactFirstInput.value = o.primaryContactFirstName ?? "";
     orgContactLastInput.value = o.primaryContactLastName ?? "";
+
+    // Billing
+    billingStreetInput.value = o.billingStreetAddress ?? "";
+    billingCityInput.value = o.billingCity ?? "";
+    billingStateInput.value = o.billingState ?? "";
+    billingZipInput.value = o.billingZipCode ?? "";
+    billingContactNameInput.value = o.billingContactName ?? "";
+    billingContactEmailInput.value = o.billingContactEmail ?? "";
 
     orgModal.classList.remove("hidden");
 }
@@ -123,9 +150,6 @@ async function openEditModal(id) {
 ----------------------------------------- */
 
 async function saveOrganization() {
-    console.log("🔵 saveOrganization() called");
-
-    // Normalize + sanitize all fields
     const safe = v => {
         if (v === undefined || v === null) return null;
         const trimmed = String(v).trim();
@@ -137,13 +161,25 @@ async function saveOrganization() {
         abbreviation: safe(orgAbbrevInput.value),
         city: safe(orgCityInput.value),
         state: safe(orgStateInput.value),
-        country: safe(orgCountryInput.value) || "USA",
+        country: safe(orgCountryInput.value),
+
+        streetAddress: safe(orgStreetInput.value),
+        zipCode: safe(orgZipInput.value),
+
+        league: safe(orgLeagueInput.value),
+        districtConference: safe(orgDistrictInput.value),
+
         primaryContactEmail: safe(orgEmailInput.value),
         primaryContactFirstName: safe(orgContactFirstInput.value),
-        primaryContactLastName: safe(orgContactLastInput.value)
-    };
+        primaryContactLastName: safe(orgContactLastInput.value),
 
-    console.log("📦 Payload being sent:", payload);
+        billingStreetAddress: safe(billingStreetInput.value),
+        billingCity: safe(billingCityInput.value),
+        billingState: safe(billingStateInput.value),
+        billingZipCode: safe(billingZipInput.value),
+        billingContactName: safe(billingContactNameInput.value),
+        billingContactEmail: safe(billingContactEmailInput.value)
+    };
 
     const url = editingOrgId
         ? `http://localhost:7071/api/organizations/${editingOrgId}`
@@ -151,43 +187,28 @@ async function saveOrganization() {
 
     const method = editingOrgId ? "PUT" : "POST";
 
-    try {
-        console.log(`➡️ Sending ${method} to ${url}`);
+    const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
 
-        const res = await fetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-
-        console.log("⬅️ Response status:", res.status);
-
-        if (!res.ok) {
-            const text = await res.text();
-            console.error("❌ Server returned error:", text);
-            alert("Error saving organization. Check console.");
-            return;
-        }
-
-        console.log("✅ Organization saved successfully");
-
-        orgModal.classList.add("hidden");
-        await loadOrganizations();
-
-    } catch (err) {
-        console.error("🔥 FETCH ERROR:", err);
-        alert("Network error saving organization. Check console.");
+    if (!res.ok) {
+        alert("Error saving organization. Check console.");
+        console.error(await res.text());
+        return;
     }
-}
 
+    orgModal.classList.add("hidden");
+    await loadOrganizations();
+}
 
 /* -----------------------------------------
    DELETE ORGANIZATION
 ----------------------------------------- */
 
 async function deleteOrganization(id) {
-    const confirmDelete = confirm("Delete this organization?");
-    if (!confirmDelete) return;
+    if (!confirm("Delete this organization?")) return;
 
     await fetch(`http://localhost:7071/api/organizations/${id}`, {
         method: "DELETE"
@@ -197,16 +218,12 @@ async function deleteOrganization(id) {
 }
 
 /* -----------------------------------------
-   CSV PARSER
+   BULK IMPORT
 ----------------------------------------- */
 
 function parseCSV(text) {
     return text.trim().split("\n").map(r => r.split(","));
 }
-
-/* -----------------------------------------
-   BULK ADD
------------------------------------------ */
 
 bulkOrgBtn.addEventListener("click", () => {
     bulkOrgPreview.innerHTML = "";
@@ -270,19 +287,25 @@ document.getElementById("bulk-org-import").addEventListener("click", async () =>
 orgSearchInput.addEventListener("input", () => {
     const term = orgSearchInput.value.toLowerCase();
     const filtered = allOrgs.filter(o =>
-        o.name.toLowerCase().includes(term) ||
+        (o.name ?? "").toLowerCase().includes(term) ||
         (o.abbreviation ?? "").toLowerCase().includes(term)
     );
     renderOrganizations(filtered);
 });
 
 /* -----------------------------------------
-   MODAL BUTTONS
+   UTILITIES
 ----------------------------------------- */
 
-addOrgBtn.addEventListener("click", openAddModal);
-orgCancelBtn.addEventListener("click", () => orgModal.classList.add("hidden"));
-orgSaveBtn.addEventListener("click", saveOrganization);
+function clearForm() {
+    [
+        orgNameInput, orgAbbrevInput, orgCityInput, orgStateInput, orgCountryInput,
+        orgStreetInput, orgZipInput, orgLeagueInput, orgDistrictInput,
+        orgEmailInput, orgContactFirstInput, orgContactLastInput,
+        billingStreetInput, billingCityInput, billingStateInput, billingZipInput,
+        billingContactNameInput, billingContactEmailInput
+    ].forEach(i => i.value = "");
+}
 
 /* -----------------------------------------
    LOGOUT
@@ -297,5 +320,11 @@ document.getElementById("logout-btn")?.addEventListener("click", () => {
 /* -----------------------------------------
    INIT
 ----------------------------------------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+    addOrgBtn.addEventListener("click", openAddModal);
+    orgCancelBtn.addEventListener("click", () => orgModal.classList.add("hidden"));
+    orgSaveBtn.addEventListener("click", saveOrganization);
+});
 
 await loadOrganizations();

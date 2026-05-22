@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
 
 namespace NetFrontAPI.DTOs
 {
-    public class OrganizationDto
+    public class CreateOrganizationDto
     {
-        public Guid OrganizationId { get; set; }
         public string Name { get; set; }
         public string Abbreviation { get; set; }
 
@@ -30,16 +28,8 @@ namespace NetFrontAPI.DTOs
         public string DistrictConference { get; set; }
 
         public Guid? LeagueId { get; set; }
-        public string LeagueName { get; set; }
-
         public string Mascot { get; set; }
-
-        public int TeamCount { get; set; }
-
         public bool IsActive { get; set; }
-
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public List<TeamDto> Teams { get; set; } = new();
     }
+
 }

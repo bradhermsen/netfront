@@ -6,32 +6,32 @@ namespace NetFrontAPI.Models
     {
         public Guid OrganizationId { get; set; }
 
-        // Basic Info
         public string Name { get; set; }
         public string Abbreviation { get; set; }
 
-        // Physical Address
+        public string StreetAddress { get; set; }
         public string City { get; set; }
         public string State { get; set; }
-        public string Country { get; set; }
-        public string StreetAddress { get; set; }
         public string ZipCode { get; set; }
+        public string Country { get; set; }
 
-        // Contact Info
         public string PrimaryContactFirstName { get; set; }
         public string PrimaryContactLastName { get; set; }
         public string PrimaryContactEmail { get; set; }
 
-        // League / Conference
-        public string League { get; set; }
         public string DistrictConference { get; set; }
 
-        // Billing Info
         public string BillingStreetAddress { get; set; }
         public string BillingCity { get; set; }
         public string BillingState { get; set; }
         public string BillingZipCode { get; set; }
         public string BillingContactName { get; set; }
         public string BillingContactEmail { get; set; }
+
+        public Guid LeagueId { get; set; }
+        public bool IsActive { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 }

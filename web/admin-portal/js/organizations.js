@@ -1,330 +1,261 @@
-console.log("Organizations JS loaded");
+// ===============================
+// DOM ELEMENTS
+// ===============================
+const orgModal = document.getElementById("orgModal");
+const orgModalTitle = document.getElementById("orgModalTitle");
+const btnAddOrganization = document.getElementById("btnAddOrganization");
+const btnSaveOrg = document.getElementById("btnSaveOrg");
+const btnCancelOrg = document.getElementById("btnCancelOrg");
 
-const tbody = document.querySelector(".org-table tbody");
-
-// Modal elements
-const orgModal = document.getElementById("org-modal");
-const orgModalTitle = document.getElementById("org-modal-title");
-
-// Core fields
 const orgNameInput = document.getElementById("org-name");
 const orgAbbrevInput = document.getElementById("org-abbrev");
+const orgStreetInput = document.getElementById("org-street");
 const orgCityInput = document.getElementById("org-city");
 const orgStateInput = document.getElementById("org-state");
-const orgCountryInput = document.getElementById("org-country");
-
-// Physical Address
-const orgStreetInput = document.getElementById("org-street");
 const orgZipInput = document.getElementById("org-zip");
-
-// League / District
-const orgLeagueInput = document.getElementById("org-league");
+const orgCountryInput = document.getElementById("org-country");
 const orgDistrictInput = document.getElementById("org-district");
+const orgMascotInput = document.getElementById("org-mascot");
+const orgLeagueInput = document.getElementById("org-league");
 
-// Primary contact
-const orgEmailInput = document.getElementById("org-email");
 const orgContactFirstInput = document.getElementById("org-contact-first");
 const orgContactLastInput = document.getElementById("org-contact-last");
+const orgContactEmailInput = document.getElementById("org-contact-email");
 
-// Billing fields
-const billingStreetInput = document.getElementById("org-billing-street");
-const billingCityInput = document.getElementById("org-billing-city");
-const billingStateInput = document.getElementById("org-billing-state");
-const billingZipInput = document.getElementById("org-billing-zip");
-const billingContactNameInput = document.getElementById("org-billing-contact-name");
-const billingContactEmailInput = document.getElementById("org-billing-contact-email");
+const billingStreetInput = document.getElementById("billing-street");
+const billingCityInput = document.getElementById("billing-city");
+const billingStateInput = document.getElementById("billing-state");
+const billingZipInput = document.getElementById("billing-zip");
+const billingContactNameInput = document.getElementById("billing-contact-name");
+const billingContactEmailInput = document.getElementById("billing-contact-email");
 
-// Buttons
-const addOrgBtn = document.getElementById("add-org-btn");
-const orgCancelBtn = document.getElementById("org-cancel");
-const orgSaveBtn = document.getElementById("org-save");
+const orgCreatedInput = document.getElementById("org-created");
+const orgUpdatedInput = document.getElementById("org-updated");
 
-// Bulk modal
-const bulkOrgModal = document.getElementById("bulk-org-modal");
-const bulkOrgBtn = document.getElementById("bulk-org-btn");
-const bulkOrgCancel = document.getElementById("bulk-org-cancel");
-const bulkOrgFile = document.getElementById("bulk-org-file");
-const bulkOrgPreview = document.getElementById("bulk-org-preview");
+const orgActiveInput = document.getElementById("org-active");
 
-// Search
-const orgSearchInput = document.getElementById("org-search");
+const organizationsBody = document.getElementById("organizationsBody");
 
-let editingOrgId = null;
-let allOrgs = [];
+let editingId = null;
 
-/* -----------------------------------------
-   LOAD ORGANIZATIONS
------------------------------------------ */
-
-async function loadOrganizations() {
-    const res = await fetch("http://localhost:7071/api/organizations");
-    allOrgs = await res.json();
-    renderOrganizations(allOrgs);
+// ===============================
+// MODAL CONTROL
+// ===============================
+function showModal() {
+    orgModal.classList.remove("hidden");
 }
 
-function renderOrganizations(orgs) {
-    tbody.innerHTML = "";
+function closeModal() {
+    orgModal.classList.add("hidden");
+    clearForm();
+    editingId = null;
+}
 
-    orgs.forEach(o => {
-        const tr = document.createElement("tr");
+btnCancelOrg.addEventListener("click", closeModal);
 
-        const contactName = `${o.primaryContactFirstName ?? ""} ${o.primaryContactLastName ?? ""}`.trim();
+// ESC closes modal
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !orgModal.classList.contains("hidden")) {
+        closeModal();
+    }
+});
 
-        tr.innerHTML = `
-            <td>${o.name}</td>
-            <td>${o.abbreviation ?? ""}</td>
-            <td>${o.city ?? ""}</td>
-            <td>${o.state ?? ""}</td>
-            <td>${contactName}</td>
-            <td>${o.primaryContactEmail ?? ""}</td>
-            <td style="text-align:center;">
-                <button class="btn-sm edit-btn" data-id="${o.organizationId}">✏️ Edit</button>
-                <button class="btn-sm delete-btn" data-id="${o.organizationId}">🗑️ Delete</button>
+// ===============================
+// CLEAR FORM
+// ===============================
+function clearForm() {
+    orgNameInput.value = "";
+    orgAbbrevInput.value = "";
+    orgStreetInput.value = "";
+    orgCityInput.value = "";
+    orgStateInput.value = "";
+    orgZipInput.value = "";
+    orgCountryInput.value = "";
+    orgDistrictInput.value = "";
+    orgMascotInput.value = "";
+    orgLeagueInput.value = "";
+
+    orgContactFirstInput.value = "";
+    orgContactLastInput.value = "";
+    orgContactEmailInput.value = "";
+
+    billingStreetInput.value = "";
+    billingCityInput.value = "";
+    billingStateInput.value = "";
+    billingZipInput.value = "";
+    billingContactNameInput.value = "";
+    billingContactEmailInput.value = "";
+
+    orgCreatedInput.value = "";
+    orgUpdatedInput.value = "";
+
+    orgActiveInput.checked = true;
+}
+
+// ===============================
+// LOAD ORGANIZATIONS TABLE
+// ===============================
+async function loadOrganizations() {
+    const orgs = await OrgApi.getAll();
+    organizationsBody.innerHTML = "";
+
+    orgs.forEach(org => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${org.name}</td>
+            <td>${org.leagueName ?? ""}</td>
+            <td>${org.districtConference ?? ""}</td>
+            <td>${org.teamCount}</td>
+            <td>${org.primaryContactFirstName ?? ""} ${org.primaryContactLastName ?? ""}</td>
+            <td>
+                <span class="status-badge ${org.isActive ? "active" : "inactive"}">
+                    ${org.isActive ? "Active" : "Inactive"}
+                </span>
+            </td>
+            <td class="actions-col">
+                <button class="btn-small" onclick="openEditModal('${org.organizationId}')">Edit</button>
+                <button class="btn-small btn-danger" onclick="openDeleteModal('${org.organizationId}')">Delete</button>
             </td>
         `;
 
-        tbody.appendChild(tr);
+        organizationsBody.appendChild(row);
     });
+}
+// ===============================
+// LOAD LEAGUES DROPDOWN
+// ===============================
+async function loadLeagues() {
+    const response = await fetch("http://localhost:7071/api/leagues");
+    const leagues = await response.json();
 
-    document.querySelectorAll(".edit-btn").forEach(btn =>
-        btn.addEventListener("click", () => openEditModal(btn.dataset.id))
-    );
+    orgLeagueInput.innerHTML = `<option value="">Select League</option>`;
 
-    document.querySelectorAll(".delete-btn").forEach(btn =>
-        btn.addEventListener("click", () => deleteOrganization(btn.dataset.id))
-    );
+    leagues.forEach(l => {
+        const option = document.createElement("option");
+        option.value = l.leagueId;
+        option.textContent = l.leagueName;
+        orgLeagueInput.appendChild(option);
+    });
 }
 
-/* -----------------------------------------
-   ADD / EDIT MODAL
------------------------------------------ */
-
-function openAddModal() {
-    editingOrgId = null;
+// ===============================
+// OPEN ADD MODAL
+// ===============================
+btnAddOrganization.addEventListener("click", () => {
+    editingId = null;
     orgModalTitle.textContent = "Add Organization";
     clearForm();
-    orgModal.classList.remove("hidden");
-}
+    showModal();
+});
 
+// ===============================
+// OPEN EDIT MODAL
+// ===============================
 async function openEditModal(id) {
-    editingOrgId = id;
-
-    const res = await fetch(`http://localhost:7071/api/organizations/${id}`);
-    const o = await res.json();
-
+    editingId = id;
     orgModalTitle.textContent = "Edit Organization";
 
-    // Core
-    orgNameInput.value = o.name ?? "";
-    orgAbbrevInput.value = o.abbreviation ?? "";
-    orgCityInput.value = o.city ?? "";
-    orgStateInput.value = o.state ?? "";
-    orgCountryInput.value = o.country ?? "USA";
+    const org = await OrgApi.getById(id);
 
-    // Physical Address
-    orgStreetInput.value = o.streetAddress ?? "";
-    orgZipInput.value = o.zipCode ?? "";
+    orgNameInput.value = org.name;
+    orgAbbrevInput.value = org.abbreviation;
+    orgStreetInput.value = org.streetAddress;
+    orgCityInput.value = org.city;
+    orgStateInput.value = org.state;
+    orgZipInput.value = org.zipCode;
+    orgCountryInput.value = org.country;
+    orgDistrictInput.value = org.districtConference;
+    orgMascotInput.value = org.mascot;
+    orgLeagueInput.value = org.leagueId ?? "";
 
-    // League / District
-    orgLeagueInput.value = o.league ?? "";
-    orgDistrictInput.value = o.districtConference ?? "";
+    orgContactFirstInput.value = org.primaryContactFirstName;
+    orgContactLastInput.value = org.primaryContactLastName;
+    orgContactEmailInput.value = org.primaryContactEmail;
 
-    // Primary Contact
-    orgEmailInput.value = o.primaryContactEmail ?? "";
-    orgContactFirstInput.value = o.primaryContactFirstName ?? "";
-    orgContactLastInput.value = o.primaryContactLastName ?? "";
+    billingStreetInput.value = org.billingStreetAddress;
+    billingCityInput.value = org.billingCity;
+    billingStateInput.value = org.billingState;
+    billingZipInput.value = org.billingZipCode;
+    billingContactNameInput.value = org.billingContactName;
+    billingContactEmailInput.value = org.billingContactEmail;
 
-    // Billing
-    billingStreetInput.value = o.billingStreetAddress ?? "";
-    billingCityInput.value = o.billingCity ?? "";
-    billingStateInput.value = o.billingState ?? "";
-    billingZipInput.value = o.billingZipCode ?? "";
-    billingContactNameInput.value = o.billingContactName ?? "";
-    billingContactEmailInput.value = o.billingContactEmail ?? "";
+    orgCreatedInput.value = org.createdAt ? new Date(org.createdAt).toLocaleString() : "";
+    orgUpdatedInput.value = org.updatedAt ? new Date(org.updatedAt).toLocaleString() : "";
 
-    orgModal.classList.remove("hidden");
+    orgActiveInput.checked = org.isActive;
+
+    showModal();
 }
 
-/* -----------------------------------------
-   SAVE ORGANIZATION (POST + PUT)
------------------------------------------ */
+// ===============================
+// SAVE ORGANIZATION
+// ===============================
+btnSaveOrg.addEventListener("click", saveOrganization);
 
 async function saveOrganization() {
-    const safe = v => {
-        if (v === undefined || v === null) return null;
-        const trimmed = String(v).trim();
-        return trimmed.length === 0 ? null : trimmed;
-    };
-
     const payload = {
-        name: safe(orgNameInput.value),
-        abbreviation: safe(orgAbbrevInput.value),
-        city: safe(orgCityInput.value),
-        state: safe(orgStateInput.value),
-        country: safe(orgCountryInput.value),
+        name: orgNameInput.value,
+        abbreviation: orgAbbrevInput.value,
+        streetAddress: orgStreetInput.value,
+        city: orgCityInput.value,
+        state: orgStateInput.value,
+        zipCode: orgZipInput.value,
+        country: orgCountryInput.value,
+        districtConference: orgDistrictInput.value,
+        mascot: orgMascotInput.value,
+        leagueId: orgLeagueInput.value || null,
 
-        streetAddress: safe(orgStreetInput.value),
-        zipCode: safe(orgZipInput.value),
+        primaryContactFirstName: orgContactFirstInput.value,
+        primaryContactLastName: orgContactLastInput.value,
+        primaryContactEmail: orgContactEmailInput.value,
 
-        league: safe(orgLeagueInput.value),
-        districtConference: safe(orgDistrictInput.value),
+        billingStreetAddress: billingStreetInput.value,
+        billingCity: billingCityInput.value,
+        billingState: billingStateInput.value,
+        billingZipCode: billingZipInput.value,
+        billingContactName: billingContactNameInput.value,
+        billingContactEmail: billingContactEmailInput.value,
 
-        primaryContactEmail: safe(orgEmailInput.value),
-        primaryContactFirstName: safe(orgContactFirstInput.value),
-        primaryContactLastName: safe(orgContactLastInput.value),
-
-        billingStreetAddress: safe(billingStreetInput.value),
-        billingCity: safe(billingCityInput.value),
-        billingState: safe(billingStateInput.value),
-        billingZipCode: safe(billingZipInput.value),
-        billingContactName: safe(billingContactNameInput.value),
-        billingContactEmail: safe(billingContactEmailInput.value)
+        isActive: orgActiveInput.checked
     };
 
-    const url = editingOrgId
-        ? `http://localhost:7071/api/organizations/${editingOrgId}`
-        : "http://localhost:7071/api/organizations";
-
-    const method = editingOrgId ? "PUT" : "POST";
-
-    const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-        alert("Error saving organization. Check console.");
-        console.error(await res.text());
-        return;
+    if (editingId) {
+        await OrgApi.update(editingId, payload);
+    } else {
+        await OrgApi.create(payload);
     }
 
-    orgModal.classList.add("hidden");
-    await loadOrganizations();
+    closeModal();
+    loadOrganizations();
 }
 
-/* -----------------------------------------
-   DELETE ORGANIZATION
------------------------------------------ */
+// ===============================
+// DELETE ORGANIZATION
+// ===============================
+let deleteId = null;
 
-async function deleteOrganization(id) {
-    if (!confirm("Delete this organization?")) return;
-
-    await fetch(`http://localhost:7071/api/organizations/${id}`, {
-        method: "DELETE"
-    });
-
-    await loadOrganizations();
+function openDeleteModal(id) {
+    deleteId = id;
+    document.getElementById("deleteModal").classList.remove("hidden");
 }
 
-/* -----------------------------------------
-   BULK IMPORT
------------------------------------------ */
-
-function parseCSV(text) {
-    return text.trim().split("\n").map(r => r.split(","));
-}
-
-bulkOrgBtn.addEventListener("click", () => {
-    bulkOrgPreview.innerHTML = "";
-    bulkOrgFile.value = "";
-    bulkOrgModal.classList.remove("hidden");
+document.getElementById("btnCancelDelete").addEventListener("click", () => {
+    deleteId = null;
+    document.getElementById("deleteModal").classList.add("hidden");
 });
 
-bulkOrgCancel.addEventListener("click", () => {
-    bulkOrgModal.classList.add("hidden");
+document.getElementById("btnConfirmDelete").addEventListener("click", async () => {
+    if (deleteId) {
+        await OrgApi.delete(deleteId);
+        deleteId = null;
+        document.getElementById("deleteModal").classList.add("hidden");
+        loadOrganizations();
+    }
 });
 
-bulkOrgFile.addEventListener("change", async () => {
-    const file = bulkOrgFile.files[0];
-    if (!file) return;
-
-    const text = await file.text();
-    const rows = parseCSV(text);
-
-    let html = `<table class="admin-table"><thead><tr>`;
-    rows[0].forEach(h => html += `<th>${h}</th>`);
-    html += `</tr></thead><tbody>`;
-
-    rows.slice(1).forEach(r => {
-        html += "<tr>";
-        r.forEach(c => html += `<td>${c}</td>`);
-        html += "</tr>";
-    });
-
-    html += "</tbody></table>";
-    bulkOrgPreview.innerHTML = html;
-});
-
-document.getElementById("bulk-org-import").addEventListener("click", async () => {
-    const file = bulkOrgFile.files[0];
-    if (!file) return;
-
-    const text = await file.text();
-    const rows = parseCSV(text);
-
-    const headers = rows[0];
-    const data = rows.slice(1).map(r => {
-        let obj = {};
-        headers.forEach((h, i) => obj[h] = r[i]);
-        return obj;
-    });
-
-    await fetch("http://localhost:7071/api/organizations/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-    });
-
-    bulkOrgModal.classList.add("hidden");
-    await loadOrganizations();
-});
-
-/* -----------------------------------------
-   SEARCH
------------------------------------------ */
-
-orgSearchInput.addEventListener("input", () => {
-    const term = orgSearchInput.value.toLowerCase();
-    const filtered = allOrgs.filter(o =>
-        (o.name ?? "").toLowerCase().includes(term) ||
-        (o.abbreviation ?? "").toLowerCase().includes(term)
-    );
-    renderOrganizations(filtered);
-});
-
-/* -----------------------------------------
-   UTILITIES
------------------------------------------ */
-
-function clearForm() {
-    [
-        orgNameInput, orgAbbrevInput, orgCityInput, orgStateInput, orgCountryInput,
-        orgStreetInput, orgZipInput, orgLeagueInput, orgDistrictInput,
-        orgEmailInput, orgContactFirstInput, orgContactLastInput,
-        billingStreetInput, billingCityInput, billingStateInput, billingZipInput,
-        billingContactNameInput, billingContactEmailInput
-    ].forEach(i => i.value = "");
-}
-
-/* -----------------------------------------
-   LOGOUT
------------------------------------------ */
-
-document.getElementById("logout-btn")?.addEventListener("click", () => {
-    localStorage.removeItem("nf_admin_token");
-    localStorage.removeItem("nf_admin_role");
-    window.location.href = "./login.html";
-});
-
-/* -----------------------------------------
-   INIT
------------------------------------------ */
-
-document.addEventListener("DOMContentLoaded", () => {
-    addOrgBtn.addEventListener("click", openAddModal);
-    orgCancelBtn.addEventListener("click", () => orgModal.classList.add("hidden"));
-    orgSaveBtn.addEventListener("click", saveOrganization);
-});
-
-await loadOrganizations();
+// ===============================
+// INITIAL LOAD
+// ===============================
+loadLeagues();
+loadOrganizations();

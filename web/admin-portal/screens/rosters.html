@@ -1,179 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>NetFront Admin Portal – Rosters</title>
-    <link rel="stylesheet" href="../css/rosters.css">
+    <meta charset="UTF-8" />
+    <title>Rosters | NetFront Admin</title>
+
+    <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/rosters.css" />
 </head>
+
 <body>
+    <div class="layout">
+        <div id="sidebarContainer"></div>
 
-<div class="web-frame">
-    <div class="admin-layout">
-
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-logo">
-                <p class="logo-title">🏒 NetFront</p>
-                <p class="logo-subtitle">Admin Portal</p>
-            </div>
-
-            <div class="sidebar-nav">
-                <div class="sidebar-section">Main</div>
-                <div class="sidebar-item" onclick="location.href='./dashboard.html'">📊 Dashboard</div>
-
-                <div class="sidebar-section">Management</div>
-                <div class="sidebar-item" onclick="location.href='./organizations.html'">🏫 Organizations</div>
-                <div class="sidebar-item" onclick="location.href='./teams.html'">🏒 Teams</div>
-                <div class="sidebar-item" onclick="location.href='./schedules.html'">📅 Schedules</div>
-                <div class="sidebar-item-active">📋 Rosters</div>
-
-                <div class="sidebar-section">Access Control</div>
-                <div class="sidebar-item" onclick="location.href='./users.html'">👤 Users & Roles</div>
-                <div class="sidebar-item" onclick="location.href='./permissions.html'">🔐 Permissions Matrix</div>
-                <div class="sidebar-item" onclick="location.href='./access-codes.html'">🔑 Access Codes</div>
-
-                <div class="sidebar-section">System</div>
-                <div class="sidebar-item" onclick="location.href='./settings.html'">⚙️ Settings</div>
-                <div class="sidebar-item" onclick="location.href='./audit-log.html'">📄 Audit Log</div>
-                <div class="sidebar-item logout" id="logout-btn">🚪 Logout</div>
-            </div>
-        </div>
-
-        <!-- Main Content -->
         <div class="main-content">
+            <h1 class="page-header">Team Rosters</h1>
 
-            <div class="header-row">
-                <div>
-                    <p class="page-title">📋 Rosters</p>
-                    <p class="page-subtitle">Manage players for each team</p>
-                </div>
-                <div>
-                    <button class="btn-primary" id="add-player-btn">+ Add Player</button>
-                    <button class="btn-secondary" id="bulk-roster-btn">Bulk Add</button>
-                </div>
-            </div>
-
-            <!-- Filter Bar -->
-            <div class="filter-bar">
-                <input class="form-field search-input" id="roster-search" placeholder="🔍 Search players...">
-            </div>
-
-            <!-- Rosters Table -->
-            <table class="admin-table roster-table">
+            <table class="data-table" id="rosterTable">
                 <thead>
                     <tr>
-                        <th>Player</th>
-                        <th>Jersey</th>
-                        <th>Position</th>
-                        <th>Shoots</th>
+                        <th>#</th>
+                        <th>Player Name</th>
+                        <th>Pos</th>
+                        <th>Grade</th>
                         <th>Status</th>
-                        <th>Team</th>
-                        <th style="text-align:center;">Actions</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody></tbody>
+                <tbody id="rosterBody"></tbody>
             </table>
-
         </div>
     </div>
-</div>
 
-<!-- Add/Edit Player Modal -->
-<div class="modal hidden" id="player-modal">
-    <div class="modal-content">
-        <p class="modal-title" id="player-modal-title">Add Player</p>
+    <!-- Edit Modal -->
+    <div id="editPlayerModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Edit Roster Entry</h2>
 
-        <div class="form-grid">
+            <label>Jersey Number</label>
+            <input id="editJersey" type="number" class="input-text" />
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">First Name</label>
-                    <input id="player-first" class="form-field">
-                </div>
+            <label>Position</label>
+            <input id="editPosition" type="text" class="input-text" />
 
-                <div class="form-group">
-                    <label class="form-label">Last Name</label>
-                    <input id="player-last" class="form-field">
-                </div>
+            <label>Grade</label>
+            <input id="editGrade" type="number" class="input-text" />
+
+            <label>Status</label>
+            <select id="editStatus" class="input-select">
+                <option value="Active">Active</option>
+                <option value="Scratched">Scratched</option>
+            </select>
+
+            <label>Notes</label>
+            <textarea id="editNotes" class="input-text"></textarea>
+
+            <div class="modal-actions">
+                <button id="editPlayerSave" class="btn-primary">Save</button>
+                <button class="btn-secondary modal-close">Cancel</button>
             </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Jersey Number</label>
-                    <input id="player-jersey" class="form-field">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Position</label>
-                    <select id="player-position" class="form-field">
-                        <option>F</option>
-                        <option>D</option>
-                        <option>G</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Shoots</label>
-                    <select id="player-shoots" class="form-field">
-                        <option>Left</option>
-                        <option>Right</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select id="player-status" class="form-field">
-                        <option>Active</option>
-                        <option>Inactive</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group" style="flex:1;">
-                    <label class="form-label">Team</label>
-                    <select id="player-team" class="form-field"></select>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="modal-actions">
-            <button class="btn-secondary" id="player-cancel">Cancel</button>
-            <button class="btn-primary" id="player-save">Save</button>
         </div>
     </div>
-</div>
 
-<!-- Bulk Add Rosters Modal -->
-<div class="modal hidden" id="bulk-roster-modal">
-    <div class="modal-content" style="width:600px;">
-        <p class="modal-title">Bulk Add Players</p>
+    <!-- Sidebar Loader -->
+    <script src="../js/sidebar-loader.js"></script>
+    <script>loadSidebar();</script>
 
-        <div class="form-grid">
-            <div class="form-row">
-                <div class="form-group" style="flex:1;">
-                    <label class="form-label">Upload CSV/Excel</label>
-                    <input type="file" id="bulk-roster-file" class="form-field">
-                </div>
-            </div>
-
-            <a href="../templates/roster-template.csv" class="template-link" download>
-                Download CSV Template
-            </a>
-
-            <div id="bulk-roster-preview" class="preview-table"></div>
-        </div>
-
-        <div class="modal-actions">
-            <button class="btn-secondary" id="bulk-roster-cancel">Cancel</button>
-            <button class="btn-primary" id="bulk-roster-import">Import Players</button>
-        </div>
-    </div>
-</div>
-
-<script type="module" src="../js/rosters.js"></script>
+    <!-- Page Logic -->
+    <script src="../js/rosters.js"></script>
 </body>
 </html>

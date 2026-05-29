@@ -1,89 +1,29 @@
-/* ============================================
-   TEAMS PAGE — CUSTOM STYLES
-   ============================================ */
+/* Teams Page — Page-specific only */
 
-/* Group Header */
-.team-group-header td {
-    background: #16233b;
-    color: #ff7a00;
-    font-weight: 700;
-    padding: 12px;
-    cursor: pointer;
-    border-bottom: 1px solid #1f2a40;
+.team-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.team-group-header:hover td {
-    background: #1d2c49;
+.access-code {
+  font-size: 14px;
+  color: var(--nf-text-muted);
 }
 
-.group-toggle {
-    margin-right: 8px;
-    font-size: 0.9rem;
+.team-status-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-/* Stacked Access Codes */
-.table-stack span {
-    display: block;
-    line-height: 1.2;
+.team-status-active {
+  background: #0f5132;
+  color: #d1e7dd;
 }
 
-/* Actions column */
-.actions-col button {
-    margin-left: 4px;
-}
-
-/* Modal spacing */
-.two-col-form label {
-    font-size: 0.9rem;
-    margin-bottom: 4px;
-}
-
-.two-col-form input,
-.two-col-form select,
-.two-col-form textarea {
-    margin-bottom: 12px;
-}
-
-/* Generate Access Codes button */
-.generate-codes-btn {
-    margin-top: 10px;
-    background: #4da6ff;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-}
-
-.generate-codes-btn:hover {
-    background: #1f8ae6;
-}
-.stack-item {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 2px;
-}
-
-.stack-label {
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: #999;
-    margin-bottom: -2px;
-    text-transform: uppercase;
-}
-.org-header {
-    background-color: var(--color-panel-dark);
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.org-title {
-    padding: 12px;
-    font-size: 1.1rem;
-}
-
-.group-header {
-    background-color: var(--color-panel);
-    font-weight: 600;
+.team-status-inactive {
+  background: #842029;
+  color: #f8d7da;
 }

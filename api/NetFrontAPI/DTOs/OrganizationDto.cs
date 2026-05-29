@@ -1,45 +1,39 @@
 using System;
-using System.Collections.Generic;
 
 namespace NetFrontAPI.DTOs
 {
     public class OrganizationDto
     {
         public Guid OrganizationId { get; set; }
-        public string Name { get; set; }
-        public string Abbreviation { get; set; }
+        public Guid LeagueId { get; set; }
 
-        public string City { get; set; }
-        public string State { get; set; }
-        public string Country { get; set; }
+        public string? Name { get; set; }
+        public string? Abbreviation { get; set; }
 
-        public string StreetAddress { get; set; }
-        public string ZipCode { get; set; }
+        public string? StreetAddress { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? ZipCode { get; set; }
+        public string? Country { get; set; }
 
-        public string BillingStreetAddress { get; set; }
-        public string BillingCity { get; set; }
-        public string BillingState { get; set; }
-        public string BillingZipCode { get; set; }
-        public string BillingContactName { get; set; }
-        public string BillingContactEmail { get; set; }
+        public string? BillingStreetAddress { get; set; }
+        public string? BillingCity { get; set; }
+        public string? BillingState { get; set; }
+        public string? BillingZipCode { get; set; }
+        public string? BillingContactName { get; set; }
+        public string? BillingContactEmail { get; set; }
 
-        public string PrimaryContactFirstName { get; set; }
-        public string PrimaryContactLastName { get; set; }
-        public string PrimaryContactEmail { get; set; }
+        public string? PrimaryContactFirstName { get; set; }
+        public string? PrimaryContactLastName { get; set; }
+        public string? PrimaryContactEmail { get; set; }
 
-        public string DistrictConference { get; set; }
-
-        public Guid? LeagueId { get; set; }
-        public string LeagueName { get; set; }
-
-        public string Mascot { get; set; }
-
-        public int TeamCount { get; set; }
+        public string? DistrictConference { get; set; }
+        public string? Mascot { get; set; }
 
         public bool IsActive { get; set; }
 
+        // System
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public List<TeamDto> Teams { get; set; } = new();
     }
 }

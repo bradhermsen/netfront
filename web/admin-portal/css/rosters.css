@@ -1,66 +1,20 @@
-/* Captain / Assistant / Goalie badges */
-.badge-captain {
-    background-color: var(--color-accent-orange);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
+/* Rosters Page — Page-specific only */
+
+.roster-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.badge-assistant {
-    background-color: var(--color-accent-blue);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
+.player-number {
+  font-weight: 600;
+  color: var(--nf-accent);
 }
 
-.badge-goalie {
-    background-color: #444;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-}
-
-/* Line number pill */
-.line-pill {
-    background-color: var(--color-panel);
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-}
-
-/* Status pill */
-.status-active {
-    background-color: #2e8b57;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 6px;
-}
-
-.status-scratched {
-    background-color: #8b2e2e;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 6px;
-}
-.group-header {
-    background-color: var(--color-panel);
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.group-title {
-    padding: 10px;
-    font-size: 1rem;
-}
-
-.group-toggle {
-    margin-right: 8px;
-    font-weight: bold;
-}
-
-.group-row.hidden {
-    display: none;
+.position-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--nf-bg-lighter);
 }

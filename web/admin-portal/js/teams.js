@@ -33,10 +33,9 @@ const teamsSearchBar = document.getElementById("teams-search-bar");
 
 let editingTeamId = null;
 let allTeams = [];
-let currentSort = { column: null, direction: null };
 
 // ===============================
-// GENERATE ACCESS CODES BUTTON
+// GENERATE ACCESS CODES
 // ===============================
 btnGenerateCodes.addEventListener("click", () => {
     const scoreCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -144,89 +143,68 @@ async function loadTeamDropdowns() {
 }
 
 // ===============================
-// RENDER TEAMS (GROUPED + COLLAPSIBLE)
+// SORT TEAMS BY ORG → NAME
+// ===============================
+function sortTeamsByOrgThenName(teams) {
+    return teams.sort((a, b) => {
+        const orgA = (a.organizationName ?? "zzz").toLowerCase();
+        const orgB = (b.organizationName ?? "zzz").toLowerCase();
+
+        if (orgA < orgB) return -1;
+        if (orgA > orgB) return 1;
+
+        const nameA = (a.name ?? "").toLowerCase();
+        const nameB = (b.name ?? "").toLowerCase();
+
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+
+        return 0;
+    });
+}
+
+// ===============================
+// RENDER TEAMS (FLAT LIST)
 // ===============================
 function renderTeams(teams) {
     teamsBody.innerHTML = "";
 
-    const groups = new Map();
-    const externalKey = "__external__";
+    teams.forEach(team => {
+        const row = document.createElement("tr");
 
-    groups.set(externalKey, []);
+        row.innerHTML = `
+            <td>${team.name}</td>
+            <td>${team.organizationName ?? ""}</td>
+            <td>${team.levelName ?? ""}</td>
+            <td>${team.seasonName ?? ""}</td>
+            <td>${team.rosterCount ?? 0}</td>
+            <td>${team.headCoachName ?? ""}</td>
 
-    teams.forEach(t => {
-        const isExternal =
-            t.isExternal === true ||
-            t.organizationId === null ||
-            t.organizationId === "00000000-0000-0000-0000-000000000000";
+            <td class="table-stack">
+                <div class="stack-item">
+                    <label class="stack-label">Score Keeper</label>
+                    <span class="stack-orange">${team.scorekeeperCode ?? ""}</span>
+                </div>
+                <div class="stack-item">
+                    <label class="stack-label">Stat Manager</label>
+                    <span class="stack-blue">${team.statManagerCode ?? ""}</span>
+                </div>
+            </td>
 
-        const key = isExternal ? externalKey : (t.organizationName ?? "");
+            <td>
+                <span class="status-pill ${team.isActive ? "active" : "inactive"}">
+                    ${team.isActive ? "ACTIVE" : "INACTIVE"}
+                </span>
+            </td>
 
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(t);
-    });
-
-    groups.forEach((groupTeams, key) => {
-        const groupId = key === externalKey ? "external" : key.replace(/\s+/g, "-").toLowerCase();
-
-        const headerRow = document.createElement("tr");
-        headerRow.classList.add("team-group-header");
-        headerRow.dataset.group = groupId;
-
-        headerRow.innerHTML = `
-            <td colspan="9">
-                <span class="group-toggle">▼</span>
-                ${key === externalKey ? "External Teams" : key}
+            <td class="actions-col">
+                <button class="btn-small" onclick="openRoster('${team.teamId}')">Roster</button>
+                <button class="btn-small" onclick="openEditTeamModal('${team.teamId}')">Edit</button>
+                <button class="btn-small btn-danger" onclick="openDeleteTeamModal('${team.teamId}')">Delete</button>
             </td>
         `;
 
-        headerRow.addEventListener("click", () => {
-            const rows = document.querySelectorAll(`tr[data-parent='${groupId}']`);
-            const icon = headerRow.querySelector(".group-toggle");
-            const collapsed = headerRow.classList.toggle("collapsed");
-            icon.textContent = collapsed ? "►" : "▼";
-            rows.forEach(r => r.style.display = collapsed ? "none" : "");
-        });
-
-        teamsBody.appendChild(headerRow);
-
-        groupTeams.forEach(team => {
-            const row = document.createElement("tr");
-            row.dataset.parent = groupId;
-
-            row.innerHTML = `
-                <td>${team.name}</td>
-                <td>${team.isExternal ? "" : (team.organizationName ?? "")}</td>
-                <td>${team.levelName ?? ""}</td>
-                <td>${team.seasonName ?? ""}</td>
-                <td>${team.rosterCount ?? 0}</td>
-                <td>${team.headCoachName ?? ""}</td>
-
-                <td class="table-stack">
-                    <div class="stack-item">
-                        <label class="stack-label">Score Keeper</label>
-                        <span class="stack-orange">${team.scorekeeperCode ?? ""}</span>
-                    </div>
-                    <div class="stack-item">
-                        <label class="stack-label">Stat Manager</label>
-                        <span class="stack-blue">${team.statManagerCode ?? ""}</span>
-                    </div>
-                </td>
-
-                <td>
-                    <span class="status-pill ${team.isActive ? "active" : "inactive"}">
-                        ${team.isActive ? "ACTIVE" : "INACTIVE"}
-                    </span>
-                </td>
-
-                <td class="actions-col">
-                    <button class="btn-small" onclick="openRoster('${team.id}')">Roster</button>
-                    <button class="btn-small" onclick="openEditTeamModal('${team.id}')">Edit</button>
-                    <button class="btn-small btn-danger" onclick="openDeleteTeamModal('${team.id}')">Delete</button>
-                </td>
-            `;
-            teamsBody.appendChild(row);
-        });
+        teamsBody.appendChild(row);
     });
 }
 
@@ -239,70 +217,20 @@ async function loadTeams() {
 }
 
 // ===============================
-// SORTING
-// ===============================
-function sortTeams(column) {
-    if (currentSort.column === column) {
-        currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
-    } else {
-        currentSort.column = column;
-        currentSort.direction = "asc";
-    }
-
-    const dir = currentSort.direction === "asc" ? 1 : -1;
-
-    allTeams.sort((a, b) => {
-        let valA = a[column];
-        let valB = b[column];
-
-        if (typeof valA === "string") valA = valA.toLowerCase();
-        if (typeof valB === "string") valB = valB.toLowerCase();
-
-        if (valA > valB) return dir;
-        if (valA < valB) return -dir;
-        return 0;
-    });
-
-    updateSortHeaderClasses();
-    applySearchAndSort();
-}
-
-function updateSortHeaderClasses() {
-    const ths = document.querySelectorAll("th.sortable");
-    ths.forEach(th => th.classList.remove("asc", "desc"));
-
-    if (!currentSort.column) return;
-
-    const map = {
-        name: 0,
-        organizationName: 1,
-        levelName: 2,
-        seasonName: 3,
-        rosterCount: 4,
-        headCoachName: 5,
-        isActive: 6
-    };
-
-    const index = map[currentSort.column];
-    if (index === undefined) return;
-
-    const th = ths[index];
-    th.classList.add(currentSort.direction);
-}
-
-// ===============================
-// SEARCH / FILTER
+// SEARCH + SORT
 // ===============================
 function applySearchAndSort() {
     const q = (teamsSearchBar.value || "").toLowerCase();
 
-    const filtered = allTeams.filter(t =>
+    let filtered = allTeams.filter(t =>
         t.name.toLowerCase().includes(q) ||
         t.organizationName?.toLowerCase().includes(q) ||
         t.levelName?.toLowerCase().includes(q) ||
         t.seasonName?.toLowerCase().includes(q) ||
         t.headCoachName?.toLowerCase().includes(q)
     );
+
+    filtered = sortTeamsByOrgThenName(filtered);
 
     renderTeams(filtered);
 }

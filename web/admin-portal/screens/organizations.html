@@ -1,222 +1,231 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Organizations | NetFront Admin</title>
 
     <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/modal.css" />
     <link rel="stylesheet" href="../css/organizations.css" />
-</head>
+  </head>
 
-<body>
-    <div class="layout">
+  <body>
+    <!-- LAYOUT ROOT -->
+    <div id="layoutContainer"></div>
 
-        <!-- SIDEBAR -->
-        <div id="sidebarContainer"></div>
+    <!-- LAYOUT LOADER -->
+    <script>
+      // 1) Load the layout shell
+      fetch("../components/layout.html")
+        .then((res) => res.text())
+        .then((html) => {
+          document.getElementById("layoutContainer").innerHTML = html;
 
-        <!-- MAIN CONTENT -->
-        <div class="main-content">
+          // 2) Load sidebar / footer
+          Promise.all([
+            fetch("../components/sidebar.html").then((r) => r.text()),
+            fetch("../components/footer.html").then((r) => r.text()),
+          ]).then(([sidebarHtml, footerHtml]) => {
+            document.getElementById("sidebarContainer").innerHTML = sidebarHtml;
+            document.getElementById("footerContainer").innerHTML = footerHtml;
 
-            <!-- PAGE HEADER -->
-            <div class="page-header">
-                <div>
-                    <h1>Organizations</h1>
-                    <p class="page-subtitle">Manage all organizations across the NetFront platform</p>
-                </div>
-                <button id="btnAddOrganization" class="btn-primary">Add Organization</button>
-            </div>
+            // Highlight active sidebar link
+            const currentPage = window.location.pathname.split("/").pop();
+            document.querySelectorAll(".sidebar-link").forEach((link) => {
+              if (link.getAttribute("href").includes(currentPage)) {
+                link.classList.add("active");
+              }
+            });
 
-            <!-- SEARCH BAR (optional, matches Teams) -->
-            <input 
-                type="text" 
-                id="org-search-bar" 
-                class="search-bar"
-                placeholder="Search organizations..."
-            >
+            // 3) Inject page content
+            const pageContent = document.getElementById("pageContent");
+            if (!pageContent) return;
 
-            <!-- ORGANIZATIONS TABLE -->
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th class="sortable" onclick="sortOrganizations('name')">Organization</th>
-                        <th class="sortable" onclick="sortOrganizations('leagueName')">League</th>
-                        <th class="sortable" onclick="sortOrganizations('district')">Conference</th>
-                        <th class="sortable" onclick="sortOrganizations('teamCount')">Teams</th>
-                        <th class="sortable" onclick="sortOrganizations('adminName')">Org Admin</th>
-                        <th class="sortable" onclick="sortOrganizations('isActive')">Status</th>
-                        <th class="actions-col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="organizationsBody"></tbody>
-            </table>
+            pageContent.innerHTML = `
+                        <!-- PAGE HEADER -->
+                        <div class="page-header-block">
+                            <div class="page-header-row">
+                                <div class="page-header-text">
+                                    <h1 class="page-header">Organizations</h1>
+                                    <p class="page-subtext">Manage all organizations across the NetFront platform</p>
+                                </div>
 
-        </div>
-    </div>
+                                <button id="btnAddOrganization" class="btn-primary nf-btn org-add-btn">
+                                    +Add Organization
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- SEARCH BAR -->
+                        <div class="org-toolbar">
+                            <input 
+                                type="text" 
+                                id="org-search-bar" 
+                                class="org-search-input"
+                                placeholder="🔍 Search organizations..."
+                            />
+                        </div>
+
+                        <!-- TABLE -->
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" onclick="sortOrganizations('name')">Organization</th>
+                                        <th class="sortable" onclick="sortOrganizations('leagueName')">League</th>
+                                        <th class="sortable" onclick="sortOrganizations('district')">Conference</th>
+                                        <th class="sortable" onclick="sortOrganizations('teamCount')">Teams</th>
+                                        <th class="sortable" onclick="sortOrganizations('adminName')">Org Admin</th>
+                                        <th class="sortable" onclick="sortOrganizations('isActive')">Status</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="organizationsBody"></tbody>
+                            </table>
+                         </div>   
+                    `;
+
+            document.dispatchEvent(new Event("nf-page-ready"));
+          });
+        });
+    </script>
+
+    <!-- =========================================================
+         MODALS (OUTSIDE LAYOUT)
+    ========================================================== -->
 
     <!-- ADD / EDIT ORGANIZATION MODAL -->
     <div id="orgModal" class="modal hidden">
-        <div class="modal-content large-modal">
+      <div class="modal-content large-modal">
+        <h2 id="orgModalTitle">Add Organization</h2>
 
-            <h2 id="orgModalTitle">Add Organization</h2>
+        <div class="modal-body">
+          <!-- BASIC INFO -->
+          <div class="form-row">
+            <label>Name</label><input id="org-name" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Abbreviation</label
+            ><input id="org-abbrev" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Street Address</label
+            ><input id="org-street" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>City</label><input id="org-city" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>State</label><input id="org-state" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Zip Code</label><input id="org-zip" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Country</label><input id="org-country" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>District / Conference</label
+            ><input id="org-district" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Mascot</label><input id="org-mascot" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>League</label
+            ><select id="org-league" class="form-field"></select>
+          </div>
 
-            <div class="modal-body">
+          <!-- PRIMARY CONTACT -->
+          <h3 class="full">Primary Contact</h3>
+          <div class="form-row">
+            <label>First Name</label
+            ><input id="org-contact-first" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Last Name</label
+            ><input id="org-contact-last" class="form-field" />
+          </div>
+          <div class="form-row full">
+            <label>Email</label
+            ><input id="org-contact-email" class="form-field" />
+          </div>
 
-                <!-- BASIC INFO -->
-                <div class="form-row">
-                    <label>Name</label>
-                    <input id="org-name" class="form-field" />
-                </div>
+          <!-- BILLING -->
+          <h3 class="full">Billing</h3>
+          <div class="form-row">
+            <label>Billing Street</label
+            ><input id="billing-street" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Billing City</label
+            ><input id="billing-city" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Billing State</label
+            ><input id="billing-state" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Billing Zip</label
+            ><input id="billing-zip" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Billing Contact Name</label
+            ><input id="billing-contact-name" class="form-field" />
+          </div>
+          <div class="form-row">
+            <label>Billing Contact Email</label
+            ><input id="billing-contact-email" class="form-field" />
+          </div>
 
-                <div class="form-row">
-                    <label>Abbreviation</label>
-                    <input id="org-abbrev" class="form-field" />
-                </div>
+          <!-- SYSTEM INFO -->
+          <div id="system-info-section" class="full hidden">
+            <h3 class="full">System Info</h3>
 
-                <div class="form-row">
-                    <label>Street Address</label>
-                    <input id="org-street" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>City</label>
-                    <input id="org-city" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>State</label>
-                    <input id="org-state" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Zip Code</label>
-                    <input id="org-zip" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Country</label>
-                    <input id="org-country" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>District / Conference</label>
-                    <input id="org-district" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Mascot</label>
-                    <input id="org-mascot" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>League</label>
-                    <select id="org-league" class="form-field"></select>
-                </div>
-
-                <!-- PRIMARY CONTACT -->
-                <h3 class="full">Primary Contact</h3>
-
-                <div class="form-row">
-                    <label>First Name</label>
-                    <input id="org-contact-first" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Last Name</label>
-                    <input id="org-contact-last" class="form-field" />
-                </div>
-
-                <div class="form-row full">
-                    <label>Email</label>
-                    <input id="org-contact-email" class="form-field" />
-                </div>
-
-                <!-- BILLING -->
-                <h3 class="full">Billing</h3>
-
-                <div class="form-row">
-                    <label>Billing Street</label>
-                    <input id="billing-street" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Billing City</label>
-                    <input id="billing-city" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Billing State</label>
-                    <input id="billing-state" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Billing Zip</label>
-                    <input id="billing-zip" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Billing Contact Name</label>
-                    <input id="billing-contact-name" class="form-field" />
-                </div>
-
-                <div class="form-row">
-                    <label>Billing Contact Email</label>
-                    <input id="billing-contact-email" class="form-field" />
-                </div>
-
-                <!-- SYSTEM INFO -->
-                <h3 class="full">System Info</h3>
-
-                <div class="form-row">
-                    <label>Created At</label>
-                    <input id="org-created" class="form-field" disabled />
-                </div>
-
-                <div class="form-row">
-                    <label>Updated At</label>
-                    <input id="org-updated" class="form-field" disabled />
-                </div>
-
-                <!-- STATUS -->
-                <h3 class="full">Status</h3>
-
-                <div class="form-row full toggle-row">
-                    <label>Active</label>
-                    <label class="switch">
-                        <input type="checkbox" id="org-active">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-
+            <div class="system-info-line">
+              <strong>Created At:</strong>
+              <span id="org-created"></span>
             </div>
 
-            <div class="modal-actions">
-                <button class="btn-secondary" id="btnCancelOrg">Cancel</button>
-                <button class="btn-primary" id="btnSaveOrg">Save</button>
+            <div class="system-info-line">
+              <strong>Updated At:</strong>
+              <span id="org-updated"></span>
             </div>
+          </div>
 
+          <!-- STATUS -->
+          <h3 class="full">Status</h3>
+          <div class="form-row full toggle-row">
+            <label>Active</label>
+            <label class="switch">
+              <input type="checkbox" id="org-active" />
+              <span class="slider round"></span>
+            </label>
+          </div>
         </div>
+
+        <div class="modal-actions">
+          <button class="btn-secondary" id="btnCancelOrg">Cancel</button>
+          <button class="btn-primary" id="btnSaveOrg">Save</button>
+        </div>
+      </div>
     </div>
 
-    <!-- DELETE MODAL -->
+    <!-- DELETE CONFIRMATION MODAL -->
     <div id="deleteModal" class="modal hidden">
-        <div class="modal-content small">
-            <h2>Delete Organization</h2>
-            <p>Are you sure you want to delete this organization?</p>
-
-            <div class="modal-actions">
-                <button class="btn-secondary" id="btnCancelDelete">Cancel</button>
-                <button class="btn-danger" id="btnConfirmDelete">Delete</button>
-            </div>
+      <div class="modal-content small">
+        <h2>Delete Organization</h2>
+        <p>Are you sure you want to delete this organization?</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" id="btnCancelDelete">Cancel</button>
+          <button class="btn-danger" id="btnConfirmDelete">Delete</button>
         </div>
+      </div>
     </div>
 
-    <!-- SCRIPTS -->
-    <script src="../js/sidebar-loader.js"></script>
-    <script>loadSidebar("organizations.html");</script>
-
+    <!-- PAGE JS -->
     <script src="../api/org-api.js"></script>
     <script src="../js/organizations.js"></script>
-
-</body>
+  </body>
 </html>

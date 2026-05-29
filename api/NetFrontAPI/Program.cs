@@ -27,7 +27,7 @@ var host = new HostBuilder()
     })
     .ConfigureServices((context, services) =>
     {
-        var connectionString = context.Configuration.GetConnectionString("SqlConnection");
+        var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
 
         services.AddScoped<IDbConnection>(sp =>
             new SqlConnection(connectionString));
@@ -40,7 +40,8 @@ var host = new HostBuilder()
         services.AddScoped<ISeasonsRepository, SeasonsRepository>();
         services.AddScoped<IPlayersRepository, PlayersRepository>();
         services.AddScoped<IRosterEntriesRepository, RosterEntriesRepository>();
-
+        services.AddScoped<IGameRepository, GameRepository>();
+       
         // Services
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<ILeagueService, LeagueService>();
@@ -49,6 +50,7 @@ var host = new HostBuilder()
         services.AddScoped<ISeasonsService, SeasonsService>();
         services.AddScoped<IPlayersService, PlayersService>();
         services.AddScoped<IRosterEntriesService, RosterEntriesService>();
+        services.AddScoped<IGameService, GameService>();
     })
     .Build();
 

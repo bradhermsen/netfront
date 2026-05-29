@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teams | NetFront Admin</title>
 
     <link rel="stylesheet" href="../css/global.css" />
@@ -10,50 +9,52 @@
 </head>
 
 <body>
-    <div class="layout">
 
-        <!-- SIDEBAR -->
-        <div id="sidebarContainer"></div>
+    <!-- LAYOUT -->
+    <div id="layoutContainer"></div>
 
-        <!-- MAIN CONTENT -->
-        <div class="main-content">
+    <script>
+        fetch("../components/layout.html")
+            .then(res => res.text())
+            .then(html => {
+                document.getElementById("layoutContainer").innerHTML = html;
 
-            <!-- PAGE HEADER -->
-            <div class="page-header">
-                <h1>Teams</h1>
-                <button id="btnAddTeam" class="btn-primary">Add Team</button>
-            </div>
+                // Inject page content
+                document.getElementById("pageContent").innerHTML = `
+                    <h1 class="page-header">Teams</h1>
 
-            <!-- SEARCH BAR -->
-            <input 
-                type="text" 
-                id="teams-search-bar" 
-                class="search-bar"
-                placeholder="Search teams..."
-            >
+                    <input 
+                        type="text" 
+                        id="teams-search-bar" 
+                        class="global-search"
+                        placeholder="Search teams..."
+                    >
 
-            <!-- TEAMS TABLE -->
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th class="sortable" onclick="sortTeams('name')">Team Name</th>
-                        <th class="sortable" onclick="sortTeams('organizationName')">Organization</th>
-                        <th class="sortable" onclick="sortTeams('levelName')">Level</th>
-                        <th class="sortable" onclick="sortTeams('seasonName')">Season</th>
-                        <th class="sortable" onclick="sortTeams('rosterCount')">Roster</th>
-                        <th class="sortable" onclick="sortTeams('headCoachName')">Head Coach</th>
-                        <th class="access-codes-header">Access Codes</th>
-                        <th class="sortable" onclick="sortTeams('isActive')">Active</th>
-                        <th class="actions-col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="teamsBody"></tbody>
-            </table>
+                    <button id="btnAddTeam" class="btn-primary nf-btn">Add Team</button>
 
-        </div>
-    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTeams('name')">Team Name</th>
+                                <th class="sortable" onclick="sortTeams('organizationName')">Organization</th>
+                                <th class="sortable" onclick="sortTeams('levelName')">Level</th>
+                                <th class="sortable" onclick="sortTeams('seasonName')">Season</th>
+                                <th class="sortable" onclick="sortTeams('rosterCount')">Roster</th>
+                                <th class="sortable" onclick="sortTeams('headCoachName')">Head Coach</th>
+                                <th>Access Codes</th>
+                                <th class="sortable" onclick="sortTeams('isActive')">Active</th>
+                                <th class="actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamsBody"></tbody>
+                    </table>
+                `;
+            });
+    </script>
 
-    <!-- ADD / EDIT TEAM MODAL -->
+    <!-- ============================
+         ADD / EDIT TEAM MODAL
+    ============================= -->
     <div id="teamModal" class="modal hidden">
         <div class="modal-content">
             <h2 id="teamModalTitle">Add Team</h2>
@@ -95,24 +96,20 @@
                     <label>Notes</label>
                     <textarea id="team-notes"></textarea>
 
-                    <!-- ACCESS CODE FIELDS -->
                     <label>Scorekeeper Code</label>
                     <input id="team-score-code" type="text" />
 
                     <label>Stat Manager Code</label>
                     <input id="team-stat-code" type="text" />
-
-
                 </div>
 
-                <!-- FULL WIDTH: GENERATE CODES BUTTON -->
+                <!-- FULL WIDTH -->
                 <div class="form-col-full">
-                    <button id="btnGenerateCodes" class="generate-codes-btn">
+                    <button id="btnGenerateCodes" class="btn-primary nf-btn">
                         Generate Access Codes
                     </button>
                 </div>
 
-                <!-- FULL WIDTH: TOGGLES -->
                 <div class="form-col-full">
                     <div class="form-row toggle-row mt-2">
                         <label>Active</label>
@@ -153,10 +150,7 @@
         </div>
     </div>
 
-    <!-- LOAD SCRIPTS -->
-    <script src="../js/sidebar-loader.js"></script>
-    <script>loadSidebar("teams.html");</script>
-
+    <!-- PAGE JS -->
     <script src="../api/team-api.js"></script>
     <script src="../js/teams.js"></script>
 

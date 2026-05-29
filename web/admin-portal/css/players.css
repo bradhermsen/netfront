@@ -1,0 +1,25 @@
+/* Players Page — Page-specific only */
+
+.player-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.player-status-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.player-status-active {
+  background: #0f5132;
+  color: #d1e7dd;
+}
+
+.player-status-inactive {
+  background: #842029;
+  color: #f8d7da;
+}

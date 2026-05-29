@@ -23,7 +23,7 @@ namespace NetFrontAPI.Repositories
         {
             var sql = @"
                 SELECT 
-                    t.Id,
+                    t.Id AS TeamId,
                     t.Name,
                     o.Name AS OrganizationName,
                     l.Name AS LevelName,
@@ -50,7 +50,7 @@ namespace NetFrontAPI.Repositories
         {
             var sql = @"
                 SELECT 
-                    t.Id,
+                    t.Id AS TeamId,
                     t.OrganizationId,
                     o.Name AS OrganizationName,
                     t.LevelId,

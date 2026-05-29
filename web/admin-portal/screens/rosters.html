@@ -9,63 +9,86 @@
 </head>
 
 <body>
-    <div class="layout">
-        <div id="sidebarContainer"></div>
 
-        <div class="main-content">
-            <h1 class="page-header">Team Rosters</h1>
+    <!-- LAYOUT -->
+    <div id="layoutContainer"></div>
 
-            <table class="data-table" id="rosterTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Player Name</th>
-                        <th>Pos</th>
-                        <th>Grade</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="rosterBody"></tbody>
-            </table>
-        </div>
-    </div>
+    <script>
+        fetch("../components/layout.html")
+            .then(res => res.text())
+            .then(html => {
+                document.getElementById("layoutContainer").innerHTML = html;
 
-    <!-- Edit Modal -->
-    <div id="editPlayerModal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Edit Roster Entry</h2>
+                // Inject page content
+                document.getElementById("pageContent").innerHTML = `
+                    <h1 class="page-header">Team Rosters</h1>
 
-            <label>Jersey Number</label>
-            <input id="editJersey" type="number" class="input-text" />
+                    <div id="globalRosterControls"></div>
 
-            <label>Position</label>
-            <input id="editPosition" type="text" class="input-text" />
+                    <table class="data-table" id="teamsRosterTable">
+                        <thead>
+                            <tr>
+                                <th>Team Name</th>
+                                <th>Organization</th>
+                                <th>Roster Count</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamsRosterBody"></tbody>
+                    </table>
+                `;
+            });
+    </script>
 
-            <label>Grade</label>
-            <input id="editGrade" type="number" class="input-text" />
+    <!-- ============================
+         ADD / EDIT ROSTER ENTRY MODAL
+    ============================= -->
+    <div id="rosterModal" class="modal hidden">
+        <div class="modal-content modal-dark">
+            <h2 id="rosterModalTitle">Edit Roster Entry</h2>
 
-            <label>Status</label>
-            <select id="editStatus" class="input-select">
-                <option value="Active">Active</option>
-                <option value="Scratched">Scratched</option>
-            </select>
+            <div class="modal-body">
 
-            <label>Notes</label>
-            <textarea id="editNotes" class="input-text"></textarea>
+                <label>Player</label>
+                <select id="rosterPlayerId" class="form-select"></select>
+
+                <label>Jersey Number</label>
+                <input id="rosterJersey" type="number" class="form-control" />
+
+                <label>Position</label>
+                <input id="rosterPosition" type="text" class="form-control" />
+
+                <label>Status</label>
+                <select id="rosterStatus" class="form-select">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+
+            </div>
 
             <div class="modal-actions">
-                <button id="editPlayerSave" class="btn-primary">Save</button>
-                <button class="btn-secondary modal-close">Cancel</button>
+                <button class="btn-secondary nf-btn modal-close">Cancel</button>
+                <button id="saveRosterBtn" class="btn-primary nf-btn">Save</button>
             </div>
         </div>
     </div>
 
-    <!-- Sidebar Loader -->
-    <script src="../js/sidebar-loader.js"></script>
-    <script>loadSidebar();</script>
+    <!-- DELETE ROSTER ENTRY MODAL -->
+    <div id="deleteRosterModal" class="modal hidden">
+        <div class="modal-content small modal-dark">
+            <h2>Delete Roster Entry</h2>
+            <p>Are you sure you want to remove this player from the roster?</p>
 
-    <!-- Page Logic -->
+            <div class="modal-actions">
+                <button class="btn-secondary nf-btn modal-close">Cancel</button>
+                <button id="confirmDeleteRosterBtn" class="btn-danger nf-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE JS -->
     <script src="../js/rosters.js"></script>
+
 </body>
 </html>

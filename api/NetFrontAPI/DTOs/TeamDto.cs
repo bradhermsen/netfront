@@ -9,8 +9,9 @@ namespace NetFrontAPI.DTOs
         public Guid LevelId { get; set; }
         public Guid SeasonId { get; set; }
 
-        public string Name { get; set; }
-        public bool IsExternal { get; set; }
+        public string? Name { get; set; }
+        public string? Gender { get; set; }
+        public string? Abbreviation { get; set; }
 
         public string? HeadCoachName { get; set; }
         public string? AssistantCoach1Name { get; set; }
@@ -18,15 +19,11 @@ namespace NetFrontAPI.DTOs
         public string? AssistantCoach3Name { get; set; }
         public string? AssistantCoach4Name { get; set; }
 
+        public string? Notes { get; set; }
         public string? ScorekeeperCode { get; set; }
         public string? StatManagerCode { get; set; }
 
-        public string? Gender { get; set; }
-        public string? Abbreviation { get; set; }
-        public string? Notes { get; set; }
-
-        public int? SortOrder { get; set; }
+        public bool IsExternal { get; set; }
         public bool IsActive { get; set; }
-        public DateTime UpdatedAt { get; set; }
     }
 }

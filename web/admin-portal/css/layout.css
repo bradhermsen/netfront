@@ -1,0 +1,47 @@
+/* ===== GLOBAL LAYOUT WRAPPER ===== */
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #0b1424; /* your dark navy */
+}
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  flex: 1;
+  padding: 30px;
+  background-color: #0b1424;
+  color: #fff;
+}
+
+/* Page header */
+.page-header {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+/* ===== FOOTER ===== */
+#footerContainer {
+  background-color: #0b1424;
+  color: #aaa;
+  padding: 15px;
+  text-align: center;
+  border-top: 1px solid #1f2a40;
+}
+.footer {
+  background-color: #0b1424;
+  color: #aaa;
+  padding: 15px;
+  text-align: center;
+  border-top: 1px solid #1f2a40;
+}
+#header {
+  background-color: #0b1424;
+  padding: 20px;
+  border-bottom: 1px solid #1f2a40;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 22px;
+  color: #fff;
+}

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using NetFrontAPI.Models;
 using NetFrontAPI.DTOs;
 using NetFrontAPI.Repositories;
 
@@ -8,26 +9,21 @@ namespace NetFrontAPI.Services
 {
     public class PlayersService : IPlayersService
     {
-        private readonly IPlayersRepository _repository;
+        private readonly IPlayersRepository _repo;
 
-        public PlayersService(IPlayersRepository repository)
+        public PlayersService(IPlayersRepository repo)
         {
-            _repository = repository;
+            _repo = repo;
         }
 
-        public Task<IEnumerable<PlayerListItemDto>> GetAllAsync()
-            => _repository.GetAllAsync();
+        public Task<IEnumerable<Player>> GetAllAsync() => _repo.GetAllAsync();
+        public Task<Player?> GetByIdAsync(Guid id) => _repo.GetByIdAsync(id);
 
-        public Task<PlayerDto?> GetByIdAsync(Guid id)
-            => _repository.GetByIdAsync(id);
+        // NEW
+        public Task<IEnumerable<PlayerDto>> GetAllDtoAsync() => _repo.GetAllDtoAsync();
 
-        public Task<Guid> CreateAsync(CreatePlayerDto dto)
-            => _repository.CreateAsync(dto);
-
-        public Task UpdateAsync(Guid id, UpdatePlayerDto dto)
-            => _repository.UpdateAsync(id, dto);
-
-        public Task DeleteAsync(Guid id)
-            => _repository.DeleteAsync(id);
+        public Task<Guid> CreateAsync(CreatePlayerDto dto) => _repo.CreateAsync(dto);
+        public Task UpdateAsync(Guid id, UpdatePlayerDto dto) => _repo.UpdateAsync(id, dto);
+        public Task DeleteAsync(Guid id) => _repo.DeleteAsync(id);
     }
 }

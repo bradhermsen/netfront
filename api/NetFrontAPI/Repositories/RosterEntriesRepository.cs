@@ -4,106 +4,147 @@ using System.Data;
 using System.Threading.Tasks;
 using Dapper;
 using NetFrontAPI.DTOs;
+using NetFrontAPI.Models;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 
 namespace NetFrontAPI.Repositories
 {
     public class RosterEntriesRepository : IRosterEntriesRepository
     {
-        private readonly IDbConnection _db;
+        private readonly string _connectionString;
 
-        public RosterEntriesRepository(IDbConnection db)
+        public RosterEntriesRepository(IConfiguration config)
         {
-            _db = db;
+            _connectionString = config.GetConnectionString("DefaultConnection");
         }
 
-        // =========================================================
-        // GET ROSTER BY TEAM
-        // =========================================================
-        public async Task<IEnumerable<RosterEntryDto>> GetByTeamIdAsync(Guid teamId)
-        {
-            var sql = @"
-                SELECT 
-                    re.Id AS RosterEntryId,
-                    re.TeamId,
-                    re.PlayerId,
-
-                    -- Player info
-                    p.FirstName,
-                    p.LastName,
-                    p.FullName,
-
-                    -- Roster info
-                    re.JerseyNumber,
-                    re.Position,
-                    re.Shoots,
-                    re.Status,
-                    re.LineNumber,
-                    re.Grade,
-                    re.Notes,
-
-                    -- Flags
-                    re.IsCaptain,
-                    re.IsAssistantCaptain,
-                    re.IsGoalie,
-                    re.IsActive,
-
-                    -- System
-                    re.CreatedAt,
-                    re.UpdatedAt
-
-                FROM RosterEntries re
-                JOIN Players p ON re.PlayerId = p.PlayerId
-                WHERE re.TeamId = @TeamId
-                ORDER BY 
-                    CASE WHEN re.IsGoalie = 1 THEN 0 ELSE 1 END,  -- Goalies first
-                    re.JerseyNumber,
-                    p.LastName;
-            ";
-
-            return await _db.QueryAsync<RosterEntryDto>(sql, new { TeamId = teamId });
-        }
+        private IDbConnection Connection => new SqlConnection(_connectionString);
 
         // =========================================================
-        // GET BY ID
+        // GET ROSTER FOR TEAM (Dapper JOIN)
         // =========================================================
-        public async Task<RosterEntryDto?> GetByIdAsync(Guid id)
+        public async Task<IEnumerable<RosterEntry>> GetByTeamIdAsync(Guid teamId)
         {
             var sql = @"
                 SELECT 
-                    re.Id AS RosterEntryId,
-                    re.TeamId,
-                    re.PlayerId,
+                    -- Roster Entry
+                    r.Id,
+                    r.TeamId,
+                    r.PlayerId,
+                    r.JerseyNumber,
+                    r.Position,
+                    r.Shoots,
+                    r.Status,
+                    r.LineNumber,
+                    r.Grade,
+                    r.Notes,
+                    r.IsCaptain,
+                    r.IsAssistantCaptain,
+                    r.IsGoalie,
+                    r.IsActive,
+                    r.CreatedAt,
+                    r.UpdatedAt,
 
+                    -- Player
+                    p.PlayerId AS PlayerId,
                     p.FirstName,
                     p.LastName,
                     p.FullName,
-
-                    re.JerseyNumber,
-                    re.Position,
-                    re.Shoots,
-                    re.Status,
-                    re.LineNumber,
-                    re.Grade,
-                    re.Notes,
-
-                    re.IsCaptain,
-                    re.IsAssistantCaptain,
-                    re.IsGoalie,
-                    re.IsActive,
-
-                    re.CreatedAt,
-                    re.UpdatedAt
-
-                FROM RosterEntries re
-                JOIN Players p ON re.PlayerId = p.PlayerId
-                WHERE re.Id = @Id;
+                    p.Position AS Position,
+                    p.Shoots AS Shoots,
+                    p.GraduationYear AS PlayerGrade
+                FROM RosterEntries r
+                INNER JOIN Players p ON p.PlayerId = r.PlayerId
+                WHERE r.TeamId = @TeamId
+                ORDER BY r.JerseyNumber ASC;
             ";
 
-            return await _db.QueryFirstOrDefaultAsync<RosterEntryDto>(sql, new { Id = id });
+            using var conn = Connection;
+
+            var lookup = new Dictionary<Guid, RosterEntry>();
+
+            var result = await conn.QueryAsync<RosterEntry, Player, RosterEntry>(
+                sql,
+                (r, p) =>
+                {
+                    if (!lookup.TryGetValue(r.Id, out var entry))
+                    {
+                        entry = r;
+                        lookup.Add(entry.Id, entry);
+                    }
+
+                    entry.Player = p;
+                    return entry;
+                },
+                new { TeamId = teamId },
+                splitOn: "PlayerId"
+            );
+
+            return lookup.Values;
         }
 
         // =========================================================
-        // CREATE
+        // GET SINGLE ROSTER ENTRY
+        // =========================================================
+        public async Task<RosterEntry?> GetByIdAsync(Guid id)
+        {
+            var sql = @"
+                SELECT 
+                    -- Roster Entry
+                    r.Id,
+                    r.TeamId,
+                    r.PlayerId,
+                    r.JerseyNumber,
+                    r.Position,
+                    r.Shoots,
+                    r.Status,
+                    r.LineNumber,
+                    r.Grade,
+                    r.Notes,
+                    r.IsCaptain,
+                    r.IsAssistantCaptain,
+                    r.IsGoalie,
+                    r.IsActive,
+                    r.CreatedAt,
+                    r.UpdatedAt,
+
+                    -- Player
+                    p.PlayerId AS PlayerId,
+                    p.FirstName,
+                    p.LastName,
+                    p.FullName,
+                    p.Position AS PlayerPosition,
+                    p.Shoots AS PlayerShoots,
+                    p.GraduationYear AS PlayerGrade
+                FROM RosterEntries r
+                INNER JOIN Players p ON p.PlayerId = r.PlayerId
+                WHERE r.Id = @Id;
+            ";
+
+            using var conn = Connection;
+
+            RosterEntry? entry = null;
+
+            await conn.QueryAsync<RosterEntry, Player, RosterEntry>(
+                sql,
+                (r, p) =>
+                {
+                    if (entry == null)
+                        entry = r;
+
+                    entry.Player = p;
+                    return entry;
+                },
+                new { Id = id },
+                splitOn: "PlayerId"
+            );
+
+            return entry;
+        }
+
+        // =========================================================
+        // CREATE ROSTER ENTRY
         // =========================================================
         public async Task<Guid> CreateAsync(CreateRosterEntryDto dto)
         {
@@ -111,40 +152,20 @@ namespace NetFrontAPI.Repositories
 
             var sql = @"
                 INSERT INTO RosterEntries (
-                    Id,
-                    TeamId,
-                    PlayerId,
-                    JerseyNumber,
-                    Position,
-                    Shoots,
-                    Status,
-                    LineNumber,
-                    Grade,
-                    Notes,
-                    IsCaptain,
-                    IsAssistantCaptain,
-                    IsGoalie,
-                    IsActive
+                    Id, TeamId, PlayerId, JerseyNumber, Position, Shoots, Status,
+                    LineNumber, Grade, Notes, IsCaptain, IsAssistantCaptain,
+                    IsGoalie, IsActive, CreatedAt, UpdatedAt
                 )
                 VALUES (
-                    @Id,
-                    @TeamId,
-                    @PlayerId,
-                    @JerseyNumber,
-                    @Position,
-                    @Shoots,
-                    @Status,
-                    @LineNumber,
-                    @Grade,
-                    @Notes,
-                    @IsCaptain,
-                    @IsAssistantCaptain,
-                    @IsGoalie,
-                    @IsActive
+                    @Id, @TeamId, @PlayerId, @JerseyNumber, @Position, @Shoots, @Status,
+                    @LineNumber, @Grade, @Notes, @IsCaptain, @IsAssistantCaptain,
+                    @IsGoalie, @IsActive, @CreatedAt, @UpdatedAt
                 );
             ";
 
-            await _db.ExecuteAsync(sql, new
+            using var conn = Connection;
+
+            await conn.ExecuteAsync(sql, new
             {
                 Id = id,
                 dto.TeamId,
@@ -159,14 +180,16 @@ namespace NetFrontAPI.Repositories
                 dto.IsCaptain,
                 dto.IsAssistantCaptain,
                 dto.IsGoalie,
-                dto.IsActive
+                dto.IsActive,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             });
 
             return id;
         }
 
         // =========================================================
-        // UPDATE
+        // UPDATE ROSTER ENTRY
         // =========================================================
         public async Task UpdateAsync(Guid id, UpdateRosterEntryDto dto)
         {
@@ -184,11 +207,13 @@ namespace NetFrontAPI.Repositories
                     IsAssistantCaptain = @IsAssistantCaptain,
                     IsGoalie = @IsGoalie,
                     IsActive = @IsActive,
-                    UpdatedAt = SYSUTCDATETIME()
+                    UpdatedAt = @UpdatedAt
                 WHERE Id = @Id;
             ";
 
-            await _db.ExecuteAsync(sql, new
+            using var conn = Connection;
+
+            await conn.ExecuteAsync(sql, new
             {
                 Id = id,
                 dto.JerseyNumber,
@@ -201,17 +226,21 @@ namespace NetFrontAPI.Repositories
                 dto.IsCaptain,
                 dto.IsAssistantCaptain,
                 dto.IsGoalie,
-                dto.IsActive
+                dto.IsActive,
+                UpdatedAt = DateTime.UtcNow
             });
         }
 
         // =========================================================
-        // DELETE
+        // DELETE ROSTER ENTRY
         // =========================================================
         public async Task DeleteAsync(Guid id)
         {
-            var sql = @"DELETE FROM RosterEntries WHERE Id = @Id;";
-            await _db.ExecuteAsync(sql, new { Id = id });
+            var sql = "DELETE FROM RosterEntries WHERE Id = @Id;";
+
+            using var conn = Connection;
+
+            await conn.ExecuteAsync(sql, new { Id = id });
         }
     }
 }

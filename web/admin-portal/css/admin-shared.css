@@ -1,0 +1,289 @@
+/* =========================================================
+   ADMIN PORTAL — SHARED UI COMPONENTS
+   Used by Organizations, Teams, Schedules, Rosters, etc.
+========================================================= */
+
+/* ---------------------------------------
+   TABLE WRAPPER
+--------------------------------------- */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 20px;
+  border: 1px solid var(--nf-border-light);
+  border-radius: 6px;
+}
+
+/* ---------------------------------------
+   DATA TABLE BASE STYLES
+--------------------------------------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto; /* allow natural column sizing */
+  background: var(--nf-bg);
+  color: var(--nf-text);
+}
+
+.data-table thead th {
+  background: var(--nf-bg-lighter);
+  color: var(--nf-accent);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  padding: 10px 12px;
+  border: 1px solid var(--nf-border-light);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.data-table tbody td {
+  background: var(--nf-bg);
+  padding: 10px 12px;
+  border: 1px solid var(--nf-border-light);
+  text-align: center;
+  vertical-align: middle;
+  word-wrap: break-word;
+}
+
+.data-table tbody tr:hover {
+  background: #111a2e;
+}
+
+.data-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.data-table th.sortable:hover {
+  color: var(--nf-accent);
+}
+
+/* ---------------------------------------
+   PAGE HEADER BLOCK
+--------------------------------------- */
+.page-header-block {
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+}
+
+.page-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-header {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.page-subtext {
+  margin-top: -15px;
+  font-size: 0.9rem;
+  color: var(--nf-text-muted);
+}
+
+/* ---------------------------------------
+   SHARED BUTTON SYSTEM
+--------------------------------------- */
+
+/* Primary CTA (Add buttons) */
+.nf-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: var(--nf-accent);
+  color: #fff;
+}
+
+.nf-btn:hover {
+  opacity: 0.85;
+}
+
+/* Secondary CTA */
+.btn-secondary {
+  background-color: var(--nf-bg-light);
+  color: #fff;
+  border: 1px solid var(--nf-border-light);
+}
+
+.btn-secondary:hover {
+  opacity: 0.85;
+}
+
+/* Action buttons inside tables */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+  background-color: #1a2740;
+  color: #cfd8dc;
+}
+
+.action-btn:hover {
+  background-color: #223354;
+  transform: translateY(-1px);
+}
+
+.action-btn i {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.edit-btn {
+  color: #90caf9;
+}
+
+.delete-btn {
+  color: #ef9a9a;
+}
+
+.delete-btn:hover {
+  background-color: #2b1a1a;
+}
+
+/* ---------------------------------------
+   STATUS PILLS
+--------------------------------------- */
+.status-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.status-pill.active {
+  background-color: #0f5132;
+  color: #d1e7dd;
+}
+
+.status-pill.inactive {
+  background-color: #455a64;
+  color: #cfd8dc;
+}
+
+/* ---------------------------------------
+   SEARCH BAR + TOOLBAR
+--------------------------------------- */
+.org-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.org-search-input {
+  width: 500px;
+  background: var(--nf-bg);
+  color: var(--nf-text);
+  border: 2px solid var(--nf-accent);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.org-search-input::placeholder {
+  color: var(--nf-text-muted);
+}
+
+/* ---------------------------------------
+   ACTIONS COLUMN
+--------------------------------------- */
+.actions-col {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  align-items: center;
+}
+
+/* Ensure Actions column has enough width for all buttons */
+.data-table th:last-child,
+.data-table td:last-child {
+  width: auto;
+  min-width: 220px;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .data-table th:last-child,
+  .data-table td:last-child {
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .data-table th:last-child,
+  .data-table td:last-child {
+    min-width: 180px;
+  }
+}
+
+/* ---------------------------------------
+   STACKED ACCESS CODES
+--------------------------------------- */
+.table-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stack-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stack-label {
+  font-size: 0.75rem;
+  color: var(--nf-text-muted);
+}
+
+.stack-orange {
+  color: #ff9f43;
+  font-weight: 600;
+}
+
+.stack-blue {
+  color: #4dabf7;
+  font-weight: 600;
+}
+.filter-select {
+  background-color: var(--nf-darkest);
+  color: var(--nf-light); /* <-- THIS fixes the hidden text */
+  border: 1px solid var(--nf-border-light);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.filter-select option {
+  background-color: var(--nf-darkest);
+  color: var(--nf-light); /* <-- Ensures dropdown list text is visible */
+}

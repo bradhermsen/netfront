@@ -1,14 +1,20 @@
 /* =========================================================
-   ORGANIZATIONS PAGE — PAGE-SPECIFIC STYLES
+   ORGANIZATIONS PAGE — PAGE-SPECIFIC ONLY
+   (All shared components live in admin-shared.css)
 ========================================================= */
 
-/* Action buttons inside table rows */
+/* ---------------------------------------
+   ACTION BUTTONS WITHIN TABLE ROWS
+--------------------------------------- */
 .org-actions {
   display: flex;
   gap: 10px;
 }
 
-/* Status badges */
+/* ---------------------------------------
+   STATUS BADGES (ORG-SPECIFIC)
+   These override shared badges only if needed
+--------------------------------------- */
 .status-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -16,45 +22,71 @@
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 80px;
+  text-align: center;
 }
 
 .status-active {
-  background-color: #1e5631;
-  color: #ffffff;
+  background-color: #0f5132;
+  color: #d1e7dd;
 }
 
 .status-inactive {
-  background-color: #555;
-  color: #ccc;
+  background-color: #455a64;
+  color: #cfd8dc;
 }
 
-/* =========================================================
-   ORGANIZATIONS TOOLBAR (Search + Button Row)
-========================================================= */
-.org-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+/* ---------------------------------------
+   OPTIONAL: Highlight inactive rows
+--------------------------------------- */
+.org-row-inactive {
+  opacity: 0.65;
 }
 
-/* Search bar */
-.org-search-input {
-  width: 500px;
-  background: var(--nf-bg);
+/* ---------------------------------------
+   OPTIONAL: Conference / League text tweaks
+--------------------------------------- */
+.org-league,
+.org-conference {
+  font-weight: 600;
   color: var(--nf-text);
-  border: 2px solid var(--nf-accent);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
 }
 
-.org-search-input::placeholder {
+/* ---------------------------------------
+   OPTIONAL: Primary Contact Column
+--------------------------------------- */
+.org-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.org-contact-name {
+  font-weight: 600;
+}
+
+.org-contact-email {
   color: var(--nf-text-muted);
+  font-size: 0.8rem;
 }
 
-/* Add Organization button */
-.org-add-btn {
-  padding: 8px 16px;
-  white-space: nowrap;
+/* ---------------------------------------
+   OPTIONAL: Table cell alignment tweaks
+--------------------------------------- */
+.data-table td.org-name {
+  font-weight: 600;
+  text-align: left;
+}
+
+.data-table td.org-status {
+  font-weight: 600;
+}
+
+/* ---------------------------------------
+   PAGE-SPECIFIC TABLE HOVER (optional)
+--------------------------------------- */
+.data-table tbody tr:hover {
+  background: #111a2e;
 }

@@ -15,6 +15,7 @@ namespace NetFrontAPI.DTOs
         public string? State { get; set; }
 
         public int TeamCount { get; set; }
+        public string? DistrictConference { get; set; }
 
         public string? PrimaryContactFirstName { get; set; }
         public string? PrimaryContactLastName { get; set; }

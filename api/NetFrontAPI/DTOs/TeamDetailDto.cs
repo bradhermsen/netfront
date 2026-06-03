@@ -4,7 +4,7 @@ namespace NetFrontAPI.DTOs
 {
     public class TeamDetailDto
     {
-        public Guid Id { get; set; }
+        public Guid TeamId { get; set; }
         public Guid OrganizationId { get; set; }
         public Guid LevelId { get; set; }
         public Guid SeasonId { get; set; }
@@ -25,5 +25,7 @@ namespace NetFrontAPI.DTOs
 
         public bool IsExternal { get; set; }
         public bool IsActive { get; set; }
+
+        public int RosterCount { get; set; }
     }
 }

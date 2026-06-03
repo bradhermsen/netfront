@@ -31,7 +31,7 @@ SELECT
     o.Country,
     o.StreetAddress,
     o.ZipCode,
-    o.DistrictConference,
+    o.DistrictConference AS DistrictConference,
     o.Mascot,
     o.LeagueId,
     l.Name AS LeagueName,

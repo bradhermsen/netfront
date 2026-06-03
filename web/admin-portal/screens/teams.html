@@ -1,158 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <title>Teams | NetFront Admin</title>
 
     <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/modal.css" />
+    <link rel="stylesheet" href="../css/admin-shared.css" />
     <link rel="stylesheet" href="../css/teams.css" />
-</head>
+  </head>
 
-<body>
-
-    <!-- LAYOUT -->
+  <body>
+    <!-- LAYOUT ROOT (layout-loader injects everything else) -->
     <div id="layoutContainer"></div>
 
+    <!-- =========================================================
+         TEAM MODAL
+    ========================================================== -->
+    <div id="teamModal" class="modal">
+      <div class="modal-content modal-dark large-modal">
+        <div class="modal-header">
+          <h2 id="teamModalTitle">Add Team</h2>
+        </div>
+
+        <div class="modal-body two-col-form">
+          <div class="form-col">
+            <label>Team Name</label>
+            <input id="team-name" type="text" />
+
+            <label>Abbreviation</label>
+            <input
+              id="team-abbreviation"
+              type="text"
+              placeholder="e.g., WSHS-VB"
+            />
+
+            <label>Organization</label>
+            <select id="team-org"></select>
+
+            <label>Level</label>
+            <select id="team-level"></select>
+
+            <label>Season</label>
+            <select id="team-season"></select>
+
+            <label>Head Coach</label>
+            <input id="team-head-coach" type="text" />
+          </div>
+
+          <div class="form-col">
+            <label>Assistant Coach 1</label>
+            <input id="team-asst1" type="text" />
+
+            <label>Assistant Coach 2</label>
+            <input id="team-asst2" type="text" />
+
+            <label>Assistant Coach 3</label>
+            <input id="team-asst3" type="text" />
+
+            <label>Assistant Coach 4</label>
+            <input id="team-asst4" type="text" />
+
+            <label>Notes</label>
+            <textarea id="team-notes"></textarea>
+
+            <label>Scorekeeper Code</label>
+            <input id="team-score-code" type="text" />
+
+            <label>Stat Manager Code</label>
+            <input id="team-stat-code" type="text" />
+          </div>
+
+          <div class="form-col-full">
+            <button id="btnGenerateCodes" class="btn-primary nf-btn">
+              Generate Access Codes
+            </button>
+          </div>
+
+          <div class="form-col-full">
+            <div class="form-row toggle-row mt-2">
+              <label>Active</label>
+              <label class="switch">
+                <input type="checkbox" id="team-active" />
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="form-row toggle-row mt-1">
+              <label>External Team</label>
+              <label class="switch">
+                <input type="checkbox" id="team-external" />
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btnCancelTeam" class="btn-secondary">Cancel</button>
+          <button id="btnSaveTeam" class="btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         DELETE TEAM MODAL
+    ========================================================== -->
+    <div id="teamDeleteModal" class="modal">
+      <div class="modal-content modal-dark small">
+        <div class="modal-header"><h2>Delete Team</h2></div>
+        <div class="modal-body full">
+          <p>Are you sure you want to delete this team?</p>
+        </div>
+        <div class="modal-actions">
+          <button id="btnCancelTeamDelete" class="btn-secondary">Cancel</button>
+          <button id="btnConfirmTeamDelete" class="btn-danger">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="nf-toast" class="nf-toast">Codes generated!</div>
+
+    <!-- =========================================================
+         SHARED LAYOUT LOADER
+    ========================================================== -->
+    <script src="../js/layout-loader.js"></script>
+    <script src="../js/page-content.js"></script>
+
     <script>
-        fetch("../components/layout.html")
-            .then(res => res.text())
-            .then(html => {
-                document.getElementById("layoutContainer").innerHTML = html;
-
-                // Inject page content
-                document.getElementById("pageContent").innerHTML = `
-                    <h1 class="page-header">Teams</h1>
-
-                    <input 
-                        type="text" 
-                        id="teams-search-bar" 
-                        class="global-search"
-                        placeholder="Search teams..."
-                    >
-
-                    <button id="btnAddTeam" class="btn-primary nf-btn">Add Team</button>
-
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th class="sortable" onclick="sortTeams('name')">Team Name</th>
-                                <th class="sortable" onclick="sortTeams('organizationName')">Organization</th>
-                                <th class="sortable" onclick="sortTeams('levelName')">Level</th>
-                                <th class="sortable" onclick="sortTeams('seasonName')">Season</th>
-                                <th class="sortable" onclick="sortTeams('rosterCount')">Roster</th>
-                                <th class="sortable" onclick="sortTeams('headCoachName')">Head Coach</th>
-                                <th>Access Codes</th>
-                                <th class="sortable" onclick="sortTeams('isActive')">Active</th>
-                                <th class="actions-col">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="teamsBody"></tbody>
-                    </table>
-                `;
-            });
+      loadLayout("teams");
     </script>
 
-    <!-- ============================
-         ADD / EDIT TEAM MODAL
-    ============================= -->
-    <div id="teamModal" class="modal hidden">
-        <div class="modal-content">
-            <h2 id="teamModalTitle">Add Team</h2>
-
-            <div class="modal-body two-col-form">
-
-                <!-- LEFT COLUMN -->
-                <div class="form-col">
-                    <label>Team Name</label>
-                    <input id="team-name" type="text" />
-
-                    <label>Organization</label>
-                    <select id="team-org"></select>
-
-                    <label>Level</label>
-                    <select id="team-level"></select>
-
-                    <label>Season</label>
-                    <select id="team-season"></select>
-
-                    <label>Head Coach</label>
-                    <input id="team-head-coach" type="text" />
-                </div>
-
-                <!-- RIGHT COLUMN -->
-                <div class="form-col">
-                    <label>Assistant Coach 1</label>
-                    <input id="team-asst1" type="text" />
-
-                    <label>Assistant Coach 2</label>
-                    <input id="team-asst2" type="text" />
-
-                    <label>Assistant Coach 3</label>
-                    <input id="team-asst3" type="text" />
-
-                    <label>Assistant Coach 4</label>
-                    <input id="team-asst4" type="text" />
-
-                    <label>Notes</label>
-                    <textarea id="team-notes"></textarea>
-
-                    <label>Scorekeeper Code</label>
-                    <input id="team-score-code" type="text" />
-
-                    <label>Stat Manager Code</label>
-                    <input id="team-stat-code" type="text" />
-                </div>
-
-                <!-- FULL WIDTH -->
-                <div class="form-col-full">
-                    <button id="btnGenerateCodes" class="btn-primary nf-btn">
-                        Generate Access Codes
-                    </button>
-                </div>
-
-                <div class="form-col-full">
-                    <div class="form-row toggle-row mt-2">
-                        <label>Active</label>
-                        <label class="switch">
-                            <input type="checkbox" id="team-active" />
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-
-                    <div class="form-row toggle-row mt-1">
-                        <label>External Team</label>
-                        <label class="switch">
-                            <input type="checkbox" id="team-external" />
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="modal-actions">
-                <button id="btnCancelTeam" class="btn-secondary">Cancel</button>
-                <button id="btnSaveTeam" class="btn-primary">Save</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- DELETE TEAM MODAL -->
-    <div id="teamDeleteModal" class="modal hidden">
-        <div class="modal-content small">
-            <h2>Delete Team</h2>
-            <p>Are you sure you want to delete this team?</p>
-
-            <div class="modal-actions">
-                <button id="btnCancelTeamDelete" class="btn-secondary">Cancel</button>
-                <button id="btnConfirmTeamDelete" class="btn-danger">Delete</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- PAGE JS -->
+    <!-- =========================================================
+         PAGE SCRIPTS (MUST BE LAST)
+    ========================================================== -->
+    <script src="../js/config-loader.js"></script>
     <script src="../api/team-api.js"></script>
+    <script src="../js/admin-page.js"></script>
     <script src="../js/teams.js"></script>
-
-</body>
+  </body>
 </html>

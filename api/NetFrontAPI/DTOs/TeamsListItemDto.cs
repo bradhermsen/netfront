@@ -10,11 +10,12 @@ namespace NetFrontAPI.DTOs
         public Guid SeasonId { get; set; }
 
         public string? Name { get; set; }
-        public string? Gender { get; set; }
-
+        public string? Abbreviation { get; set; }
         public string? OrganizationName { get; set; }
         public string? LevelName { get; set; }
         public string? SeasonName { get; set; }
+
+        public int RosterCount { get; set; }
 
         public string? HeadCoachName { get; set; }
         public string? ScorekeeperCode { get; set; }

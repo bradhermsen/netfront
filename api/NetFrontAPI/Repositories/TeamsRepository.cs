@@ -24,7 +24,11 @@ namespace NetFrontAPI.Repositories
             var sql = @"
                 SELECT 
                     t.Id AS TeamId,
+                    t.OrganizationId AS OrganizationId,
+                    t.LevelId AS LevelId,
+                    t.SeasonId AS SeasonId,
                     t.Name,
+                    t.Abbreviation,                     -- ⭐ ADDED
                     o.Name AS OrganizationName,
                     l.Name AS LevelName,
                     s.SeasonName,
@@ -51,14 +55,15 @@ namespace NetFrontAPI.Repositories
             var sql = @"
                 SELECT 
                     t.Id AS TeamId,
-                    t.OrganizationId,
+                    t.OrganizationId AS OrganizationId,
                     o.Name AS OrganizationName,
-                    t.LevelId,
+                    t.LevelId AS LevelId,
                     l.Name AS LevelName,
-                    t.SeasonId,
+                    t.SeasonId AS SeasonId,
                     s.SeasonName,
                     (SELECT COUNT(*) FROM RosterEntries r WHERE r.TeamId = t.Id) AS RosterCount,
                     t.Name,
+                    t.Abbreviation AS Abbreviation,                     
                     t.HeadCoachName,
                     t.AssistantCoach1Name,
                     t.AssistantCoach2Name,
@@ -91,6 +96,7 @@ namespace NetFrontAPI.Repositories
                     LevelId,
                     SeasonId,
                     Name,
+                    Abbreviation,                       -- ⭐ ADDED
                     HeadCoachName,
                     AssistantCoach1Name,
                     AssistantCoach2Name,
@@ -108,6 +114,7 @@ namespace NetFrontAPI.Repositories
                     @LevelId,
                     @SeasonId,
                     @Name,
+                    @Abbreviation,                      -- ⭐ ADDED
                     @HeadCoachName,
                     @AssistantCoach1Name,
                     @AssistantCoach2Name,
@@ -127,6 +134,7 @@ namespace NetFrontAPI.Repositories
                 dto.LevelId,
                 dto.SeasonId,
                 dto.Name,
+                dto.Abbreviation,                      // ⭐ ADDED
                 dto.HeadCoachName,
                 dto.AssistantCoach1Name,
                 dto.AssistantCoach2Name,
@@ -152,6 +160,7 @@ namespace NetFrontAPI.Repositories
                     LevelId = @LevelId,
                     SeasonId = @SeasonId,
                     Name = @Name,
+                    Abbreviation = @Abbreviation,       -- ⭐ ADDED
                     HeadCoachName = @HeadCoachName,
                     AssistantCoach1Name = @AssistantCoach1Name,
                     AssistantCoach2Name = @AssistantCoach2Name,
@@ -171,6 +180,7 @@ namespace NetFrontAPI.Repositories
                 dto.LevelId,
                 dto.SeasonId,
                 dto.Name,
+                dto.Abbreviation,                      
                 dto.HeadCoachName,
                 dto.AssistantCoach1Name,
                 dto.AssistantCoach2Name,

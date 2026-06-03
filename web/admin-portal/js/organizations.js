@@ -1,280 +1,311 @@
-// ===============================
-// PAGE INITIALIZER
-// ===============================
-document.addEventListener("nf-page-ready", () => {
-  // ===============================
-  // DOM ELEMENTS
-  // ===============================
-  const orgModal = document.getElementById("orgModal");
-  const orgModalTitle = document.getElementById("orgModalTitle");
+// =========================================================
+// LOAD LEAGUES (MODAL + FILTER)
+// =========================================================
+async function loadLeagues() {
+  try {
+    const res = await fetch(`${window.apiBase}/leagues`);
+    const leagues = await res.json();
 
-  const btnAddOrganization = document.getElementById("btnAddOrganization");
-  const btnSaveOrg = document.getElementById("btnSaveOrg");
-  const btnCancelOrg = document.getElementById("btnCancelOrg");
-
-  const orgNameInput = document.getElementById("org-name");
-  const orgAbbrevInput = document.getElementById("org-abbrev");
-  const orgStreetInput = document.getElementById("org-street");
-  const orgCityInput = document.getElementById("org-city");
-  const orgStateInput = document.getElementById("org-state");
-  const orgZipInput = document.getElementById("org-zip");
-  const orgCountryInput = document.getElementById("org-country");
-  const orgDistrictInput = document.getElementById("org-district");
-  const orgMascotInput = document.getElementById("org-mascot");
-  const orgLeagueInput = document.getElementById("org-league");
-
-  const orgContactFirstInput = document.getElementById("org-contact-first");
-  const orgContactLastInput = document.getElementById("org-contact-last");
-  const orgContactEmailInput = document.getElementById("org-contact-email");
-
-  const billingStreetInput = document.getElementById("billing-street");
-  const billingCityInput = document.getElementById("billing-city");
-  const billingStateInput = document.getElementById("billing-state");
-  const billingZipInput = document.getElementById("billing-zip");
-  const billingContactNameInput = document.getElementById(
-    "billing-contact-name",
-  );
-  const billingContactEmailInput = document.getElementById(
-    "billing-contact-email",
-  );
-
-  const orgCreatedInput = document.getElementById("org-created");
-  const orgUpdatedInput = document.getElementById("org-updated");
-
-  const orgActiveInput = document.getElementById("org-active");
-
-  const organizationsBody = document.getElementById("organizationsBody");
-
-  let editingId = null;
-  let deleteId = null;
-
-  // ===============================
-  // MODAL CONTROL
-  // ===============================
-  function showModal() {
-    orgModal.classList.remove("hidden");
-  }
-
-  function closeModal() {
-    orgModal.classList.add("hidden");
-    clearForm();
-    editingId = null;
-  }
-
-  btnCancelOrg.addEventListener("click", closeModal);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !orgModal.classList.contains("hidden")) {
-      closeModal();
+    // Modal dropdown
+    const modalSelect = document.getElementById("org-league");
+    if (modalSelect) {
+      modalSelect.innerHTML = `<option value="">Select League</option>`;
+      leagues.forEach((l) => {
+        const opt = document.createElement("option");
+        opt.value = l.leagueId;
+        opt.textContent = l.leagueName;
+        modalSelect.appendChild(opt);
+      });
     }
-  });
 
-  // ===============================
-  // CLEAR FORM
-  // ===============================
-  function clearForm() {
-    orgNameInput.value = "";
-    orgAbbrevInput.value = "";
-    orgStreetInput.value = "";
-    orgCityInput.value = "";
-    orgStateInput.value = "";
-    orgZipInput.value = "";
-    orgCountryInput.value = "";
-    orgDistrictInput.value = "";
-    orgMascotInput.value = "";
-    orgLeagueInput.value = "";
-
-    orgContactFirstInput.value = "";
-    orgContactLastInput.value = "";
-    orgContactEmailInput.value = "";
-
-    billingStreetInput.value = "";
-    billingCityInput.value = "";
-    billingStateInput.value = "";
-    billingZipInput.value = "";
-    billingContactNameInput.value = "";
-    billingContactEmailInput.value = "";
-
-    orgCreatedInput.value = "";
-    orgUpdatedInput.value = "";
-
-    orgActiveInput.checked = true;
+    // Toolbar filter
+    const filterSelect = document.getElementById("filter-league");
+    if (filterSelect) {
+      filterSelect.innerHTML = `<option value="">League: All</option>`;
+      leagues.forEach((l) => {
+        const opt = document.createElement("option");
+        opt.value = l.leagueId;
+        opt.textContent = l.leagueName;
+        filterSelect.appendChild(opt);
+      });
+    }
+  } catch (err) {
+    console.error("Failed to load leagues:", err);
   }
+}
 
-  // ===============================
-  // LOAD ORGANIZATIONS TABLE
-  // ===============================
-  async function loadOrganizations() {
-    const orgs = await OrgApi.getAll();
-    organizationsBody.innerHTML = "";
+// =========================================================
+// LOAD CONFERENCES (FILTER ONLY)
+// =========================================================
+async function loadConferences() {
+  try {
+    const res = await fetch(`${window.apiBase}/organizations/conferences`);
+    const conferences = await res.json();
+
+    const filterSelect = document.getElementById("filter-conference");
+    if (filterSelect) {
+      filterSelect.innerHTML = `<option value="">Conference: All</option>`;
+      conferences.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        filterSelect.appendChild(opt);
+      });
+    }
+  } catch (err) {
+    console.error("Failed to load conferences:", err);
+  }
+}
+
+// =========================================================
+// FILTER + SEARCH LOGIC
+// =========================================================
+function applyOrgFiltersAndSearch() {
+  const tbody = document.getElementById("organizationsBody");
+  if (!tbody) return;
+
+  const searchTerm =
+    (document.getElementById("org-search-bar")?.value || "").toLowerCase();
+
+  const leagueFilter = document.getElementById("filter-league")?.value || "";
+  const confFilter = document.getElementById("filter-conference")?.value || "";
+  const statusFilter = document.getElementById("filter-status")?.value || "";
+
+  Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
+    const rowText = row.textContent.toLowerCase();
+
+    const rowLeague = row.dataset.leagueId || "";
+    const rowConf = row.dataset.conference || "";
+    const rowStatus = row.dataset.status || "";
+
+    const matchesSearch = !searchTerm || rowText.includes(searchTerm);
+    const matchesLeague = !leagueFilter || rowLeague === leagueFilter;
+    const matchesConf = !confFilter || rowConf === confFilter;
+    const matchesStatus = !statusFilter || rowStatus === statusFilter;
+
+    row.style.display =
+      matchesSearch && matchesLeague && matchesConf && matchesStatus
+        ? ""
+        : "none";
+  });
+}
+
+function wireOrgFilterEvents() {
+  const search = document.getElementById("org-search-bar");
+  const league = document.getElementById("filter-league");
+  const conf = document.getElementById("filter-conference");
+  const status = document.getElementById("filter-status");
+
+  if (search) search.addEventListener("input", applyOrgFiltersAndSearch);
+  if (league) league.addEventListener("change", applyOrgFiltersAndSearch);
+  if (conf) conf.addEventListener("change", applyOrgFiltersAndSearch);
+  if (status) status.addEventListener("change", applyOrgFiltersAndSearch);
+}
+
+// =========================================================
+// ADMIN PAGE CONTROLLER
+// =========================================================
+AdminPage.init({
+  tableBodyId: "organizationsBody",
+  searchInputId: "org-search-bar",
+
+  modalId: "orgModal",
+  modalTitleId: "orgModalTitle",
+  addButtonId: "btnAddOrganization",
+  saveButtonId: "btnSaveOrg",
+  cancelButtonId: "btnCancelOrg",
+
+  deleteModalId: "deleteModal",
+  deleteConfirmId: "btnConfirmDelete",
+  deleteCancelId: "btnCancelDelete",
+
+  editHandlerName: "openEditOrganization",
+  deleteHandlerName: "openDeleteOrganization",
+
+  addTitle: "Add Organization",
+  editTitle: "Edit Organization",
+
+  api: OrgApi,
+
+  loadDropdowns: async () => {
+    await Promise.all([loadLeagues(), loadConferences()]);
+    wireOrgFilterEvents();
+  },
+
+  // =========================================================
+  // TABLE RENDERING
+  // =========================================================
+  renderTable: (orgs) => {
+    const body = document.getElementById("organizationsBody");
+    body.innerHTML = "";
 
     orgs.forEach((org) => {
       const row = document.createElement("tr");
 
+      // dataset attributes for filtering
+      row.dataset.leagueId = org.leagueId || "";
+      row.dataset.conference = org.districtConference || "";
+      row.dataset.status = org.isActive ? "active" : "inactive";
+
       row.innerHTML = `
-                <td>${org.name}</td>
-                <td>${org.leagueName ?? ""}</td>
-                <td>${org.districtConference ?? ""}</td>
-                <td>${org.teamCount}</td>
-                <td>${org.primaryContactFirstName ?? ""} ${org.primaryContactLastName ?? ""}</td>
-                <td>
-                    <span class="status-pill ${org.isActive ? "status-active" : "status-inactive"}">
-                        ${org.isActive ? "ACTIVE" : "INACTIVE"}
-                    </span>
-                <td class="actions-col">
-                    <button class="action-btn edit-btn" onclick="openEditModal('${org.organizationId}')">
-                        <i class="fa fa-pencil"></i> Edit
-                    </button>
-                    <button class="action-btn delete-btn" onclick="openDeleteModal('${org.organizationId}')">
-                        <i class="fa fa-trash"></i> Delete
-                    </button>
-                </td>
+        <td>${org.name}</td>
+        <td>${org.leagueName ?? ""}</td>
+        <td>${org.districtConference ?? ""}</td>
+        <td>${org.teamCount ?? 0}</td>
+        <td>${org.primaryContactFirstName ?? ""} ${org.primaryContactLastName ?? ""}</td>
+        <td>${org.isActive ? "Active" : "Inactive"}</td>
+        <td class="actions-col">
+          <button class="action-btn roster-btn">View Teams</button>
+          <button class="action-btn edit-btn">Edit</button>
+          <button class="action-btn delete-btn">Delete</button>
+        </td>
+      `;
 
-            `;
+      // Attach event listeners AFTER row is created
+      const [btnView, btnEdit, btnDelete] = row.querySelectorAll("button");
 
-      organizationsBody.appendChild(row);
-    });
-  }
-
-  // ===============================
-  // LOAD LEAGUES DROPDOWN
-  // ===============================
-  async function loadLeagues() {
-    const response = await fetch("http://localhost:7071/api/leagues");
-    const leagues = await response.json();
-
-    orgLeagueInput.innerHTML = `<option value="">Select League</option>`;
-
-    leagues.forEach((l) => {
-      const option = document.createElement("option");
-      option.value = l.leagueId;
-      option.textContent = l.leagueName;
-      orgLeagueInput.appendChild(option);
-    });
-  }
-
-  // ===============================
-  // OPEN ADD MODAL
-  // ===============================
-  btnAddOrganization.addEventListener("click", () => {
-    editingId = null;
-    orgModalTitle.textContent = "Add Organization";
-    clearForm();
-    showModal();
-  });
-
-  // ===============================
-  // OPEN EDIT MODAL
-  // ===============================
-  window.openEditModal = async function (id) {
-    editingId = id;
-    orgModalTitle.textContent = "Edit Organization";
-
-    const org = await OrgApi.getById(id);
-
-    orgNameInput.value = org.name;
-    orgAbbrevInput.value = org.abbreviation;
-    orgStreetInput.value = org.streetAddress;
-    orgCityInput.value = org.city;
-    orgStateInput.value = org.state;
-    orgZipInput.value = org.zipCode;
-    orgCountryInput.value = org.country;
-    orgDistrictInput.value = org.districtConference;
-    orgMascotInput.value = org.mascot;
-    orgLeagueInput.value = org.leagueId ?? "";
-
-    orgContactFirstInput.value = org.primaryContactFirstName;
-    orgContactLastInput.value = org.primaryContactLastName;
-    orgContactEmailInput.value = org.primaryContactEmail;
-
-    billingStreetInput.value = org.billingStreetAddress;
-    billingCityInput.value = org.billingCity;
-    billingStateInput.value = org.billingState;
-    billingZipInput.value = org.billingZipCode;
-    billingContactNameInput.value = org.billingContactName;
-    billingContactEmailInput.value = org.billingContactEmail;
-
-    orgCreatedInput.value = org.createdAt
-      ? new Date(org.createdAt).toLocaleString()
-      : "";
-    orgUpdatedInput.value = org.updatedAt
-      ? new Date(org.updatedAt).toLocaleString()
-      : "";
-
-    orgActiveInput.checked = org.isActive;
-
-    showModal();
-  };
-
-  // ===============================
-  // SAVE ORGANIZATION
-  // ===============================
-  btnSaveOrg.addEventListener("click", saveOrganization);
-
-  async function saveOrganization() {
-    const payload = {
-      name: orgNameInput.value,
-      abbreviation: orgAbbrevInput.value,
-      streetAddress: orgStreetInput.value,
-      city: orgCityInput.value,
-      state: orgStateInput.value,
-      zipCode: orgZipInput.value,
-      country: orgCountryInput.value,
-      districtConference: orgDistrictInput.value,
-      mascot: orgMascotInput.value,
-      leagueId: orgLeagueInput.value || null,
-
-      primaryContactFirstName: orgContactFirstInput.value,
-      primaryContactLastName: orgContactLastInput.value,
-      primaryContactEmail: orgContactEmailInput.value,
-
-      billingStreetAddress: billingStreetInput.value,
-      billingCity: billingCityInput.value,
-      billingState: billingStateInput.value,
-      billingZipCode: billingZipInput.value,
-      billingContactName: billingContactNameInput.value,
-      billingContactEmail: billingContactEmailInput.value,
-
-      isActive: orgActiveInput.checked,
-    };
-
-    if (editingId) {
-      await OrgApi.update(editingId, payload);
-    } else {
-      await OrgApi.create(payload);
-    }
-
-    closeModal();
-    loadOrganizations();
-  }
-
-  // ===============================
-  // DELETE ORGANIZATION
-  // ===============================
-  window.openDeleteModal = function (id) {
-    deleteId = id;
-    document.getElementById("deleteModal").classList.remove("hidden");
-  };
-
-  document.getElementById("btnCancelDelete").addEventListener("click", () => {
-    deleteId = null;
-    document.getElementById("deleteModal").classList.add("hidden");
-  });
-
-  document
-    .getElementById("btnConfirmDelete")
-    .addEventListener("click", async () => {
-      if (deleteId) {
-        await OrgApi.delete(deleteId);
-        deleteId = null;
-        document.getElementById("deleteModal").classList.add("hidden");
-        loadOrganizations();
+      if (btnView) {
+        btnView.addEventListener("click", () => {
+          window.location.href = `teams.html?orgId=${org.organizationId}`;
+        });
       }
+
+      if (btnEdit) {
+        btnEdit.addEventListener("click", () => {
+          openEditOrganization(org.organizationId);
+        });
+      }
+
+      if (btnDelete) {
+        btnDelete.addEventListener("click", () => {
+          openDeleteOrganization(org.organizationId);
+        });
+      }
+
+      body.appendChild(row);
     });
 
-  // ===============================
-  // INITIAL LOAD
-  // ===============================
-  loadLeagues();
-  loadOrganizations();
+    applyOrgFiltersAndSearch();
+  },
+
+  // =========================================================
+  // CLEAR FORM
+  // =========================================================
+  clearForm: () => {
+    [
+      "org-name",
+      "org-abbrev",
+      "org-street",
+      "org-city",
+      "org-state",
+      "org-zip",
+      "org-country",
+      "org-district",
+      "org-mascot",
+      "org-contact-first",
+      "org-contact-last",
+      "org-contact-email",
+      "billing-street",
+      "billing-city",
+      "billing-state",
+      "billing-zip",
+      "billing-contact-name",
+      "billing-contact-email",
+    ].forEach((id) => (document.getElementById(id).value = ""));
+
+    document.getElementById("org-league").value = "";
+    document.getElementById("org-active").checked = true;
+  },
+
+  // =========================================================
+  // POPULATE FORM
+  // =========================================================
+  populateForm: (org) => {
+    document.getElementById("org-name").value = org.name;
+    document.getElementById("org-abbrev").value = org.abbreviation;
+
+    document.getElementById("org-street").value = org.streetAddress ?? "";
+    document.getElementById("org-city").value = org.city ?? "";
+    document.getElementById("org-state").value = org.state ?? "";
+    document.getElementById("org-zip").value = org.zipCode ?? "";
+    document.getElementById("org-country").value = org.country ?? "";
+    document.getElementById("org-district").value =
+      org.districtConference ?? "";
+    document.getElementById("org-mascot").value = org.mascot ?? "";
+    document.getElementById("org-league").value = org.leagueId ?? "";
+
+    document.getElementById("org-contact-first").value =
+      org.primaryContactFirstName ?? "";
+    document.getElementById("org-contact-last").value =
+      org.primaryContactLastName ?? "";
+    document.getElementById("org-contact-email").value =
+      org.primaryContactEmail ?? "";
+
+    document.getElementById("billing-street").value =
+      org.billingStreetAddress ?? "";
+    document.getElementById("billing-city").value = org.billingCity ?? "";
+    document.getElementById("billing-state").value = org.billingState ?? "";
+    document.getElementById("billing-zip").value = org.billingZipCode ?? "";
+    document.getElementById("billing-contact-name").value =
+      org.billingContactName ?? "";
+    document.getElementById("billing-contact-email").value =
+      org.billingContactEmail ?? "";
+
+    document.getElementById("org-active").checked = org.isActive;
+  },
+
+  // =========================================================
+  // COLLECT FORM DATA
+  // =========================================================
+  collectFormData: () => ({
+    name: document.getElementById("org-name").value,
+    abbreviation: document.getElementById("org-abbrev").value,
+
+    streetAddress: document.getElementById("org-street").value,
+    city: document.getElementById("org-city").value,
+    state: document.getElementById("org-state").value,
+    zipCode: document.getElementById("org-zip").value,
+    country: document.getElementById("org-country").value,
+    districtConference: document.getElementById("org-district").value,
+    mascot: document.getElementById("org-mascot").value,
+    leagueId: document.getElementById("org-league").value,
+
+    primaryContactFirstName: document.getElementById("org-contact-first").value,
+    primaryContactLastName: document.getElementById("org-contact-last").value,
+    primaryContactEmail: document.getElementById("org-contact-email").value,
+
+    billingStreetAddress: document.getElementById("billing-street").value,
+    billingCity: document.getElementById("billing-city").value,
+    billingState: document.getElementById("billing-state").value,
+    billingZipCode: document.getElementById("billing-zip").value,
+    billingContactName: document.getElementById("billing-contact-name").value,
+    billingContactEmail: document.getElementById("billing-contact-email").value,
+
+    isActive: document.getElementById("org-active").checked,
+  }),
 });
+
+// =========================================================
+// EDIT HANDLER
+// =========================================================
+async function openEditOrganization(id) {
+  try {
+    const org = await OrgApi.getById(id);
+    AdminPage.currentEditId = id;
+    AdminPage.populateForm(org);
+
+    document.getElementById("orgModalTitle").textContent = "Edit Organization";
+    document.getElementById("orgModal").style.display = "block";
+  } catch (err) {
+    console.error("Failed to load organization:", err);
+    alert("Unable to load organization details.");
+  }
+}
+
+// =========================================================
+// DELETE HANDLER
+// =========================================================
+function openDeleteOrganization(id) {
+  AdminPage.currentDeleteId = id;
+  document.getElementById("deleteModal").style.display = "block";
+}

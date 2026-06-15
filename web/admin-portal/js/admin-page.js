@@ -1,5 +1,5 @@
 // =========================================================
-// ADMIN PAGE ENGINE (GLOBAL, STABLE VERSION)
+// ADMIN PAGE ENGINE (GLOBAL, MODERNIZED VERSION)
 // =========================================================
 
 window.AdminPage = {
@@ -11,7 +11,6 @@ window.AdminPage = {
   init(config) {
     this.config = config;
 
-    // Wait for layout + page content to be injected
     document.addEventListener("nf-page-ready", () => {
       this.resolveDom();
       this.bindEvents();
@@ -29,14 +28,14 @@ window.AdminPage = {
     this.tableBody = document.getElementById(c.tableBodyId);
     this.searchInput = document.getElementById(c.searchInputId);
 
-    this.modal = document.getElementById(c.modalId);
+    this.modal = document.getElementById(c.modalId); // overlay
     this.modalTitle = document.getElementById(c.modalTitleId);
 
     this.btnAdd = document.getElementById(c.addButtonId);
     this.btnSave = document.getElementById(c.saveButtonId);
     this.btnCancel = document.getElementById(c.cancelButtonId);
 
-    this.deleteModal = document.getElementById(c.deleteModalId);
+    this.deleteModal = document.getElementById(c.deleteModalId); // overlay
     this.btnDeleteConfirm = document.getElementById(c.deleteConfirmId);
     this.btnDeleteCancel = document.getElementById(c.deleteCancelId);
 
@@ -53,14 +52,16 @@ window.AdminPage = {
 
     if (this.btnAdd)
       this.btnAdd.addEventListener("click", () => this.openAdd());
+
     if (this.btnSave) this.btnSave.addEventListener("click", () => this.save());
+
     if (this.btnCancel)
       this.btnCancel.addEventListener("click", () => this.closeModal());
 
     if (this.btnDeleteCancel) {
       this.btnDeleteCancel.addEventListener("click", () => {
         this.deleteId = null;
-        this.deleteModal.classList.remove("show");
+        this.deleteModal.classList.remove("active");
       });
     }
 
@@ -69,7 +70,7 @@ window.AdminPage = {
         if (this.deleteId) {
           await c.api.delete(this.deleteId);
           this.deleteId = null;
-          this.deleteModal.classList.remove("show");
+          this.deleteModal.classList.remove("active");
           this.loadData();
         }
       });
@@ -115,32 +116,55 @@ window.AdminPage = {
   },
 
   // -------------------------------------------------------
-  // MODAL CONTROL
+  // MODAL CONTROL — UPDATED FOR .active SYSTEM
   // -------------------------------------------------------
   openAdd() {
     this.editingId = null;
     this.modalTitle.textContent = this.config.addTitle;
     this.config.clearForm();
-    this.modal.classList.add("show");
+    this.modal.classList.add("active"); // overlay
   },
 
   async openEdit(id) {
     this.editingId = id;
+
+    // Reset form
+    this.config.clearForm();
+
+    // Set title
     this.modalTitle.textContent = this.config.editTitle;
 
+    // Load data
     const item = await this.config.api.getById(id);
     this.config.populateForm(item);
 
-    this.modal.classList.add("show");
+    // ⭐ Activate overlay
+    this.modal.classList.add("active");
+
+    // ⭐ Activate modal panel
+    const panel = this.modal.querySelector(".nf-modal");
+    if (panel) panel.classList.add("active");
   },
 
   openDelete(id) {
     this.deleteId = id;
-    this.deleteModal.classList.add("show");
+    this.deleteModal.classList.add("active"); // overlay
   },
 
   closeModal() {
-    this.modal.classList.remove("show");
+    console.log(
+      "🔥 closeModal called on:",
+      this.modalOverlay,
+      this.modalOverlay?.id,
+    );
+
+    // Remove overlay active
+    this.modal.classList.remove("active");
+
+    // Remove modal panel active
+    const panel = this.modal.querySelector(".nf-modal");
+    if (panel) panel.classList.remove("active");
+
     this.config.clearForm();
     this.editingId = null;
   },
@@ -157,7 +181,10 @@ window.AdminPage = {
       await this.config.api.create(payload);
     }
 
+    // ✅ Re‑resolve modal reference before closing
+    this.modal = document.getElementById(this.config.modalId);
     this.closeModal();
+
     this.loadData();
   },
 };

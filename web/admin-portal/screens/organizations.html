@@ -6,173 +6,24 @@
 
     <link rel="stylesheet" href="../css/global.css" />
     <link rel="stylesheet" href="../css/layout.css" />
-    <link rel="stylesheet" href="../css/modal.css" />
     <link rel="stylesheet" href="../css/admin-shared.css" />
+    <link rel="stylesheet" href="../css/modal.css" />
     <link rel="stylesheet" href="../css/organizations.css" />
   </head>
 
   <body>
-    <!-- LAYOUT ROOT (layout-loader injects everything else) -->
     <div id="layoutContainer"></div>
 
-    <!-- =========================================================
-         ADD / EDIT ORGANIZATION MODAL
-    ========================================================== -->
-    <div id="orgModal" class="modal">
-      <div class="modal-content modal-dark large-modal">
-        <div class="modal-header">
-          <h2 id="orgModalTitle">Add Organization</h2>
-        </div>
-
-        <div class="modal-body">
-          <div>
-            <label>Name</label>
-            <input id="org-name" class="form-control" />
-          </div>
-
-          <div>
-            <label>Abbreviation</label>
-            <input id="org-abbrev" class="form-control" />
-          </div>
-
-          <div>
-            <label>Street Address</label>
-            <input id="org-street" class="form-control" />
-          </div>
-
-          <div>
-            <label>City</label>
-            <input id="org-city" class="form-control" />
-          </div>
-
-          <div>
-            <label>State</label>
-            <input id="org-state" class="form-control" />
-          </div>
-
-          <div>
-            <label>Zip Code</label>
-            <input id="org-zip" class="form-control" />
-          </div>
-
-          <div>
-            <label>Country</label>
-            <input id="org-country" class="form-control" />
-          </div>
-
-          <div>
-            <label>District / Conference</label>
-            <input id="org-district" class="form-control" />
-          </div>
-
-          <div>
-            <label>Mascot</label>
-            <input id="org-mascot" class="form-control" />
-          </div>
-
-          <div>
-            <label>League</label>
-            <select id="org-league" class="form-select"></select>
-          </div>
-
-          <h3 class="full">Primary Contact</h3>
-
-          <div>
-            <label>First Name</label>
-            <input id="org-contact-first" class="form-control" />
-          </div>
-
-          <div>
-            <label>Last Name</label>
-            <input id="org-contact-last" class="form-control" />
-          </div>
-
-          <div class="full">
-            <label>Email</label>
-            <input id="org-contact-email" class="form-control" />
-          </div>
-
-          <h3 class="full">Billing</h3>
-
-          <div>
-            <label>Billing Street</label>
-            <input id="billing-street" class="form-control" />
-          </div>
-
-          <div>
-            <label>Billing City</label>
-            <input id="billing-city" class="form-control" />
-          </div>
-
-          <div>
-            <label>Billing State</label>
-            <input id="billing-state" class="form-control" />
-          </div>
-
-          <div>
-            <label>Billing Zip</label>
-            <input id="billing-zip" class="form-control" />
-          </div>
-
-          <div>
-            <label>Billing Contact Name</label>
-            <input id="billing-contact-name" class="form-control" />
-          </div>
-
-          <div>
-            <label>Billing Contact Email</label>
-            <input id="billing-contact-email" class="form-control" />
-          </div>
-
-          <h3 class="full">Status</h3>
-
-          <div class="full">
-            <label>Active</label>
-            <label class="switch">
-              <input type="checkbox" id="org-active" />
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn-secondary" id="btnCancelOrg">Cancel</button>
-          <button class="btn-primary" id="btnSaveOrg">Save</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- =========================================================
-         DELETE CONFIRMATION MODAL
-    ========================================================== -->
-    <div id="deleteModal" class="modal">
-      <div class="modal-content modal-dark small">
-        <div class="modal-header"><h2>Delete Organization</h2></div>
-
-        <div class="modal-body full">
-          <p>Are you sure you want to delete this organization?</p>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn-secondary" id="btnCancelDelete">Cancel</button>
-          <button class="btn-danger" id="btnConfirmDelete">Delete</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- =========================================================
-         SHARED SYSTEM SCRIPTS
-    ========================================================== -->
+    <!-- Shared System Scripts -->
     <script src="../js/layout-loader.js"></script>
+    <!-- <script src="../js/modal-diagnostics.js"></script> -->
     <script src="../js/page-content.js"></script>
 
     <script>
       loadLayout("organizations");
     </script>
 
-    <!-- =========================================================
-         PAGE SCRIPTS (MUST BE LAST)
-    ========================================================== -->
+    <!-- Page Scripts -->
     <script src="../js/config-loader.js"></script>
     <script src="../api/org-api.js"></script>
     <script src="../js/admin-page.js"></script>

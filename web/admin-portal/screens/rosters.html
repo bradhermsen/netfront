@@ -6,79 +6,34 @@
 
     <link rel="stylesheet" href="../css/global.css" />
     <link rel="stylesheet" href="../css/layout.css" />
-    <link rel="stylesheet" href="../css/modal.css" />
     <link rel="stylesheet" href="../css/admin-shared.css" />
+    <link rel="stylesheet" href="../css/modal.css" />
     <link rel="stylesheet" href="../css/rosters.css" />
   </head>
 
   <body>
-    <!-- LAYOUT ROOT (layout-loader injects everything else) -->
     <div id="layoutContainer"></div>
 
-    <!-- ============================
-         ADD / EDIT ROSTER ENTRY MODAL
-    ============================= -->
-    <div id="rosterModal" class="modal">
-      <div class="modal-content modal-dark">
-        <h2 id="rosterModalTitle">Edit Roster Entry</h2>
-
-        <div class="modal-body">
-          <label>Player</label>
-          <select id="rosterPlayerId" class="form-select"></select>
-
-          <label>Jersey Number</label>
-          <input id="rosterJersey" type="number" class="form-control" />
-
-          <label>Position</label>
-          <input id="rosterPosition" type="text" class="form-control" />
-
-          <label>Status</label>
-          <select id="rosterStatus" class="form-select">
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn-secondary nf-btn modal-close">Cancel</button>
-          <button id="saveRosterBtn" class="btn-primary nf-btn">Save</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- DELETE ROSTER ENTRY MODAL -->
-    <div id="deleteRosterModal" class="modal">
-      <div class="modal-content small modal-dark">
-        <h2>Delete Roster Entry</h2>
-        <p>Are you sure you want to remove this player from the roster?</p>
-
-        <div class="modal-actions">
-          <button class="btn-secondary nf-btn modal-close">Cancel</button>
-          <button id="confirmDeleteRosterBtn" class="btn-danger nf-btn">
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- =========================================================
-        LOAD CONFIG FIRST (must be first)
-    ========================================================== -->
+    <!-- Correct Script Order -->
+    <!-- MUST load first -->
     <script src="../js/config-loader.js"></script>
 
-    <!-- =========================================================
-        LAYOUT SYSTEM (loads sidebar, header, page content)
-    ========================================================== -->
+    <!-- MUST load second -->
     <script src="../js/layout-loader.js"></script>
+
+    <script src="../js/modal-diagnostics.js"></script>
+
+    <!-- MUST load third -->
     <script src="../js/page-content.js"></script>
 
+    <!-- MUST run AFTER page-content.js -->
     <script>
       loadLayout("rosters");
     </script>
 
-    <!-- =========================================================
-        PAGE LOGIC (must be last)
-    ========================================================== -->
+    <!-- MUST load AFTER layout is injected -->
+    <script src="../js/admin-page.js"></script>
+    <script src="../api/roster-api.js"></script>
     <script src="../js/rosters.js"></script>
   </body>
 </html>

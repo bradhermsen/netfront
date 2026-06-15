@@ -112,8 +112,8 @@ namespace NetFrontAPI.Services
                 Position = r.Position ?? p?.Position,
                 Shoots = r.Shoots ?? p?.Shoots,
 
-                // Grade: roster overrides player graduation year
-                Grade = r.Grade ?? p?.GraduationYear,
+                // Grade: roster overrides player grade
+                Grade = r.Grade ?? p?.Grade,
 
                 // Roster-specific
                 JerseyNumber = r.JerseyNumber,

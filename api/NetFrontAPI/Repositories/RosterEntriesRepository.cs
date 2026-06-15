@@ -53,7 +53,7 @@ namespace NetFrontAPI.Repositories
                     p.FullName,
                     p.Position AS Position,
                     p.Shoots AS Shoots,
-                    p.GraduationYear AS PlayerGrade
+                    p.Grade AS Grade
                 FROM RosterEntries r
                 INNER JOIN Players p ON p.PlayerId = r.PlayerId
                 WHERE r.TeamId = @TeamId
@@ -116,7 +116,7 @@ namespace NetFrontAPI.Repositories
                     p.FullName,
                     p.Position AS PlayerPosition,
                     p.Shoots AS PlayerShoots,
-                    p.GraduationYear AS PlayerGrade
+                    p.Grade AS Grade
                 FROM RosterEntries r
                 INNER JOIN Players p ON p.PlayerId = r.PlayerId
                 WHERE r.Id = @Id;

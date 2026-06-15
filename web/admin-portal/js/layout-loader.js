@@ -1,3 +1,5 @@
+console.log("🔥 layout-loader.js loaded");
+
 // =========================================================
 // SHARED LAYOUT LOADER
 // =========================================================
@@ -33,7 +35,30 @@ window.loadLayout = async function (pageKey) {
       pageContent.innerHTML = window.PageContentRegistry[pageKey]();
     }
 
-    // 4) Fire page-ready event
+    // 3b) Inject page-specific modals (overlay-based, repeatable)
+    if (
+      window.PageContentRegistry &&
+      window.PageContentRegistry[pageKey + "Modals"]
+    ) {
+      // ⭐ Remove old modals by ID (leftovers in <body>)
+      ["playerModalOverlay", "playerDeleteModalOverlay"].forEach((id) => {
+        const old = document.getElementById(id);
+        if (old) old.remove();
+      });
+
+      const modalsHtml = window.PageContentRegistry[pageKey + "Modals"]();
+      const temp = document.createElement("div");
+      temp.innerHTML = modalsHtml;
+
+      const overlays = temp.querySelectorAll(".nf-modal-overlay");
+      overlays.forEach((overlay) => {
+        overlay.setAttribute("data-page", pageKey);
+        document.body.appendChild(overlay);
+      });
+    }
+
+    // 4) Fire page-ready events
+    document.dispatchEvent(new Event("layoutLoaded"));
     document.dispatchEvent(new Event("nf-page-ready"));
   } catch (err) {
     console.error("Layout loader failed:", err);

@@ -1,113 +1,113 @@
 /* =========================================================
-   MODAL OVERLAY (Unified System)
+   MODAL OVERLAY — Unified Dark Theme System
 ========================================================= */
-
-.modal {
+.nf-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-
-  opacity: 0;
-  pointer-events: none;
   transition: opacity 0.25s ease;
+  opacity: 0;
 }
 
 /* Visible state */
-.modal.show {
+.nf-modal-overlay.active {
+  display: flex;
   opacity: 1;
-  pointer-events: auto;
-}
-
-/* Hidden utility (NOT used for modals anymore) */
-.hidden {
-  display: none;
 }
 
 /* =========================================================
-   MODAL PANEL (Dark Theme)
+   MODAL PANEL
 ========================================================= */
-
-.modal-content.modal-dark {
+.nf-modal {
   background-color: var(--nf-bg);
   color: var(--nf-text);
   border: 1px solid var(--nf-border);
   border-radius: 10px;
-  padding: 0;
   width: 700px;
   max-width: 90vw;
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.55);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  animation: fadeIn 0.25s ease;
+  position: relative;
+  z-index: 10000 !important;
+}
 }
 
-/* Large modal option */
-.large-modal {
-  width: 900px;
-}
-
-/* Small modal option */
-.small {
+/* Size variants */
+.nf-modal.small {
   width: 420px;
+}
+.nf-modal.large {
+  width: 900px;
 }
 
 /* =========================================================
    HEADER
 ========================================================= */
-
-.modal-dark .modal-header {
+.nf-modal-header {
   border-bottom: 1px solid var(--nf-accent);
   padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.modal-dark .modal-header h2 {
+.nf-modal-header h2 {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
   color: var(--nf-accent);
 }
 
+/* Close button */
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--nf-text);
+  cursor: pointer;
+  font-size: 18px;
+  transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+  color: var(--nf-accent);
+}
+
 /* =========================================================
    BODY
 ========================================================= */
-
-.modal-dark .modal-body {
+.nf-modal-body {
   padding: 22px;
   max-height: 70vh;
   overflow-y: auto;
-
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px 24px;
 }
 
-/* Full-width rows */
-.full {
+.nf-modal-body.full {
   grid-column: 1 / 3;
 }
 
 /* =========================================================
-   LABELS
+   LABELS + FORM FIELDS
 ========================================================= */
-
-.modal-dark label {
+.nf-modal label {
   color: var(--nf-text-muted);
   font-weight: 500;
   margin-bottom: 4px;
   display: block;
 }
 
-/* =========================================================
-   FORM FIELDS
-========================================================= */
-
-.modal-dark .form-control,
-.modal-dark .form-select,
-.modal-dark textarea,
-.modal-dark .form-field {
+.nf-modal .nf-input,
+.nf-modal select,
+.nf-modal textarea {
   background-color: #1a1f2e;
   color: var(--nf-text);
   border: 1px solid var(--nf-border-light);
@@ -119,10 +119,9 @@
     box-shadow 0.2s;
 }
 
-.modal-dark .form-control:focus,
-.modal-dark .form-select:focus,
-.modal-dark textarea:focus,
-.modal-dark .form-field:focus {
+.nf-modal .nf-input:focus,
+.nf-modal select:focus,
+.nf-modal textarea:focus {
   border-color: var(--nf-accent);
   box-shadow: 0 0 4px var(--nf-accent);
 }
@@ -136,9 +135,7 @@
 /* =========================================================
    FOOTER
 ========================================================= */
-
-.modal-dark .modal-footer,
-.modal-actions {
+.nf-modal-footer {
   border-top: 1px solid var(--nf-border);
   padding: 16px 22px;
   display: flex;
@@ -149,7 +146,6 @@
 /* =========================================================
    TOGGLE SWITCHES
 ========================================================= */
-
 .switch {
   position: relative;
   display: inline-block;
@@ -192,7 +188,50 @@ input:checked + .slider:before {
   transform: translateX(22px);
 }
 
-/* Close button */
-.btn-close-white {
-  filter: invert(1);
+/* =========================================================
+   ANIMATION
+========================================================= */
+@keyframes fadeIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* Force horizontal layout for the filter bar inside the Roster Manager modal */
+#rosterManagerOverlay #rosterManagerModal .nf-filter-bar {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+/* Search expands */
+#rosterManagerModal .nf-filter-bar .nf-search {
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+
+/* Selects compact */
+#rosterManagerModal .nf-filter-bar .nf-select {
+  width: auto;
+  min-width: 140px;
+}
+
+/* Add Player button pushed right */
+#rosterManagerModal #rm-add-player {
+  margin-left: auto !important;
+}
+/* Roster Manager modal uses a single-column layout */
+#rosterManagerModal .nf-modal-body {
+  display: block;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 22px;
 }

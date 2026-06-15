@@ -1,19 +1,30 @@
 /* =========================================================
-   ORGANIZATIONS PAGE — PAGE-SPECIFIC ONLY
+   ORGANIZATIONS PAGE — NEW UNIFIED DESIGN SYSTEM
    (All shared components live in admin-shared.css)
 ========================================================= */
 
 /* ---------------------------------------
-   ACTION BUTTONS WITHIN TABLE ROWS
+   STACKED ORGANIZATION COLUMN
 --------------------------------------- */
-.org-actions {
+.org-col {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.org-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--nf-text);
+}
+
+.org-sub {
+  font-size: 0.8rem;
+  color: var(--nf-text-muted);
 }
 
 /* ---------------------------------------
-   STATUS BADGES (ORG-SPECIFIC)
-   These override shared badges only if needed
+   STATUS BADGES
 --------------------------------------- */
 .status-badge {
   display: inline-block;
@@ -70,23 +81,4 @@
 .org-contact-email {
   color: var(--nf-text-muted);
   font-size: 0.8rem;
-}
-
-/* ---------------------------------------
-   OPTIONAL: Table cell alignment tweaks
---------------------------------------- */
-.data-table td.org-name {
-  font-weight: 600;
-  text-align: left;
-}
-
-.data-table td.org-status {
-  font-weight: 600;
-}
-
-/* ---------------------------------------
-   PAGE-SPECIFIC TABLE HOVER (optional)
---------------------------------------- */
-.data-table tbody tr:hover {
-  background: #111a2e;
 }

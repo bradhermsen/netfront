@@ -3,34 +3,32 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using NetFrontAPI.Services;
 using NetFrontAPI.DTOs;
+using NetFrontAPI.Services;
 
 namespace NetFrontAPI.Functions
 {
-    public class PlayerFunctions
+    public class PlayersFunctions
     {
-        private readonly IPlayersService _playersService;
-        private readonly ILogger<PlayerFunctions> _logger;
+        private readonly IPlayersService _service;
 
-        public PlayerFunctions(IPlayersService playersService, ILogger<PlayerFunctions> logger)
+        public PlayersFunctions(IPlayersService service)
         {
-            _playersService = playersService;
-            _logger = logger;
+            _service = service;
         }
 
         // =========================================================
-        // GET ALL PLAYERS
+        // GET ALL PLAYERS (DTO VERSION)
         // =========================================================
-        [Function("GetPlayers")]
-        public async Task<HttpResponseData> GetPlayers(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "players")] HttpRequestData req)
+        [Function("GetPlayersDto")]
+        public async Task<HttpResponseData> GetPlayersDto(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "players/dto")] HttpRequestData req)
         {
-            var players = await _playersService.GetAllAsync();
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteAsJsonAsync(players);
-            return response;
+            var players = await _service.GetAllDtosAsync();
+
+            var res = req.CreateResponse(HttpStatusCode.OK);
+            await res.WriteAsJsonAsync(players);
+            return res;
         }
 
         // =========================================================
@@ -41,17 +39,18 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "players/{id:guid}")] HttpRequestData req,
             Guid id)
         {
-            var player = await _playersService.GetByIdAsync(id);
+            var player = await _service.GetByIdAsync(id);
+
             if (player == null)
             {
                 var notFound = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFound.WriteStringAsync("Player not found.");
+                await notFound.WriteStringAsync("Player not found");
                 return notFound;
             }
 
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteAsJsonAsync(player);
-            return response;
+            var res = req.CreateResponse(HttpStatusCode.OK);
+            await res.WriteAsJsonAsync(player);
+            return res;
         }
 
         // =========================================================
@@ -62,18 +61,19 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "players")] HttpRequestData req)
         {
             var dto = await req.ReadFromJsonAsync<CreatePlayerDto>();
+
             if (dto == null)
             {
                 var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-                await bad.WriteStringAsync("Invalid request body.");
+                await bad.WriteStringAsync("Invalid payload");
                 return bad;
             }
 
-            var newId = await _playersService.CreateAsync(dto);
+            var id = await _service.CreateAsync(dto);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(new { PlayerId = newId });
-            return response;
+            var res = req.CreateResponse(HttpStatusCode.Created);
+            await res.WriteAsJsonAsync(new { id });
+            return res;
         }
 
         // =========================================================
@@ -85,23 +85,15 @@ namespace NetFrontAPI.Functions
             Guid id)
         {
             var dto = await req.ReadFromJsonAsync<UpdatePlayerDto>();
+
             if (dto == null)
             {
                 var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-                await bad.WriteStringAsync("Invalid request body.");
+                await bad.WriteStringAsync("Invalid payload");
                 return bad;
             }
 
-            try
-            {
-                await _playersService.UpdateAsync(id, dto);
-            }
-            catch (Exception ex)
-            {
-                var notFound = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFound.WriteStringAsync(ex.Message);
-                return notFound;
-            }
+            await _service.UpdateAsync(id, dto);
 
             return req.CreateResponse(HttpStatusCode.NoContent);
         }
@@ -114,17 +106,7 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "players/{id:guid}")] HttpRequestData req,
             Guid id)
         {
-            try
-            {
-                await _playersService.DeleteAsync(id);
-            }
-            catch (Exception ex)
-            {
-                var notFound = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFound.WriteStringAsync(ex.Message);
-                return notFound;
-            }
-
+            await _service.DeleteAsync(id);
             return req.CreateResponse(HttpStatusCode.NoContent);
         }
     }

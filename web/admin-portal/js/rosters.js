@@ -1,20 +1,16 @@
-// =========================================================
-// Rosters.js — Final Corrected Version (Delegated + Modal Safe)
-// =========================================================
-
 console.log("ROSTERS.JS LOADED");
 
-// Data caches
+// =========================================================
+// DATA CACHES
+// =========================================================
 let allTeams = [];
-let rosterCache = {};
 let allPlayers = [];
-let currentSort = { field: null, direction: "asc" };
+let rosterCache = {}; // teamId → roster array
 
-// Local filters
-let searchQuery = "";
-let activeFilters = { position: "", status: "", shoots: "" };
+let rmSort = { field: null, direction: "asc" };
+let rmSearch = "";
+let rmFilters = { position: "", shoots: "", status: "" };
 
-// Global filters
 let globalFilters = {
   search: "",
   teamId: "",
@@ -25,557 +21,367 @@ let globalFilters = {
 // =========================================================
 // PAGE INITIALIZATION
 // =========================================================
-document.addEventListener("nf-page-ready", async () => {
-  console.log("nf-page-ready fired");
+function initRostersPage() {
+  if (!document.getElementById("teamsRosterBody")) return;
 
-  await window.configReady;
+  AdminPage.init({
+    tableBodyId: "teamsRosterBody",
+    searchInputId: "rosters-search-bar",
 
-  await loadTeams();
-  await loadPlayersList();
-  attachGlobalFilterEvents();
-  loadTeamsWithRosters();
+    modalId: "rosterModalOverlay",
+    modalTitleId: "rosterModalTitle",
+    addButtonId: null,
+    saveButtonId: "rosterSave",
+    cancelButtonId: "rosterCancel",
 
-  // CLOSE BUTTONS
-  document.querySelectorAll(".modal-close").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      document.getElementById("rosterModal").classList.remove("show");
-      document.getElementById("deleteRosterModal").classList.remove("show");
-    });
+    deleteModalId: "rosterDeleteModalOverlay",
+    deleteConfirmId: "rosterDeleteConfirm",
+    deleteCancelId: "rosterDeleteCancel",
+
+    // ⭐ Prevent AdminPage from overwriting your real handler
+    editHandlerName: null,
+    deleteHandlerName: "openDeleteRoster",
+    addHandlerName: "openAddRoster",
+
+    addTitle: "Add Player to Roster",
+    editTitle: "Edit Roster Entry",
+
+    api: RosterApi,
+
+    loadDropdowns: async () => {
+      await loadPlayersDropdown();
+    },
+
+    renderTable: (teams) => {
+      const body = document.getElementById("teamsRosterBody");
+      body.innerHTML = "";
+
+      teams.forEach((team) => {
+        const rosterCount = team.rosterCount ?? 0;
+
+        const row = document.createElement("tr");
+        row.dataset.teamId = team.teamId;
+
+        row.innerHTML = `
+          <td>${team.name}</td>
+          <td>${team.organizationName || "External Team"}</td>
+          <td>${rosterCount}</td>
+          <td>${team.isActive ? "Active" : "Inactive"}</td>
+          <td class="actions-col">
+            <button class="nf-btn-icon" title="Manage Roster" onclick="openRosterManager('${team.teamId}')">
+              <i class="fa-solid fa-users"></i>
+            </button>
+          </td>
+        `;
+
+        body.appendChild(row);
+      });
+    },
+
+    clearForm: () => {
+      document.getElementById("rosterPlayerId").value = "";
+      document.getElementById("rosterJersey").value = "";
+      document.getElementById("rosterPosition").value = "";
+      document.getElementById("rosterStatus").value = "Active";
+      document.getElementById("rosterGrade").value = "";
+    },
+
+    populateForm: (entry) => {
+      document.getElementById("rosterPlayerId").value = entry.playerId;
+      document.getElementById("rosterJersey").value = entry.jerseyNumber ?? "";
+      document.getElementById("rosterPosition").value = entry.position ?? "";
+      document.getElementById("rosterStatus").value = entry.status ?? "Active";
+
+      const player = allPlayers.find((p) => p.id === entry.playerId);
+      document.getElementById("rosterGrade").value = player?.grade ?? "";
+    },
+
+    collectFormData: () => ({
+      teamId: window.currentRosterTeamId,
+      playerId: document.getElementById("rosterPlayerId").value,
+      jerseyNumber: document.getElementById("rosterJersey").value,
+      position: document.getElementById("rosterPosition").value,
+      status: document.getElementById("rosterStatus").value,
+    }),
   });
 
-  // SAVE BUTTON
-  document
-    .getElementById("saveRosterBtn")
-    .addEventListener("click", saveRosterEntry);
+  // Wire Add Player button inside roster manager modal
+  document.getElementById("rm-add-player").onclick = () =>
+    openAddRoster(window.currentRosterTeamId);
 
-  // DELETE CONFIRM
-  document
-    .getElementById("confirmDeleteRosterBtn")
-    .addEventListener("click", confirmDeleteRoster);
-});
-
-// =========================================================
-// DELEGATED EVENT LISTENERS (Dynamic‑Safe)
-// =========================================================
-
-// View Players
-document.addEventListener("click", (e) => {
-  if (e.target.classList.contains("roster-btn")) {
-    const teamId = e.target.dataset.teamId;
-    viewRoster(teamId);
-  }
-});
-
-// Add Player
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest(".add-btn");
-  if (!btn) return;
-
-  const teamId = btn.dataset.teamId;
-  openAddRoster(teamId);
-});
-
-// Edit Player
-document.addEventListener("click", (e) => {
-  if (e.target.classList.contains("edit-btn")) {
-    const rosterEntryId = e.target.dataset.entryId;
-    const teamId = e.target.dataset.teamId;
-    openEditRoster(rosterEntryId, teamId);
-  }
-});
-
-// Delete Player
-document.addEventListener("click", (e) => {
-  if (e.target.classList.contains("delete-btn")) {
-    const rosterEntryId = e.target.dataset.entryId;
-    const teamId = e.target.dataset.teamId;
-    openDeleteRoster(rosterEntryId, teamId);
-  }
-});
-
-// =========================================================
-// LOAD TEAMS
-// =========================================================
-async function loadTeams() {
-  const res = await fetch(`${window.apiBase}/teams`);
-  allTeams = await res.json();
+  loadPlayersList();
+  attachGlobalFilterEvents();
 }
 
+document.addEventListener("layoutLoaded", initRostersPage);
+if (window.__layoutAlreadyLoaded) initRostersPage();
+
 // =========================================================
-// LOAD ALL PLAYERS
+// LOAD PLAYERS
 // =========================================================
 async function loadPlayersList() {
-  const res = await fetch(`${window.apiBase}/players`);
-  allPlayers = await res.json();
+  console.log("loadPlayersList START, allPlayers:", allPlayers.length);
+
+  const res = await fetch(`${window.apiBase}/players/dto`);
+  const data = await res.json();
+
+  allPlayers = data;
+
+  console.log("loadPlayersList END, allPlayers:", allPlayers.length);
+
+  return data; // ⭐ REQUIRED so await actually waits
+}
+
+async function loadPlayersDropdown() {
+  const select = document.getElementById("rosterPlayerId");
+
+  console.log("Dropdown element:", select);
+
+  if (!select) {
+    console.warn("⚠️ rosterPlayerId does NOT exist yet.");
+    return;
+  }
+
+  select.innerHTML = "";
+
+  allPlayers.forEach((p) => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.fullName;
+    select.appendChild(opt);
+  });
+
+  console.log("Dropdown options created:", select.options.length);
+  console.log("First option:", select.options[0]?.textContent);
+
+  select.onchange = () => {
+    const p = allPlayers.find((x) => x.id === select.value);
+    document.getElementById("rosterGrade").value = p?.grade ?? "";
+  };
 }
 
 // =========================================================
 // GLOBAL FILTER EVENTS
 // =========================================================
 function attachGlobalFilterEvents() {
-  const searchEl = document.getElementById("globalSearch");
-  const teamEl = document.getElementById("globalTeam");
-  const orgEl = document.getElementById("globalOrg");
-  const statusEl = document.getElementById("globalStatus");
-
-  if (searchEl)
-    searchEl.addEventListener("input", (e) => {
-      globalFilters.search = e.target.value.toLowerCase();
-      loadTeamsWithRosters();
-    });
-
-  if (teamEl)
-    teamEl.addEventListener("change", (e) => {
-      globalFilters.teamId = e.target.value;
-      loadTeamsWithRosters();
-    });
-
-  if (orgEl)
-    orgEl.addEventListener("change", (e) => {
-      globalFilters.organization = e.target.value;
-      loadTeamsWithRosters();
-    });
-
-  if (statusEl)
-    statusEl.addEventListener("change", (e) => {
-      globalFilters.status = e.target.value;
-      loadTeamsWithRosters();
-    });
-}
-
-// =========================================================
-// GLOBAL FILTER LOGIC
-// =========================================================
-function applyGlobalFilters(team) {
-  const teamName = team.name.toLowerCase();
-  const orgName = (team.organizationName || "External Team").toLowerCase();
-
-  const matchesSearch =
-    !globalFilters.search ||
-    teamName.includes(globalFilters.search) ||
-    orgName.includes(globalFilters.search);
-
-  const matchesTeam =
-    !globalFilters.teamId || team.teamId === globalFilters.teamId;
-
-  const matchesOrg =
-    !globalFilters.organization ||
-    (team.organizationName || "External Team") === globalFilters.organization;
-
-  const matchesStatus =
-    !globalFilters.status ||
-    (team.isActive ? "Active" : "Inactive") === globalFilters.status;
-
-  return matchesSearch && matchesTeam && matchesOrg && matchesStatus;
-}
-
-// =========================================================
-// LOAD TEAMS + ROSTERS
-// =========================================================
-async function loadTeamsWithRosters() {
-  const tbody = document.getElementById("teamsRosterBody");
-  if (!tbody) return;
-
-  tbody.innerHTML = "";
-
-  for (const team of allTeams) {
-    if (!applyGlobalFilters(team)) continue;
-
-    let roster = [];
-    try {
-      const res = await fetch(`${window.apiBase}/teams/${team.teamId}/roster`);
-      if (res.ok) roster = await res.json();
-    } catch (err) {
-      console.error("Roster load failed:", err);
-    }
-
-    rosterCache[team.teamId] = roster;
-
-    // TEAM ROW
-    const teamRow = document.createElement("tr");
-    teamRow.classList.add("team-row");
-    teamRow.dataset.teamId = team.teamId;
-
-    teamRow.innerHTML = `
-      <td class="team-toggle">${team.name}</td>
-      <td>${team.organizationName || "External Team"}</td>
-      <td>${roster.length}</td>
-      <td>${team.isActive ? "Active" : "Inactive"}</td>
-      <td class="actions-col">
-        <button class="action-btn roster-btn" data-team-id="${team.teamId}">View Players</button>
-        <button class="action-btn add-btn" data-team-id="${team.teamId}">Add Player</button>
-      </td>
-    `;
-
-    tbody.appendChild(teamRow);
-
-    // DETAIL ROW
-    const detailRow = document.createElement("tr");
-    detailRow.classList.add("team-details", "hidden");
-    detailRow.dataset.teamId = team.teamId;
-
-    detailRow.innerHTML = `
-      <td colspan="5">
-        <div class="roster-container" id="roster-${team.teamId}"></div>
-      </td>
-    `;
-
-    tbody.appendChild(detailRow);
-
-    teamRow
-      .querySelector(".team-toggle")
-      .addEventListener("click", () => toggleRoster(team.teamId));
-  }
-}
-
-// =========================================================
-// EXPAND / COLLAPSE ROSTER
-// =========================================================
-function viewRoster(teamId) {
-  toggleRoster(teamId);
-}
-
-async function toggleRoster(teamId, refresh = false) {
-  const detailRow = document.querySelector(
-    `tr.team-details[data-team-id="${teamId}"]`,
-  );
-  const container = document.getElementById(`roster-${teamId}`);
-
-  if (!detailRow || !container) return;
-
-  if (!refresh) {
-    const isHidden = detailRow.classList.contains("hidden");
-    if (!isHidden) {
-      detailRow.classList.add("hidden");
-      return;
-    }
-  }
-
-  detailRow.classList.remove("hidden");
-
-  let roster = rosterCache[teamId] || [];
-  roster = applySearchAndFilters(roster);
-  roster = applySort(roster);
-
-  container.innerHTML = buildRosterTable(roster, teamId);
-
-  attachSortHandlers(teamId);
-}
-
-// =========================================================
-// BUILD ROSTER TABLE
-// =========================================================
-function buildRosterTable(roster, teamId) {
-  return `
-    <div class="roster-controls">
-      <input id="searchInput-${teamId}" class="search-bar" placeholder="Search players...">
-      <select id="filterPosition-${teamId}">
-        <option value="">All Positions</option>
-        <option value="F">Forward</option>
-        <option value="D">Defense</option>
-        <option value="G">Goalie</option>
-      </select>
-      <select id="filterShoots-${teamId}">
-        <option value="">Shoots</option>
-        <option value="L">Left</option>
-        <option value="R">Right</option>
-      </select>
-      <select id="filterStatus-${teamId}">
-        <option value="">All Status</option>
-        <option value="Active">Active</option>
-        <option value="Scratched">Scratched</option>
-      </select>
-    </div>
-
-    <table class="inner-table">
-      <thead>
-        <tr>
-          <th class="sortable" data-field="fullName">Player Name</th>
-          <th class="sortable" data-field="position">Position</th>
-          <th class="sortable" data-field="shoots">Shoots</th>
-          <th class="sortable" data-field="jerseyNumber">Jersey</th>
-          <th class="sortable" data-field="status">Status</th>
-          <th class="actions-col">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${roster
-          .map(
-            (r) => `
-          <tr>
-            <td>${r.fullName}</td>
-            <td>${r.position ?? "-"}</td>
-            <td>${r.shoots ?? "-"}</td>
-            <td>${r.jerseyNumber ?? "-"}</td>
-            <td>${r.status ?? (r.isActive ? "Active" : "Inactive")}</td>
-            <td class="actions-col">
-              <button class="action-btn edit-btn" data-entry-id="${r.rosterEntryId}" data-team-id="${teamId}">Edit</button>
-              <button class="action-btn delete-btn" data-entry-id="${r.rosterEntryId}" data-team-id="${teamId}">Delete</button>
-            </td>
-          </tr>
-        `,
-          )
-          .join("")}
-      </tbody>
-    </table>
-  `;
-}
-
-// =========================================================
-// SORT + FILTER HANDLERS
-// =========================================================
-function attachSortHandlers(teamId) {
-  document.querySelectorAll(`#roster-${teamId} .sortable`).forEach((header) => {
-    header.addEventListener("click", () => {
-      const field = header.dataset.field;
-      currentSort.direction =
-        currentSort.field === field && currentSort.direction === "asc"
-          ? "desc"
-          : "asc";
-      currentSort.field = field;
-
-      toggleRoster(teamId, true);
-    });
-  });
-
-  const searchEl = document.getElementById(`searchInput-${teamId}`);
-  const posEl = document.getElementById(`filterPosition-${teamId}`);
-  const shootsEl = document.getElementById(`filterShoots-${teamId}`);
-  const statusEl = document.getElementById(`filterStatus-${teamId}`);
+  const searchEl = document.getElementById("rosters-search-bar");
 
   if (searchEl) {
     searchEl.addEventListener("input", (e) => {
-      searchQuery = e.target.value.toLowerCase();
-      toggleRoster(teamId, true);
-    });
-  }
-
-  if (posEl) {
-    posEl.addEventListener("change", (e) => {
-      activeFilters.position = e.target.value;
-      toggleRoster(teamId, true);
-    });
-  }
-
-  if (shootsEl) {
-    shootsEl.addEventListener("change", (e) => {
-      activeFilters.shoots = e.target.value;
-      toggleRoster(teamId, true);
-    });
-  }
-
-  if (statusEl) {
-    statusEl.addEventListener("change", (e) => {
-      activeFilters.status = e.target.value;
-      toggleRoster(teamId, true);
+      globalFilters.search = e.target.value.toLowerCase();
+      AdminPage.applySearch();
     });
   }
 }
 
 // =========================================================
-// SORT + FILTER LOGIC
+// ROSTER MANAGER — OPEN MODAL
 // =========================================================
-function applySort(roster) {
-  if (!currentSort.field) return roster;
+async function openRosterManager(teamId) {
+  window.currentRosterTeamId = teamId;
 
-  return roster.slice().sort((a, b) => {
-    const A = (a[currentSort.field] ?? "").toString().toLowerCase();
-    const B = (b[currentSort.field] ?? "").toString().toLowerCase();
-    return currentSort.direction === "asc"
-      ? A.localeCompare(B)
-      : B.localeCompare(A);
-  });
-}
+  const overlay = document.getElementById("rosterManagerOverlay");
+  const modal = document.getElementById("rosterManagerModal");
 
-function applySearchAndFilters(roster) {
-  return roster.filter((r) => {
-    const matchesSearch =
-      !searchQuery ||
-      (r.fullName ?? "").toLowerCase().includes(searchQuery) ||
-      (r.position ?? "").toLowerCase().includes(searchQuery) ||
-      (r.shoots ?? "").toLowerCase().includes(searchQuery);
+  overlay.classList.add("active");
+  modal.classList.add("active");
 
-    const matchesPosition =
-      !activeFilters.position ||
-      (r.position ?? "").toUpperCase() === activeFilters.position;
+  // ⭐ WIRE BUTTONS AFTER MODAL HTML EXISTS
+  document.getElementById("rm-add-player").onclick = () =>
+    openAddRoster(teamId);
 
-    const matchesShoots =
-      !activeFilters.shoots || r.shoots === activeFilters.shoots;
+  document
+    .querySelectorAll("#rosterManagerOverlay .rm-close")
+    .forEach((btn) => (btn.onclick = closeRosterManager));
 
-    const matchesStatus =
-      !activeFilters.status || r.status === activeFilters.status;
+  // Update title
+  const team = allTeams.find((t) => t.teamId === teamId);
+  document.getElementById("rosterManagerTitle").textContent =
+    `Manage Roster — ${team?.name || ""}`;
 
-    return matchesSearch && matchesPosition && matchesShoots && matchesStatus;
-  });
+  // Render cached roster immediately
+  const cached = rosterCache[teamId] || [];
+  renderRosterManagerTable(cached);
+
+  // Fetch fresh roster
+  fetchRosterFresh(teamId);
 }
 
 // =========================================================
-// EDIT ROSTER ENTRY
+// FETCH ROSTER (SILENT REFRESH)
 // =========================================================
-async function openEditRoster(rosterEntryId, teamId) {
-  try {
-    const res = await fetch(`${window.apiBase}/roster/${rosterEntryId}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const entry = await res.json();
-
-    const select = document.getElementById("rosterPlayerId");
-    select.innerHTML = "";
-    allPlayers.forEach((p) => {
-      const opt = document.createElement("option");
-      opt.value = p.playerId;
-      opt.textContent = p.fullName;
-      select.appendChild(opt);
-    });
-
-    document.getElementById("rosterPlayerId").value = entry.playerId;
-    document.getElementById("rosterJersey").value = entry.jerseyNumber ?? "";
-    document.getElementById("rosterPosition").value = entry.position ?? "";
-    document.getElementById("rosterStatus").value = entry.status ?? "Active";
-
-    window.currentRosterEdit = { rosterEntryId, teamId };
-
-    document.getElementById("rosterModalTitle").textContent =
-      "Edit Roster Entry";
-    document.getElementById("rosterModal").classList.add("show");
-  } catch (err) {
-    console.error("Failed to load roster entry:", err);
-    alert("Unable to load roster entry.");
-  }
-}
-
-// =========================================================
-// SAVE ROSTER ENTRY
-// =========================================================
-async function saveRosterEntry() {
-  const playerId = document.getElementById("rosterPlayerId").value;
-  const jerseyNumber = document.getElementById("rosterJersey").value;
-  const position = document.getElementById("rosterPosition").value;
-  const status = document.getElementById("rosterStatus").value;
-
-  let url, method, teamId;
-
-  if (window.currentRosterEdit) {
-    url = `${window.apiBase}/roster/${window.currentRosterEdit.rosterEntryId}`;
-    method = "PUT";
-    teamId = window.currentRosterEdit.teamId;
-  } else {
-    teamId = window.currentTeamForAdd;
-    url = `${window.apiBase}/roster`;
-    method = "POST";
-  }
-
-  const body = {
-    teamId,
-    playerId,
-    jerseyNumber,
-    position,
-    status,
-  };
-
-  const res = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    alert("Failed to save roster entry.");
-    return;
-  }
-
-  document.getElementById("rosterModal").classList.remove("show");
-  await refreshRoster(teamId);
-}
-
-// =========================================================
-// DELETE ROSTER ENTRY
-// =========================================================
-function openDeleteRoster(rosterEntryId, teamId) {
-  window.currentRosterDelete = { rosterEntryId, teamId };
-  document.getElementById("deleteRosterModal").classList.add("show");
-}
-
-async function confirmDeleteRoster() {
-  const { rosterEntryId, teamId } = window.currentRosterDelete;
-
-  const res = await fetch(`${window.apiBase}/roster/${rosterEntryId}`, {
-    method: "DELETE",
-  });
-
-  if (!res.ok) {
-    alert("Failed to delete roster entry.");
-    return;
-  }
-
-  document.getElementById("deleteRosterModal").classList.remove("show");
-  await refreshRoster(teamId);
-}
-
-// =========================================================
-// REFRESH ROSTER
-// =========================================================
-async function refreshRoster(teamId) {
-  let roster = [];
+async function fetchRosterFresh(teamId) {
   try {
     const res = await fetch(`${window.apiBase}/teams/${teamId}/roster`);
-    if (res.ok) roster = await res.json();
+    if (!res.ok) return;
+
+    const fresh = await res.json();
+    rosterCache[teamId] = fresh;
+
+    renderRosterManagerTable(fresh);
   } catch (err) {
-    console.error("Error refreshing roster:", err);
+    console.error("Roster refresh failed:", err);
   }
-
-  rosterCache[teamId] = roster;
-  toggleRoster(teamId, true);
 }
 
 // =========================================================
-// TEAM ACTIONS
+// ROSTER MANAGER — RENDER TABLE
 // =========================================================
-function editTeam(teamId) {
-  window.location.href = `/admin-portal/screens/edit-team.html?id=${teamId}`;
-}
+function renderRosterManagerTable(list) {
+  const body = document.getElementById("rm-roster-body");
+  if (!Array.isArray(list)) list = [];
 
-async function deleteTeam(teamId) {
-  if (!confirm("Are you sure you want to delete this team?")) return;
+  let filtered = list
+    .filter((r) => {
+      const p = allPlayers.find((x) => x.id === r.playerId);
+      if (!p) return false;
 
-  try {
-    const res = await fetch(`${window.apiBase}/teams/${teamId}`, {
-      method: "DELETE",
+      const s = rmSearch.toLowerCase();
+      return (
+        p.fullName.toLowerCase().includes(s) ||
+        (r.position ?? "").toLowerCase().includes(s)
+      );
+    })
+    .filter((r) => !rmFilters.position || r.position === rmFilters.position)
+    .filter((r) => !rmFilters.shoots || r.shoots === rmFilters.shoots)
+    .filter((r) => !rmFilters.status || r.status === rmFilters.status);
+
+  if (rmSort.field) {
+    filtered = filtered.slice().sort((a, b) => {
+      const A = (a[rmSort.field] ?? "").toString().toLowerCase();
+      const B = (b[rmSort.field] ?? "").toString().toLowerCase();
+      return rmSort.direction === "asc"
+        ? A.localeCompare(B)
+        : B.localeCompare(A);
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    loadTeamsWithRosters();
-  } catch (err) {
-    console.error("Error deleting team:", err);
-    alert("Failed to delete team.");
   }
+
+  body.innerHTML = filtered
+    .map((r) => {
+      const p = allPlayers.find((x) => x.id === r.playerId);
+      const grade = p?.grade ?? "-";
+
+      return `
+        <tr data-roster-entry-id="${r.rosterEntryId}">
+          <td>${p?.fullName ?? "Unknown Player"}</td>
+          <td>${r.position ?? "-"}</td>
+          <td>${r.shoots ?? "-"}</td>
+          <td>${r.jerseyNumber ?? "-"}</td>
+          <td>${grade}</td>
+          <td>${r.status ?? "Active"}</td>
+          <td class="actions-col">
+            <button class="nf-btn-icon edit" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button class="nf-btn-icon delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  attachRosterManagerEvents();
 }
 
 // =========================================================
-// Add Player Action
+// ROSTER MANAGER — EVENT HANDLERS
 // =========================================================
-function openAddRoster(teamId) {
-  window.currentRosterEdit = null;
-  window.currentTeamForAdd = teamId;
+function attachRosterManagerEvents() {
+  document.getElementById("rm-search").oninput = (e) => {
+    rmSearch = e.target.value;
+    renderRosterManagerTable(rosterCache[window.currentRosterTeamId] || []);
+  };
 
-  const select = document.getElementById("rosterPlayerId");
-  select.innerHTML = "";
-  allPlayers.forEach((p) => {
-    const opt = document.createElement("option");
-    opt.value = p.playerId;
-    opt.textContent = p.fullName;
-    select.appendChild(opt);
+  document.getElementById("rm-filter-position").onchange = (e) => {
+    rmFilters.position = e.target.value;
+    renderRosterManagerTable(rosterCache[window.currentRosterTeamId] || []);
+  };
+
+  document.getElementById("rm-filter-shoots").onchange = (e) => {
+    rmFilters.shoots = e.target.value;
+    renderRosterManagerTable(rosterCache[window.currentRosterTeamId] || []);
+  };
+
+  document.getElementById("rm-filter-status").onchange = (e) => {
+    rmFilters.status = e.target.value;
+    renderRosterManagerTable(rosterCache[window.currentRosterTeamId] || []);
+  };
+
+  document.querySelectorAll("#rm-roster-table .sortable").forEach((th) => {
+    th.onclick = () => {
+      const field = th.dataset.field;
+      rmSort.direction =
+        rmSort.field === field && rmSort.direction === "asc" ? "desc" : "asc";
+      rmSort.field = field;
+
+      renderRosterManagerTable(rosterCache[window.currentRosterTeamId] || []);
+    };
   });
 
+  document
+    .querySelectorAll("#rosterManagerOverlay .rm-close")
+    .forEach((btn) => {
+      btn.onclick = closeRosterManager;
+    });
+
+  // ⭐ Wire Edit buttons
+  document.querySelectorAll("#rm-roster-body .edit").forEach((btn) => {
+    btn.onclick = (e) => {
+      const row = e.target.closest("tr");
+      const entryId = row.dataset.rosterEntryId;
+      roster_openEdit(entryId);
+    };
+  });
+
+  // Wire Delete buttons
+  document.querySelectorAll("#rm-roster-body .delete").forEach((btn) => {
+    btn.onclick = (e) => {
+      const row = e.target.closest("tr");
+      const entryId = row.dataset.rosterEntryId;
+      openDeleteRoster(entryId);
+    };
+  });
+}
+
+function closeRosterManager() {
+  document.getElementById("rosterManagerOverlay").classList.remove("active");
+  document.getElementById("rosterManagerModal").classList.remove("active");
+}
+
+// =========================================================
+// CRUD HANDLERS
+// =========================================================
+function openAddRoster() {
+  window.currentRosterEntryId = null;
+
+  // ⭐ Populate dropdown BEFORE showing modal
+  loadPlayersDropdown();
+
+  document.getElementById("rosterPlayerId").value = "";
   document.getElementById("rosterJersey").value = "";
   document.getElementById("rosterPosition").value = "";
   document.getElementById("rosterStatus").value = "Active";
+  document.getElementById("rosterGrade").value = "";
 
-  document.getElementById("rosterModalTitle").textContent =
-    "Add Player to Roster";
-  document.getElementById("rosterModal").classList.add("show");
+  document.getElementById("rosterModalOverlay").classList.add("active");
 }
 
-// expose for any callers that need them
-window.openAddRoster = openAddRoster;
-window.viewRoster = viewRoster;
+async function roster_openEdit(rosterEntryId) {
+  // 1. Get the roster entry
+  const entry = await RosterApi.getById(rosterEntryId);
+  window.currentRosterTeamId = entry.teamId;
+
+  // 2. Open the modal FIRST so the dropdown exists in the DOM
+  AdminPage.openEdit(rosterEntryId);
+
+  // 3. Load players and WAIT for them to finish
+  await loadPlayersList();
+
+  // 4. Populate the dropdown AFTER players are loaded
+  await loadPlayersDropdown();
+}
+
+// =========================================================
+// REFRESH ROSTER AFTER SAVE/DELETE
+// =========================================================
+async function refreshRoster(teamId) {
+  await fetchRosterFresh(teamId);
+}

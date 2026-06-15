@@ -1,358 +1,172 @@
 // =========================================================
-// SAFE INITIALIZER — RUNS WHENEVER LAYOUT IS READY
+// TEAMS PAGE — MODERNIZED + MATCHED DESIGN
 // =========================================================
 
-function initTeamsPage() {
-  if (window.__teamsPageInitialized) return;
-  window.__teamsPageInitialized = true;
+// =========================================================
+// LOAD ALL TEAM DROPDOWNS (NEW + COMPLETE)
+// =========================================================
+async function loadAllTeamDropdowns() {
+  await Promise.all([
+    loadTeamOrganizations(),
+    loadTeamLevels(),
+    loadTeamSeasons(),
+  ]);
+}
 
-  console.log("Teams page initializing…");
-
-  // Read orgId from query string if present
-  function getQueryParam(name) {
-    const url = new URL(window.location.href);
-    return url.searchParams.get(name);
-  }
-
-  const orgIdFromUrl = getQueryParam("orgId");
-
-  // =========================================================
-  // TOAST NOTIFICATION
-  // =========================================================
-  function showToast(message) {
-    const toast = document.getElementById("nf-toast");
-    if (!toast) return;
-
-    toast.textContent = message;
-    toast.classList.add("show");
-
-    setTimeout(() => {
-      toast.classList.remove("show");
-    }, 2500);
-  }
-
-  // =========================================================
-  // DROPDOWN LOADERS (MODAL + FILTER BAR)
-  // =========================================================
-
-  async function loadOrganizationsForTeams() {
-    const modalSelect = document.getElementById("team-org");
-    const filterSelect = document.getElementById("filter-org");
-
+// ------------------------------
+// ORGANIZATIONS DROPDOWN
+// ------------------------------
+async function loadTeamOrganizations() {
+  try {
     const res = await fetch(`${window.apiBase}/organizations`);
     const orgs = await res.json();
 
-    if (modalSelect) {
-      modalSelect.innerHTML = `<option value="">Select Organization</option>`;
+    const select = document.getElementById("team-org");
+    if (!select) return;
+
+    select.innerHTML = `<option value="">Select Organization</option>`;
+    orgs.forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.organizationId;
+      opt.textContent = o.name;
+      select.appendChild(opt);
+    });
+
+    // Populate filter dropdown
+    const filter = document.getElementById("filter-org");
+    if (filter) {
+      filter.innerHTML = `<option value="">Organization: All</option>`;
       orgs.forEach((o) => {
         const opt = document.createElement("option");
         opt.value = o.organizationId;
         opt.textContent = o.name;
-        modalSelect.appendChild(opt);
+        filter.appendChild(opt);
       });
     }
-
-    if (filterSelect) {
-      filterSelect.innerHTML = `<option value="">Org: All</option>`;
-
-      // Add External Teams option
-      const externalOpt = document.createElement("option");
-      externalOpt.value = "external";
-      externalOpt.textContent = "External Teams";
-      filterSelect.appendChild(externalOpt);
-
-      orgs.forEach((o) => {
-        const opt = document.createElement("option");
-        opt.value = o.organizationId;
-        opt.textContent = o.name;
-        filterSelect.appendChild(opt);
-      });
-    }
+  } catch (err) {
+    console.error("Failed to load organizations:", err);
   }
+}
 
-  async function loadLevelsForTeams() {
-    const modalSelect = document.getElementById("team-level");
-    const filterSelect = document.getElementById("filter-level");
-
+// ------------------------------
+// LEVELS DROPDOWN
+// ------------------------------
+async function loadTeamLevels() {
+  try {
     const res = await fetch(`${window.apiBase}/levels`);
     const levels = await res.json();
 
-    if (modalSelect) {
-      modalSelect.innerHTML = `<option value="">Select Level</option>`;
-      levels.forEach((lvl) => {
-        const opt = document.createElement("option");
-        opt.value = lvl.levelId || lvl.id;
-        opt.textContent = lvl.levelName || lvl.name;
-        modalSelect.appendChild(opt);
-      });
-    }
+    const select = document.getElementById("team-level");
+    if (!select) return;
 
-    if (filterSelect) {
-      filterSelect.innerHTML = `<option value="">Level: All</option>`;
-      levels.forEach((lvl) => {
+    select.innerHTML = `<option value="">Select Level</option>`;
+    levels.forEach((l) => {
+      const opt = document.createElement("option");
+      opt.value = l.levelId;
+      opt.textContent = l.levelName;
+      select.appendChild(opt);
+    });
+
+    // Populate filter dropdown
+    const filter = document.getElementById("filter-level");
+    if (filter) {
+      filter.innerHTML = `<option value="">Level: All</option>`;
+      levels.forEach((l) => {
         const opt = document.createElement("option");
-        opt.value = lvl.levelId || lvl.id;
-        opt.textContent = lvl.levelName || lvl.name;
-        filterSelect.appendChild(opt);
+        opt.value = l.levelId;
+        opt.textContent = l.levelName;
+        filter.appendChild(opt);
       });
     }
+  } catch (err) {
+    console.error("Failed to load levels:", err);
   }
+}
 
-  async function loadSeasonsForTeams() {
-    const modalSelect = document.getElementById("team-season");
-    const filterSelect = document.getElementById("filter-season");
-
+// ------------------------------
+// SEASONS DROPDOWN
+// ------------------------------
+async function loadTeamSeasons() {
+  try {
     const res = await fetch(`${window.apiBase}/seasons`);
     const seasons = await res.json();
 
-    if (modalSelect) {
-      modalSelect.innerHTML = `<option value="">Select Season</option>`;
-      seasons.forEach((s) => {
-        const opt = document.createElement("option");
-        opt.value = s.seasonId;
-        opt.textContent = s.seasonName;
-        modalSelect.appendChild(opt);
-      });
-    }
+    const select = document.getElementById("team-season");
+    if (!select) return;
 
-    if (filterSelect) {
-      filterSelect.innerHTML = `<option value="">Season: All</option>`;
-      seasons.forEach((s) => {
-        const opt = document.createElement("option");
-        opt.value = s.seasonId;
-        opt.textContent = s.seasonName;
-        filterSelect.appendChild(opt);
-      });
-    }
-  }
-
-  async function loadAllTeamDropdowns() {
-    await Promise.all([
-      loadOrganizationsForTeams(),
-      loadLevelsForTeams(),
-      loadSeasonsForTeams(),
-    ]);
-  }
-
-  // =========================================================
-  // FILTER + SEARCH (APPLY ON TABLE ROWS)
-  // =========================================================
-
-  function applyTeamFiltersAndSearch() {
-    const tbody = document.getElementById("teamsBody");
-    if (!tbody) return;
-
-    const searchInput = document.getElementById("teams-search-bar");
-    const orgSelect = document.getElementById("filter-org");
-    const levelSelect = document.getElementById("filter-level");
-    const seasonSelect = document.getElementById("filter-season");
-
-    const searchTerm = (searchInput?.value || "").toLowerCase();
-    const orgFilter = orgSelect?.value || "";
-    const levelFilter = levelSelect?.value || "";
-    const seasonFilter = seasonSelect?.value || "";
-
-    Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
-      const rowText = row.textContent.toLowerCase();
-      const rowOrg = row.dataset.orgId || "";
-      const rowLevel = row.dataset.levelId || "";
-      const rowSeason = row.dataset.seasonId || "";
-
-      const matchesSearch = !searchTerm || rowText.includes(searchTerm);
-
-      // ⭐ Updated logic — supports "External Teams"
-      const matchesOrg =
-        !orgFilter ||
-        rowOrg === orgFilter ||
-        (orgFilter === "external" &&
-          (!rowOrg || rowOrg === "00000000-0000-0000-0000-000000000000"));
-
-      const matchesLevel = !levelFilter || rowLevel === levelFilter;
-      const matchesSeason = !seasonFilter || rowSeason === seasonFilter;
-
-      row.style.display =
-        matchesSearch && matchesOrg && matchesLevel && matchesSeason
-          ? ""
-          : "none";
+    select.innerHTML = `<option value="">Select Season</option>`;
+    seasons.forEach((s) => {
+      const opt = document.createElement("option");
+      opt.value = s.seasonId;
+      opt.textContent = s.seasonName;
+      select.appendChild(opt);
     });
+  } catch (err) {
+    console.error("Failed to load seasons:", err);
   }
+}
 
-  function wireFilterEvents() {
-    const searchInput = document.getElementById("teams-search-bar");
-    const orgSelect = document.getElementById("filter-org");
-    const levelSelect = document.getElementById("filter-level");
-    const seasonSelect = document.getElementById("filter-season");
-
-    if (searchInput)
-      searchInput.addEventListener("input", applyTeamFiltersAndSearch);
-    if (orgSelect)
-      orgSelect.addEventListener("change", applyTeamFiltersAndSearch);
-    if (levelSelect)
-      levelSelect.addEventListener("change", applyTeamFiltersAndSearch);
-    if (seasonSelect)
-      seasonSelect.addEventListener("change", applyTeamFiltersAndSearch);
-  }
-
-  // =========================================================
-  // GENERATE ACCESS CODES BUTTON
-  // =========================================================
-
-  const generateBtn = document.getElementById("btnGenerateCodes");
-  if (generateBtn) {
-    generateBtn.addEventListener("click", () => {
-      const sk = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const sm = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-      document.getElementById("team-score-code").value = sk;
-      document.getElementById("team-stat-code").value = sm;
-
-      showToast("Codes generated!");
-    });
-  }
-
-  // =========================================================
-  // MODAL OPEN FUNCTIONS
-  // =========================================================
-
-  window.openAddTeamModal = async function () {
-    await loadAllTeamDropdowns();
-
-    AdminPage.currentEditId = null;
-    AdminPage.clearForm();
-
-    const orgSelect = document.getElementById("team-org");
-    if (orgSelect) orgSelect.disabled = false;
-
-    document.getElementById("team-abbreviation").value = "";
-    document.getElementById("team-external").checked = false;
-
-    document.getElementById("teamModalTitle").textContent = "Add Team";
-    document.getElementById("teamModal").classList.add("show");
-  };
-
-  window.openEditTeamModal = async function (teamId) {
-    await loadAllTeamDropdowns();
-
-    const team = await TeamApi.getById(teamId);
-
-    AdminPage.populateForm(team);
-
-    const orgSelect = document.getElementById("team-org");
-    const extToggle = document.getElementById("team-external");
-
-    const orgId = team.organizationId;
-
-    const isExternalTeam =
-      team.isExternal ||
-      orgId === null ||
-      orgId === undefined ||
-      orgId === "" ||
-      orgId === "00000000-0000-0000-0000-000000000000";
-
-    if (isExternalTeam) {
-      if (orgSelect) {
-        orgSelect.innerHTML = "";
-        const externalOption = document.createElement("option");
-        externalOption.value = "";
-        externalOption.textContent = "External Team";
-        externalOption.selected = true;
-        orgSelect.appendChild(externalOption);
-        orgSelect.disabled = true;
-      }
-      if (extToggle) extToggle.checked = true;
-    } else {
-      if (orgSelect) {
-        orgSelect.disabled = false;
-        await loadOrganizationsForTeams();
-        orgSelect.value = orgId || "";
-      }
-      if (extToggle) extToggle.checked = false;
-    }
-
-    document.getElementById("teamModalTitle").textContent = "Edit Team";
-    document.getElementById("teamModal").classList.add("show");
-  };
-
-  // =========================================================
-  // EXTERNAL TEAM TOGGLE
-  // =========================================================
-
-  const extToggle = document.getElementById("team-external");
-  if (extToggle) {
-    extToggle.addEventListener("change", async (e) => {
-      const orgSelect = document.getElementById("team-org");
-      if (!orgSelect) return;
-
-      if (e.target.checked) {
-        orgSelect.innerHTML = "";
-        const externalOption = document.createElement("option");
-        externalOption.value = "";
-        externalOption.textContent = "External Team";
-        externalOption.selected = true;
-        orgSelect.appendChild(externalOption);
-
-        orgSelect.disabled = true;
-      } else {
-        orgSelect.disabled = false;
-        await loadOrganizationsForTeams();
-        orgSelect.value = "";
-      }
-    });
-  }
-
-  // =========================================================
-  // ADMIN PAGE INIT
-  // =========================================================
+// =========================================================
+// MAIN PAGE INITIALIZER
+// =========================================================
+function initTeamsPage() {
+  if (!document.getElementById("teamsBody")) return;
 
   AdminPage.init({
     tableBodyId: "teamsBody",
     searchInputId: "teams-search-bar",
 
-    modalId: "teamModal",
+    // ⭐ FIXED MODAL IDS
+    modalId: "teamModalOverlay",
     modalTitleId: "teamModalTitle",
     addButtonId: "btnAddTeam",
     saveButtonId: "btnSaveTeam",
     cancelButtonId: "btnCancelTeam",
 
-    deleteModalId: "teamDeleteModal",
+    deleteModalId: "teamDeleteModalOverlay",
     deleteConfirmId: "btnConfirmTeamDelete",
     deleteCancelId: "btnCancelTeamDelete",
 
-    editHandlerName: "openEditTeamModal",
-    deleteHandlerName: "openDeleteTeamModal",
+    editHandlerName: "openEditTeam",
+    deleteHandlerName: "openDeleteTeam",
+    addHandlerName: "openAddTeam",
 
     addTitle: "Add Team",
     editTitle: "Edit Team",
 
     api: TeamApi,
 
+    // -------------------------------------------------------
+    // DROPDOWNS + FILTERS
+    // -------------------------------------------------------
     loadDropdowns: async () => {
       await loadAllTeamDropdowns();
-      wireFilterEvents();
+      wireTeamFilterEvents();
 
-      if (orgIdFromUrl) {
+      if (window.orgIdFromUrl) {
         const orgFilter = document.getElementById("filter-org");
         if (orgFilter) {
-          orgFilter.value = orgIdFromUrl;
+          orgFilter.value = window.orgIdFromUrl;
           applyTeamFiltersAndSearch();
         }
       }
     },
 
+    // -------------------------------------------------------
+    // TABLE RENDERING
+    // -------------------------------------------------------
     renderTable: (teams) => {
       const body = document.getElementById("teamsBody");
-      if (!body) return;
-
       body.innerHTML = "";
 
       teams.forEach((team) => {
         const row = document.createElement("tr");
 
-        const rosterCount = team.rosterCount ?? team.playerCount ?? 0;
-
         row.dataset.orgId = team.organizationId || "";
         row.dataset.levelId = team.levelId || "";
-        row.dataset.seasonId = team.seasonId || "";
+        row.dataset.status = team.isActive ? "active" : "inactive";
+
+        const rosterCount = team.rosterCount ?? team.playerCount ?? 0;
 
         row.innerHTML = `
           <td>${team.name}</td>
@@ -367,42 +181,61 @@ function initTeamsPage() {
               <div class="code-badge sm-code">SM-${team.statManagerCode ?? ""}</div>
             </div>
           </td>
-          <td>${team.isActive ? "Active" : "Inactive"}</td>
+          <td>
+            <span class="status-badge ${team.isActive ? "active" : "inactive"}">
+              ${team.isActive ? "Active" : "Inactive"}
+            </span>
+          </td>
           <td class="actions-col">
-            <button class="action-btn roster-btn" onclick="window.location.href='team-roster.html?teamId=${team.teamId}'">Roster</button>
-            <button class="action-btn edit-btn" onclick="openEditTeamModal('${team.teamId}')">Edit</button>
-            <button class="action-btn delete-btn" onclick="openDeleteTeamModal('${team.teamId}')">Delete</button>
+            <button class="nf-btn-icon view"><i class="fa-solid fa-users"></i></button>
+            <button class="nf-btn-icon edit"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button class="nf-btn-icon delete"><i class="fa-solid fa-trash"></i></button>
           </td>
         `;
+
+        const [btnView, btnEdit, btnDelete] = row.querySelectorAll("button");
+
+        btnView.addEventListener("click", () => {
+          window.location.href = `rosters.html?teamId=${team.id}`;
+        });
+
+        btnEdit.addEventListener("click", () => openEditTeam(team.teamId));
+        btnDelete.addEventListener("click", () => openDeleteTeam(team.teamId));
 
         body.appendChild(row);
       });
 
       applyTeamFiltersAndSearch();
-      wireFilterEvents();
     },
 
+    // -------------------------------------------------------
+    // CLEAR FORM
+    // -------------------------------------------------------
     clearForm: () => {
-      document.getElementById("team-name").value = "";
-      document.getElementById("team-abbreviation").value = "";
-      document.getElementById("team-org").value = "";
-      document.getElementById("team-level").value = "";
-      document.getElementById("team-season").value = "";
-      document.getElementById("team-head-coach").value = "";
-      document.getElementById("team-asst1").value = "";
-      document.getElementById("team-asst2").value = "";
-      document.getElementById("team-asst3").value = "";
-      document.getElementById("team-asst4").value = "";
-      document.getElementById("team-notes").value = "";
-      document.getElementById("team-score-code").value = "";
-      document.getElementById("team-stat-code").value = "";
+      [
+        "team-name",
+        "team-abbreviation",
+        "team-org",
+        "team-level",
+        "team-season",
+        "team-head-coach",
+        "team-asst1",
+        "team-asst2",
+        "team-asst3",
+        "team-asst4",
+        "team-notes",
+        "team-score-code",
+        "team-stat-code",
+      ].forEach((id) => (document.getElementById(id).value = ""));
+
       document.getElementById("team-active").checked = true;
       document.getElementById("team-external").checked = false;
-
-      const orgSelect = document.getElementById("team-org");
-      if (orgSelect) orgSelect.disabled = false;
+      document.getElementById("team-org").disabled = false;
     },
 
+    // -------------------------------------------------------
+    // POPULATE FORM
+    // -------------------------------------------------------
     populateForm: (team) => {
       document.getElementById("team-name").value = team.name ?? "";
       document.getElementById("team-abbreviation").value =
@@ -430,12 +263,17 @@ function initTeamsPage() {
 
       document.getElementById("team-active").checked = !!team.isActive;
       document.getElementById("team-external").checked = !!team.isExternal;
+
+      document.getElementById("team-org").disabled = !!team.isExternal;
     },
 
+    // -------------------------------------------------------
+    // COLLECT FORM DATA
+    // -------------------------------------------------------
     collectFormData: () => {
       const isExternal = document.getElementById("team-external").checked;
 
-      const payload = {
+      return {
         name: document.getElementById("team-name").value,
         abbreviation:
           document.getElementById("team-abbreviation").value || null,
@@ -455,25 +293,90 @@ function initTeamsPage() {
         isActive: document.getElementById("team-active").checked,
         isExternal: isExternal,
       };
-
-      return payload;
     },
   });
 
-  // =========================================================
-  // DELETE HANDLER
-  // =========================================================
-
-  window.openDeleteTeamModal = function (id) {
-    AdminPage.currentDeleteId = id;
-    document.getElementById("teamDeleteModal").classList.add("show");
-  };
+  // Map AdminPage internal add handler
+  AdminPage.openAdd = openAddTeam;
 }
 
 // =========================================================
-// RUN INIT WHENEVER POSSIBLE
+// ADD TEAM (FIXED)
 // =========================================================
+function openAddTeam() {
+  AdminPage.editingId = null;
+  AdminPage.config.clearForm();
+  document.getElementById("teamModalTitle").textContent = "Add Team";
+  document.getElementById("teamModalOverlay").classList.add("active");
+}
 
+// =========================================================
+// EDIT TEAM (FIXED)
+// =========================================================
+async function openEditTeam(id) {
+  try {
+    const team = await TeamApi.getById(id);
+    AdminPage.editingId = id;
+    AdminPage.config.populateForm(team);
+
+    document.getElementById("teamModalTitle").textContent = "Edit Team";
+    document.getElementById("teamModalOverlay").classList.add("active");
+  } catch (err) {
+    console.error("Failed to load team:", err);
+    alert("Unable to load team details.");
+  }
+}
+
+// =========================================================
+// DELETE TEAM (FIXED)
+// =========================================================
+function openDeleteTeam(id) {
+  AdminPage.deleteId = id;
+  document.getElementById("teamDeleteModalOverlay").classList.add("active");
+}
+
+// =========================================================
+// FILTERS
+// =========================================================
+function applyTeamFiltersAndSearch() {
+  const tbody = document.getElementById("teamsBody");
+  if (!tbody) return;
+
+  const searchTerm = (
+    document.getElementById("teams-search-bar")?.value || ""
+  ).toLowerCase();
+  const orgFilter = document.getElementById("filter-org")?.value || "";
+  const levelFilter = document.getElementById("filter-level")?.value || "";
+  const statusFilter = document.getElementById("filter-status")?.value || "";
+
+  Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
+    const rowText = row.textContent.toLowerCase();
+
+    const matchesSearch = !searchTerm || rowText.includes(searchTerm);
+    const matchesOrg = !orgFilter || row.dataset.orgId === orgFilter;
+    const matchesLevel = !levelFilter || row.dataset.levelId === levelFilter;
+    const matchesStatus = !statusFilter || row.dataset.status === statusFilter;
+
+    row.style.display =
+      matchesSearch && matchesOrg && matchesLevel && matchesStatus
+        ? ""
+        : "none";
+  });
+}
+
+function wireTeamFilterEvents() {
+  ["teams-search-bar", "filter-org", "filter-level", "filter-status"].forEach(
+    (id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", applyTeamFiltersAndSearch);
+      if (el) el.addEventListener("change", applyTeamFiltersAndSearch);
+    },
+  );
+}
+
+// =========================================================
+// INIT
+// =========================================================
 document.addEventListener("layoutLoaded", initTeamsPage);
 if (window.__layoutAlreadyLoaded) initTeamsPage();
 window.addEventListener("DOMContentLoaded", initTeamsPage);

@@ -1,0 +1,43 @@
+<!-- =========================================================
+     LIST PAGE TEMPLATE
+========================================================= -->
+
+<div class="page-header-block">
+  <div class="page-header-row">
+    <div class="page-header-text">
+      <h1 class="page-header">Page Title</h1>
+      <p class="page-subtext">Short description of what this page manages</p>
+    </div>
+
+    <button id="btnAddItem" class="nf-btn nf-btn-primary">+ Add Item</button>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="org-toolbar">
+  <input
+    type="text"
+    id="searchInput"
+    class="org-search-input"
+    placeholder="🔍 Search..."
+  />
+
+  <select id="filterSelect" class="nf-select" style="width: 200px">
+    <option value="">All</option>
+  </select>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrapper">
+  <table class="nf-table" id="dataTable">
+    <thead>
+      <tr>
+        <th class="sortable">Column 1</th>
+        <th class="sortable">Column 2</th>
+        <th class="sortable">Column 3</th>
+        <th class="actions-col">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>

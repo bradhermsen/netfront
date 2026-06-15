@@ -1,10 +1,17 @@
 /* =========================================================
-   GLOBAL COLOR SYSTEM
+   GLOBAL CSS VARIABLES AND BASE STYLES
+========================================================= */
+/* =========================================================
+   GLOBAL DESIGN TOKENS (EXPANDED)
 ========================================================= */
 :root {
-  --nf-bg: #0b1424;
-  --nf-bg-light: #1e1e1e;
-  --nf-bg-lighter: #1a2740;
+  /* ============================
+     COLOR PALETTE (Dark Theme)
+     ============================ */
+  --nf-bg: #0b1424; /* dark navy */
+  --nf-bg-light: #0f1a30; /* medium navy */
+  --nf-bg-lighter: #1a2740; /* lighter navy */
+  --nf-border-light: #223354;
 
   --nf-text: #ffffff;
   --nf-text-muted: #a0a0a0;
@@ -13,7 +20,40 @@
   --nf-border-light: #444444;
 
   --nf-accent: #ff7b00;
+  --nf-accent-light: #ffa733;
+
   --nf-danger: #d9534f;
+
+  /* ============================
+     SPACING SCALE (4/8px system)
+     ============================ */
+  --nf-space-1: 4px;
+  --nf-space-2: 8px;
+  --nf-space-3: 12px;
+  --nf-space-4: 16px;
+  --nf-space-5: 24px;
+  --nf-space-6: 32px;
+
+  /* ============================
+     BORDER RADIUS
+     ============================ */
+  --nf-radius-sm: 4px;
+  --nf-radius-md: 6px;
+  --nf-radius-lg: 10px;
+
+  /* ============================
+     SHADOWS
+     ============================ */
+  --nf-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --nf-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4);
+
+  /* ============================
+     TYPOGRAPHY
+     ============================ */
+  --nf-font-sm: 12px;
+  --nf-font-base: 14px;
+  --nf-font-lg: 16px;
+  --nf-font-xl: 20px;
 }
 
 /* =========================================================

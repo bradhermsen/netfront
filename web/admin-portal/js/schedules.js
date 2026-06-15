@@ -1,235 +1,311 @@
-// =========================================================
-// WAIT FOR CONFIG (apiBase from config-loader.js)
-// =========================================================
-async function waitForConfig() {
-    if (window.configReady) return;
-
-    await new Promise(resolve => {
-        const check = setInterval(() => {
-            if (window.configReady) {
-                clearInterval(check);
-                resolve();
-            }
-        }, 50);
-    });
-}
+console.log("🔥 schedules.js LOADED");
 
 // =========================================================
-// WAIT FOR SIDEBAR (sidebar-loader.js)
+// GAME SCHEDULES MODULE (UNIFIED MODAL SYSTEM)
+// Matches Org / Teams / Rosters / Players patterns
 // =========================================================
-async function waitForSidebar() {
-    const container = document.getElementById("sidebarContainer");
 
-    await new Promise(resolve => {
-        const check = setInterval(() => {
-            if (
-                container &&
-                container.innerHTML.trim().length > 0 &&
-                container.querySelector("a")
-            ) {
-                clearInterval(check);
-                resolve();
-            }
-        }, 50);
-    });
-}
+let allTeams = [];
+let allGameTypes = [];
+let allGameRounds = [];
+let allGames = [];
+
+let currentGameId = null;
 
 // =========================================================
 // LOOKUPS
 // =========================================================
-async function loadLookups() {
-    await Promise.all([
-        loadTeams(),
-        loadGameTypes(),
-        loadGameRounds()
-    ]);
+async function loadScheduleLookups() {
+  const [teamsRes, typesRes, roundsRes] = await Promise.all([
+    fetch(`${apiBase}/teams`),
+    fetch(`${apiBase}/gametypes`),
+    fetch(`${apiBase}/gamerounds`),
+  ]);
+
+  allTeams = await teamsRes.json();
+  allGameTypes = await typesRes.json();
+  allGameRounds = await roundsRes.json();
 }
 
-async function loadTeams() {
-    const res = await fetch(`${apiBase}/teams`);
-    const teams = await res.json();
+function fillSelect(id, list, valueField, textField, includeNone = false) {
+  const el = document.getElementById(id);
+  el.innerHTML = includeNone ? `<option value="">None</option>` : "";
 
-    const home = document.getElementById("homeTeamId");
-    const away = document.getElementById("awayTeamId");
-
-    home.innerHTML = "";
-    away.innerHTML = "";
-
-    teams.forEach(t => {
-        const opt = `<option value="${t.teamId}">${t.name}</option>`;
-        home.innerHTML += opt;
-        away.innerHTML += opt;
-    });
+  list.forEach((item) => {
+    el.innerHTML += `<option value="${item[valueField]}">${item[textField]}</option>`;
+  });
 }
 
-async function loadGameTypes() {
-    const res = await fetch(`${apiBase}/gametypes`);
-    const types = await res.json();
-
-    const select = document.getElementById("gameTypeId");
-    select.innerHTML = "";
-
-    types.forEach(t => {
-        select.innerHTML += `<option value="${t.gameTypeId}">${t.name}</option>`;
-    });
-}
-
-async function loadGameRounds() {
-    const res = await fetch(`${apiBase}/gamerounds`);
-    const rounds = await res.json();
-
-    const select = document.getElementById("gameRoundId");
-    select.innerHTML = `<option value="">None</option>`;
-
-    rounds.forEach(r => {
-        select.innerHTML += `<option value="${r.gameRoundId}">${r.roundName}</option>`;
-    });
-}
-
-// =========================================================
-// LOAD GAMES
-// =========================================================
-async function loadGames() {
-    const res = await fetch(`${apiBase}/games`);
-    const games = await res.json();
-
-    const tbody = document.getElementById("gamesTableBody");
-    tbody.innerHTML = "";
-
-    games.forEach(game => {
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-            <td>${game.homeTeamName}</td>
-            <td>${game.awayTeamName}</td>
-            <td>${formatDate(game.gameDateTime)}</td>
-            <td>${formatTime(game.gameDateTime)}</td>
-            <td>${game.arenaName}</td>
-            <td>${game.rinkName}</td>
-            <td>${game.gameTypeName}</td>
-            <td>${game.gameRoundName ?? ""}</td>
-            <td>${game.status}</td>
-            <td>
-                <button class="nf-btn btn-primary" onclick="openEditModal('${game.gameId}')">Edit</button>
-                <button class="nf-btn btn-danger" onclick="deleteGame('${game.gameId}')">Delete</button>
-            </td>
-        `;
-
-        tbody.appendChild(row);
-    });
+function populateScheduleDropdowns() {
+  fillSelect("game-home-team", allTeams, "teamId", "name");
+  fillSelect("game-away-team", allTeams, "teamId", "name");
+  fillSelect("game-type", allGameTypes, "gameTypeId", "name");
+  fillSelect("game-round", allGameRounds, "gameRoundId", "roundName", true);
 }
 
 // =========================================================
 // FORMAT HELPERS
 // =========================================================
 function formatDate(dt) {
-    return new Date(dt).toISOString().split("T")[0];
+  return new Date(dt).toISOString().split("T")[0];
 }
 
 function formatTime(dt) {
-    return new Date(dt).toISOString().substring(11, 16);
+  return new Date(dt).toISOString().substring(11, 16);
 }
 
 // =========================================================
-// MODAL: ADD
+// LOAD + RENDER GAMES
 // =========================================================
-function openAddModal() {
-    document.getElementById("gameId").value = "";
-    document.getElementById("gameDate").value = "";
-    document.getElementById("gameTime").value = "";
-    document.getElementById("arenaName").value = "";
-    document.getElementById("rinkName").value = "";
-    document.getElementById("gameTypeId").value = "";
-    document.getElementById("gameRoundId").value = "";
-    document.getElementById("notes").value = "";
+async function loadGames() {
+  const res = await fetch(`${apiBase}/games`);
+  allGames = await res.json();
+  renderGamesTable(allGames);
+}
 
-    gameModal.show();
+function renderGamesTable(list) {
+  const tbody = document.getElementById("gamesTableBody");
+  tbody.innerHTML = "";
+
+  list.forEach((g) => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${g.homeTeamName}</td>
+        <td>${g.awayTeamName}</td>
+        <td>${formatDate(g.gameDateTime)}</td>
+        <td>${formatTime(g.gameDateTime)}</td>
+        <td>${g.arenaName}</td>
+        <td>${g.rinkName}</td>
+        <td>${g.gameTypeName}</td>
+        <td>${g.gameRoundName ?? ""}</td>
+        <td>${g.status}</td>
+        <td class="actions-col">
+          <button class="nf-btn-icon edit" data-id="${g.gameId}">
+            <i class="fa fa-edit"></i>
+          </button>
+          <button class="nf-btn-icon delete" data-id="${g.gameId}">
+            <i class="fa fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  wireGameRowButtons();
+}
+
+function wireGameRowButtons() {
+  document.querySelectorAll(".nf-btn-icon.edit").forEach((btn) => {
+    btn.onclick = () => openEditGame(btn.dataset.id);
+  });
+
+  document.querySelectorAll(".nf-btn-icon.delete").forEach((btn) => {
+    btn.onclick = () => openDeleteGame(btn.dataset.id);
+  });
 }
 
 // =========================================================
-// MODAL: EDIT
+// MODALS: OPEN ADD / EDIT
 // =========================================================
-async function openEditModal(id) {
-    const res = await fetch(`${apiBase}/games/${id}`);
-    const game = await res.json();
+function openAddGame() {
+  currentGameId = null;
 
-    document.getElementById("gameId").value = game.gameId;
+  populateScheduleDropdowns();
 
-    const dt = new Date(game.gameDateTime);
-    document.getElementById("gameDate").value = dt.toISOString().split("T")[0];
-    document.getElementById("gameTime").value = dt.toISOString().substring(11, 16);
+  document.getElementById("gameModalTitle").textContent = "Add Game";
 
-    document.getElementById("arenaName").value = game.arenaName;
-    document.getElementById("rinkName").value = game.rinkName;
-    document.getElementById("gameTypeId").value = game.gameTypeId;
-    document.getElementById("gameRoundId").value = game.gameRoundId ?? "";
-    document.getElementById("notes").value = game.notes ?? "";
+  document.getElementById("game-home-team").value = "";
+  document.getElementById("game-away-team").value = "";
+  document.getElementById("game-date").value = "";
+  document.getElementById("game-time").value = "";
+  document.getElementById("game-arena-select").value = "";
+  document.getElementById("game-arena-custom").value = "";
+  document.getElementById("game-rink-select").value = "";
+  document.getElementById("game-rink-custom").value = "";
+  document.getElementById("game-type").value = "";
+  document.getElementById("game-round").value = "";
+  document.getElementById("game-notes").value = "";
+  document.getElementById("game-status").value = "Scheduled";
 
-    gameModal.show();
+  document.getElementById("gameModalOverlay").classList.add("active");
+}
+
+async function openEditGame(id) {
+  currentGameId = id;
+
+  const res = await fetch(`${apiBase}/games/${id}`);
+  const g = await res.json();
+
+  populateScheduleDropdowns();
+
+  document.getElementById("gameModalTitle").textContent = "Edit Game";
+
+  const dt = new Date(g.gameDateTime);
+
+  document.getElementById("game-home-team").value = g.homeTeamId;
+  document.getElementById("game-away-team").value = g.awayTeamId;
+  document.getElementById("game-date").value = dt.toISOString().split("T")[0];
+  document.getElementById("game-time").value = dt
+    .toISOString()
+    .substring(11, 16);
+
+  document.getElementById("game-arena-select").value = g.arenaName;
+  document.getElementById("game-arena-custom").value = "";
+  document.getElementById("game-rink-select").value = g.rinkName;
+  document.getElementById("game-rink-custom").value = "";
+
+  document.getElementById("game-type").value = g.gameTypeId;
+  document.getElementById("game-round").value = g.gameRoundId ?? "";
+  document.getElementById("game-notes").value = g.notes ?? "";
+  document.getElementById("game-status").value = g.status;
+
+  document.getElementById("gameModalOverlay").classList.add("active");
 }
 
 // =========================================================
 // SAVE GAME
 // =========================================================
-async function saveGameFromForm() {
-    const id = document.getElementById("gameId").value;
+async function saveGame() {
+  const date = document.getElementById("game-date").value;
+  const time = document.getElementById("game-time").value;
+  const gameDateTime = new Date(`${date}T${time}:00`);
 
-    const date = document.getElementById("gameDate").value;
-    const time = document.getElementById("gameTime").value;
-    const gameDateTime = new Date(`${date}T${time}:00`);
+  const payload = {
+    homeTeamId: document.getElementById("game-home-team").value,
+    awayTeamId: document.getElementById("game-away-team").value,
+    gameDateTime: gameDateTime.toISOString(),
+    arenaName:
+      document.getElementById("game-arena-custom").value ||
+      document.getElementById("game-arena-select").value,
+    rinkName:
+      document.getElementById("game-rink-custom").value ||
+      document.getElementById("game-rink-select").value,
+    gameTypeId: parseInt(document.getElementById("game-type").value),
+    gameRoundId: document.getElementById("game-round").value || null,
+    notes: document.getElementById("game-notes").value,
+    // status: document.getElementById("game-status").value,
+  };
 
-    const payload = {
-        homeTeamId: document.getElementById("homeTeamId").value,
-        awayTeamId: document.getElementById("awayTeamId").value,
-        gameDateTime: gameDateTime.toISOString(),
-        arenaName: document.getElementById("arenaName").value,
-        rinkName: document.getElementById("rinkName").value,
-        gameTypeId: parseInt(document.getElementById("gameTypeId").value),
-        gameRoundId: document.getElementById("gameRoundId").value || null,
-        notes: document.getElementById("notes").value
-    };
+  const method = currentGameId ? "PUT" : "POST";
+  const url = currentGameId
+    ? `${apiBase}/games/${currentGameId}`
+    : `${apiBase}/games`;
 
-    const method = id ? "PUT" : "POST";
-    const url = id ? `${apiBase}/games/${id}` : `${apiBase}/games`;
+  await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 
-    await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    });
-
-    gameModal.hide();
-    loadGames();
+  closeGameModal();
+  loadGames();
 }
 
 // =========================================================
 // DELETE GAME
 // =========================================================
-async function deleteGame(id) {
-    if (!confirm("Delete this game?")) return;
+function openDeleteGame(id) {
+  currentGameId = id;
+  document.getElementById("gameDeleteModalOverlay").classList.add("active");
+}
 
-    await fetch(`${apiBase}/games/${id}`, { method: "DELETE" });
-    loadGames();
+async function confirmDeleteGame() {
+  await fetch(`${apiBase}/games/${currentGameId}`, { method: "DELETE" });
+  closeDeleteGameModal();
+  loadGames();
 }
 
 // =========================================================
-// DOM READY — STRICT + SAFE STARTUP PIPELINE
+// CLOSE MODALS
 // =========================================================
-let gameModal;
+function closeGameModal() {
+  document.getElementById("gameModalOverlay").classList.remove("active");
+}
 
-document.addEventListener("DOMContentLoaded", async () => {
-    // 1. Wait for config-loader.js
-    await waitForConfig();
+function closeDeleteGameModal() {
+  document.getElementById("gameDeleteModalOverlay").classList.remove("active");
+}
 
-    // 2. Wait for sidebar-loader.js
-    await waitForSidebar();
+// =========================================================
+// PAGE SCRIPT REGISTRATION
+// =========================================================
+function waitForSchedulesPageReady() {
+  return new Promise((resolve) => {
+    const check = setInterval(() => {
+      if (
+        window.PageScriptRegistry &&
+        document.getElementById("gamesTableBody") // page content loaded
+      ) {
+        clearInterval(check);
+        resolve();
+      }
+    }, 30);
+  });
+}
 
-    // 3. Initialize modal
-    gameModal = new bootstrap.Modal(document.getElementById("gameModal"));
+waitForSchedulesPageReady().then(() => {
+  console.log("schedules.js loaded");
 
-    // 4. Load lookups
-    await loadLookups();
+  window.PageScriptRegistry.schedules = () => {
+    document.getElementById("btnAddGame").onclick = openAddGame;
 
-    // 5. Load games
-    await loadGames();
+    document.getElementById("gameSave").onclick = saveGame;
+    document.getElementById("gameCancel").onclick = closeGameModal;
+
+    document.getElementById("gameDeleteConfirm").onclick = confirmDeleteGame;
+    document.getElementById("gameDeleteCancel").onclick = closeDeleteGameModal;
+
+    loadScheduleLookups().then(loadGames);
+  };
+});
+waitForSchedulesPageReady().then(() => {
+  if (window.PageScriptRegistry.schedules) {
+    console.log("🔥 schedules.js: auto-running schedules page script");
+    window.PageScriptRegistry.schedules();
+  }
+});
+
+// =========================================================
+// PAGE SCRIPT REGISTRATION (DIAGNOSTIC MODE)
+// =========================================================
+
+console.log("🔥 schedules.js loaded (top of file)");
+
+function waitForSchedulesPageReady() {
+  return new Promise((resolve) => {
+    const check = setInterval(() => {
+      const registryReady = !!window.PageScriptRegistry;
+      const pageReady = !!document.getElementById("gamesTableBody");
+
+      console.log("⏳ waiting... registry:", registryReady, "page:", pageReady);
+
+      if (registryReady && pageReady) {
+        console.log("✅ PageScriptRegistry + Schedules page content READY");
+        clearInterval(check);
+        resolve();
+      }
+    }, 300);
+  });
+}
+
+waitForSchedulesPageReady().then(() => {
+  console.log("🔥 Registering PageScriptRegistry.schedules");
+
+  window.PageScriptRegistry.schedules = () => {
+    console.log("🔥 PageScriptRegistry.schedules RUN");
+
+    document.getElementById("btnAddGame").onclick = openAddGame;
+
+    document.getElementById("gameSave").onclick = saveGame;
+    document.getElementById("gameCancel").onclick = closeGameModal;
+
+    document.getElementById("gameDeleteConfirm").onclick = confirmDeleteGame;
+    document.getElementById("gameDeleteCancel").onclick = closeDeleteGameModal;
+
+    console.log("🔥 Calling loadScheduleLookups...");
+    loadScheduleLookups().then(() => {
+      console.log("🔥 Lookups loaded, calling loadGames...");
+      loadGames();
+    });
+  };
 });

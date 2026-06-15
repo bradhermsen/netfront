@@ -1,0 +1,28 @@
+<!-- =========================================================
+     MODAL TEMPLATE
+========================================================= -->
+
+<div id="modalOverlay" class="modal-overlay hidden">
+  <div class="nf-modal">
+    <div class="nf-modal-header">Modal Title</div>
+
+    <div class="flex flex-col gap-3">
+      <div>
+        <label class="nf-label">Field Label</label>
+        <input type="text" class="nf-input" id="modalFieldInput" />
+      </div>
+
+      <div>
+        <label class="nf-label">Select Label</label>
+        <select class="nf-select" id="modalSelectInput">
+          <option value="">Choose...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="nf-modal-actions">
+      <button class="nf-btn nf-btn-secondary" id="btnCloseModal">Cancel</button>
+      <button class="nf-btn nf-btn-primary" id="btnSubmitModal">Save</button>
+    </div>
+  </div>
+</div>

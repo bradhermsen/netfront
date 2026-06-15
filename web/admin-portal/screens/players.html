@@ -1,98 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <title>Players | NetFront Admin</title>
 
     <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/admin-shared.css" />
+    <link rel="stylesheet" href="../css/modal.css" />
     <link rel="stylesheet" href="../css/players.css" />
-</head>
+  </head>
 
-<body>
-
-    <!-- LAYOUT -->
+  <body>
     <div id="layoutContainer"></div>
 
+    <!-- Shared System Scripts -->
+    <!-- <script src="../js/page-script-registry.js"></script> -->
+    <!-- MUST COME FIRST -->
+    <script src="../js/layout-loader.js"></script>
+    <script src="../js/modal-diagnostics.js"></script>
+    <script src="../js/page-content.js"></script>
+
     <script>
-        fetch("../components/layout.html")
-            .then(res => res.text())
-            .then(html => {
-                document.getElementById("layoutContainer").innerHTML = html;
-
-                // Inject page content
-                document.getElementById("pageContent").innerHTML = `
-                    <h1 class="page-header">Players</h1>
-
-                    <input 
-                        type="text" 
-                        id="playerSearch" 
-                        class="global-search"
-                        placeholder="Search players..."
-                    />
-
-                    <table class="data-table" id="playersTable">
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-key="fullName">Name</th>
-                                <th class="sortable" data-key="teamName">Team</th>
-                                <th class="sortable" data-key="organizationName">Organization</th>
-                                <th class="sortable" data-key="position">Position</th>
-                                <th class="sortable" data-key="shoots">Shoots</th>
-                                <th class="sortable" data-key="jerseyNumber">Jersey</th>
-                                <th class="sortable" data-key="status">Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="playersBody"></tbody>
-                    </table>
-                `;
-            });
+      loadLayout("players");
     </script>
 
-    <!-- ============================
-         ADD / EDIT PLAYER MODAL
-    ============================= -->
-    <div id="playerModal" class="modal hidden">
-        <div class="modal-content modal-dark">
-            <h2 id="modalTitle">Add Player</h2>
-
-            <div class="modal-body">
-
-                <label>First Name</label>
-                <input id="firstName" type="text" class="form-control" />
-
-                <label>Last Name</label>
-                <input id="lastName" type="text" class="form-control" />
-
-                <label>Organization</label>
-                <select id="organizationId" class="form-select"></select>
-
-                <label>Team</label>
-                <select id="teamId" class="form-select"></select>
-
-                <label>Position</label>
-                <input id="position" type="text" class="form-control" />
-
-                <label>Jersey Number</label>
-                <input id="jerseyNumber" type="number" class="form-control" />
-
-                <label>Status</label>
-                <select id="isActive" class="form-select">
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                </select>
-
-            </div>
-
-            <div class="modal-actions">
-                <button class="btn-secondary nf-btn modal-close">Cancel</button>
-                <button id="savePlayerBtn" class="btn-primary nf-btn">Save</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- PAGE JS -->
+    <!-- Page Scripts -->
+    <script src="../js/config-loader.js"></script>
+    <script src="../js/admin-page.js"></script>
+    <script src="../api/player-api.js"></script>
     <script src="../js/players.js"></script>
-
-</body>
+  </body>
 </html>

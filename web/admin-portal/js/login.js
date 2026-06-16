@@ -1,58 +1,45 @@
-const form = document.querySelector(".login-form");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const errorEl = document.querySelector(".login-error");
-const forgotBtn = document.querySelector(".forgot-link");
+console.log("login.js loaded");
 
-function showError(message) {
-    errorEl.textContent = message;
-    errorEl.classList.remove("hidden");
-}
+const btn = document.getElementById("btnLogin");
+console.log("btnLogin =", btn);
 
-function clearError() {
-    errorEl.textContent = "";
-    errorEl.classList.add("hidden");
-}
+btn.addEventListener("click", async () => {
+  console.log("Login button clicked");
 
-form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    clearError();
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value.trim();
+  const errorDiv = document.getElementById("login-error");
 
-    const payload = {
-        email: emailInput.value.trim(),
-        password: passwordInput.value
-    };
+  errorDiv.textContent = "";
 
-    try {
-        const res = await fetch("http://localhost:7071/api/admin/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+  if (!email || !password) {
+    errorDiv.textContent = "Please enter both email and password.";
+    return;
+  }
 
-        if (!res.ok) {
-            showError("Invalid email or password.");
-            return;
-        }
+  try {
+    const res = await fetch("http://localhost:7071/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-        const data = await res.json();
+    console.log("Response status:", res.status);
 
-        // Example: store token + role (adjust to your backend contract)
-        if (data.token) {
-            localStorage.setItem("nf_admin_token", data.token);
-        }
-        if (data.role) {
-            localStorage.setItem("nf_admin_role", data.role);
-        }
-
-        window.location.href = "./dashboard.html";
-    } catch (err) {
-        console.error(err);
-        showError("Unable to reach server. Please try again.");
+    if (!res.ok) {
+      errorDiv.textContent = "Invalid email or password.";
+      return;
     }
-});
 
-forgotBtn.addEventListener("click", () => {
-    // Placeholder – wire to your password reset flow later
-    alert("Password reset flow coming soon.");
+    const data = await res.json();
+    console.log("Login success:", data);
+
+    localStorage.setItem("nf_token", data.token);
+    localStorage.setItem("nf_role", data.role);
+
+    window.location.href = "dashboard.html";
+  } catch (err) {
+    console.error("Login error:", err);
+    errorDiv.textContent = "Unable to connect to server.";
+  }
 });

@@ -1,40 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>NetFront Admin Portal - Login</title>
-    <link rel="stylesheet" href="../css/login.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>NetFront Admin Login</title>
 
-<div class="login-frame">
-    <div class="login-box">
-        <p class="login-logo">🏒 NetFront</p>
-        <p class="login-subtitle">Admin Portal</p>
+    <!-- Only the CSS needed for this page -->
+    <link rel="stylesheet" href="../css/login.css" />
+    <link rel="stylesheet" href="../css/admin-shared.css" />
+  </head>
 
-        <form class="login-form">
-            <label class="form-label" for="email">Email Address</label>
-            <input id="email" class="form-field" type="email" autocomplete="username" required>
+  <body class="login-body">
+    <div class="login-split">
+      <!-- LEFT SIDE -->
+      <div class="login-left">
+        <img src="../assets/NF_Logo_Default.png" alt="NetFront Logo" />
+        <h1>NetFront Admin Portal</h1>
+        <p>Manage organizations, teams, rosters, and system settings</p>
+      </div>
 
-            <label class="form-label" for="password">Password</label>
-            <input id="password" class="form-field" type="password" autocomplete="current-password" required>
+      <!-- RIGHT SIDE -->
+      <div class="login-right">
+        <h2>Sign In</h2>
 
-            <div class="forgot-row">
-                <button type="button" class="forgot-link">Forgot Password?</button>
-            </div>
+        <label for="login-email">Email</label>
+        <input
+          id="login-email"
+          type="email"
+          class="nf-input"
+          placeholder="you@example.com"
+        />
 
-            <button type="submit" class="btn-primary login-btn">Sign In</button>
+        <label for="login-password">Password</label>
+        <input
+          id="login-password"
+          type="password"
+          class="nf-input"
+          placeholder="••••••••"
+        />
 
-            <p class="login-error hidden"></p>
-        </form>
+        <button id="btnLogin" class="nf-btn nf-btn-primary full-width">
+          Log In
+        </button>
 
-        <div class="login-role-box">
-            <p>🔒 Role assigned at login based on account permissions</p>
-            <p>NetFront Admin • Org Admin • Coach</p>
-        </div>
+        <p id="login-error" class="login-error"></p>
+      </div>
     </div>
-</div>
 
-<script type="module" src="../js/login.js"></script>
-</body>
+    <!-- Auth helper + login logic -->
+    <script src="../js/auth.js"></script>
+    <script src="../js/login.js"></script>
+  </body>
 </html>

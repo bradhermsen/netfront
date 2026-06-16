@@ -1,6 +1,6 @@
-using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using System.Data;
 
 namespace NetFrontAPI.Infrastructure.Database
 {
@@ -10,7 +10,7 @@ namespace NetFrontAPI.Infrastructure.Database
 
         public SqlConnectionFactory(IConfiguration configuration)
         {
-            _connectionString = configuration["SqlConnection"];
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
         public IDbConnection CreateConnection()

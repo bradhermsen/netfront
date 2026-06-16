@@ -1074,6 +1074,160 @@ window.PageContentRegistry.dashboard = () => `
   <div id="sandboxContent"></div>
 `;
 //=================================================================
+// USERS PAGE CONTENT
+//=================================================================
+window.PageContentRegistry.users = () => `
+  <div class="page-header-block">
+    <div class="page-header-row">
+      <div class="page-header-text">
+        <h1 class="page-header">Users</h1>
+        <p class="page-subtext">Manage admin accounts, roles, and access</p>
+      </div>
+
+      <div class="page-header-actions">
+        <button id="btnAddUser" class="nf-btn nf-btn-primary">
+          <i class="fa fa-plus"></i> Add User
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- USERS FILTER BAR COMPONENT                               -->
+  <!-- ========================================================= -->
+  <div class="nf-card">
+    <div class="nf-filter-bar" id="user-filter-bar-component">
+
+      <!-- Search -->
+      <input
+        id="user-search-bar"
+        class="nf-search"
+        type="text"
+        placeholder="🔍  Search users…"
+      />
+
+      <!-- Role Filter -->
+      <select id="filter-role" class="nf-select">
+        <option value="">Role: All</option>
+        <option value="Admin">Admin</option>
+        <option value="Coach">Coach</option>
+        <option value="Staff">Staff</option>
+      </select>
+
+      <!-- Status Filter -->
+      <select id="filter-user-status" class="nf-select">
+        <option value="">Status: All</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+
+    </div>
+  </div>
+
+  <div class="nf-card mt-4">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Organization</th>
+            <th>Status</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+`;
+//=================================================================
+// USERS MODALS (OVERLAY-BASED)
+//=================================================================
+window.PageContentRegistry.usersModals = () => `
+  <!-- ADD / EDIT USER MODAL -->
+  <div id="userModalOverlay" class="nf-modal-overlay">
+    <div id="userModal" class="nf-modal medium">
+      <div class="nf-modal-header">
+        <h2 id="userModalTitle"></h2>
+        <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
+      </div>
+
+      <div class="nf-modal-body">
+        <h3 class="modal-section-title">User Information</h3>
+
+        <div class="modal-grid">
+          <div>
+            <label>First Name</label>
+            <input id="user-first" class="nf-input" />
+          </div>
+
+          <div>
+            <label>Last Name</label>
+            <input id="user-last" class="nf-input" />
+          </div>
+
+          <div>
+            <label>Email</label>
+            <input id="user-email" class="nf-input" />
+          </div>
+
+          <div>
+            <label>Password</label>
+            <input id="user-password" type="password" class="nf-input" />
+          </div>
+
+          <div>
+            <label>Role</label>
+            <select id="user-role" class="nf-input">
+              <option value="Admin">Admin</option>
+              <option value="Coach">Coach</option>
+              <option value="Staff">Staff</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Organization</label>
+            <select id="user-organization" class="nf-input">
+              <option value="">None</option>
+            </select>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="user-active" />
+            <label for="user-active">Active User</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="userCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="userSave" class="nf-btn nf-btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE USER MODAL -->
+  <div id="userDeleteModalOverlay" class="nf-modal-overlay">
+    <div id="userDeleteModal" class="nf-modal small">
+      <div class="nf-modal-header">
+        <h2>Confirm Delete</h2>
+      </div>
+
+      <div class="nf-modal-body full">
+        Are you sure you want to delete this user?
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="userDeleteCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="userDeleteConfirm" class="nf-btn nf-btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+`;
+
+//=================================================================
 // COMPONENT SANDBOX PAGE CONTENT
 //=================================================================
 window.PageContentRegistry.components = () => `

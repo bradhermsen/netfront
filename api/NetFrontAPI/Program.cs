@@ -5,14 +5,17 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Text.Json;
+using NetFrontAPI.Repositories;
+using NetFrontAPI.Services;
+
 
 using NetFrontAPI.Repositories;
 using NetFrontAPI.Services;
+using NetFrontAPI.Infrastructure.Database;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults(worker =>
     {
-        // This is the ONLY supported serializer hook in your Functions version
         worker.Services.Configure<JsonSerializerOptions>(options =>
         {
             options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -23,14 +26,20 @@ var host = new HostBuilder()
     .ConfigureAppConfiguration((context, config) =>
     {
         config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+        config.AddJsonFile("local.settings.json", optional: true, reloadOnChange: true);
         config.AddEnvironmentVariables();
     })
     .ConfigureServices((context, services) =>
     {
-        var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
+        // 🔥 Load configuration (needed for JWT)
+        services.AddSingleton<IConfiguration>(context.Configuration);
 
-        services.AddScoped<IDbConnection>(sp =>
-            new SqlConnection(connectionString));
+        // 🔥 Register SQL connection factory (required for AuthLogin)
+        services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
+
+        // Existing DB connection (your repos use this)
+        var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
+        services.AddScoped<IDbConnection>(sp => new SqlConnection(connectionString));
 
         // Repositories
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();
@@ -41,7 +50,9 @@ var host = new HostBuilder()
         services.AddScoped<IPlayersRepository, PlayersRepository>();
         services.AddScoped<IRosterEntriesRepository, RosterEntriesRepository>();
         services.AddScoped<IGameRepository, GameRepository>();
+        services.AddScoped<IUsersRepository, UsersRepository>();
        
+
         // Services
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<ILeagueService, LeagueService>();
@@ -51,6 +62,7 @@ var host = new HostBuilder()
         services.AddScoped<IPlayersService, PlayersService>();
         services.AddScoped<IRosterEntriesService, RosterEntriesService>();
         services.AddScoped<IGameService, GameService>();
+        services.AddScoped<IUsersService, UsersService>();
     })
     .Build();
 

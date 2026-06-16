@@ -6,7 +6,22 @@ console.log("🔥 layout-loader.js loaded");
 
 window.loadLayout = async function (pageKey) {
   try {
+    // =====================================================
+    // 🔐 AUTH CHECK — BLOCK ALL PAGES EXCEPT LOGIN
+    // =====================================================
+    const currentPage = window.location.pathname.split("/").pop();
+
+    if (currentPage !== "login.html") {
+      if (!window.Auth || !window.Auth.isAuthenticated()) {
+        console.warn("⛔ Not authenticated — redirecting to login");
+        window.location.href = "login.html";
+        return;
+      }
+    }
+
+    // =====================================================
     // 1) Load layout shell
+    // =====================================================
     const layoutHtml = await fetch("../components/layout.html").then((r) =>
       r.text(),
     );
@@ -22,25 +37,25 @@ window.loadLayout = async function (pageKey) {
     document.getElementById("footerContainer").innerHTML = footerHtml;
 
     // Highlight active link
-    const currentPage = window.location.pathname.split("/").pop();
     document.querySelectorAll(".sidebar-link").forEach((link) => {
       if (link.getAttribute("href").includes(currentPage)) {
         link.classList.add("active");
       }
     });
 
-    // 3) Inject page content from registry
+    // 3) Inject page content
     if (window.PageContentRegistry && window.PageContentRegistry[pageKey]) {
       const pageContent = document.getElementById("pageContent");
       pageContent.innerHTML = window.PageContentRegistry[pageKey]();
+      window.AdminPage = window.AdminPage || {};
+      window.AdminPage.currentPage = pageKey;
     }
 
-    // 3b) Inject page-specific modals (overlay-based, repeatable)
+    // 3b) Inject page-specific modals
     if (
       window.PageContentRegistry &&
       window.PageContentRegistry[pageKey + "Modals"]
     ) {
-      // ⭐ Remove old modals by ID (leftovers in <body>)
       ["playerModalOverlay", "playerDeleteModalOverlay"].forEach((id) => {
         const old = document.getElementById(id);
         if (old) old.remove();
@@ -64,3 +79,14 @@ window.loadLayout = async function (pageKey) {
     console.error("Layout loader failed:", err);
   }
 };
+// =====================================================
+// LOGOUT HANDLER (works even with dynamic sidebar load)
+// =====================================================
+document.addEventListener("click", (e) => {
+  const logoutLink = e.target.closest("#sidebar-logout");
+  if (logoutLink) {
+    e.preventDefault();
+    console.log("🔓 Logout clicked");
+    logout();
+  }
+});

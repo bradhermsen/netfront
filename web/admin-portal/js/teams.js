@@ -195,9 +195,8 @@ function initTeamsPage() {
 
         const [btnView, btnEdit, btnDelete] = row.querySelectorAll("button");
 
-        btnView.addEventListener("click", () => {
-          window.location.href = `rosters.html?teamId=${team.id}`;
-        });
+        
+        
 
         btnEdit.addEventListener("click", () => openEditTeam(team.teamId));
         btnDelete.addEventListener("click", () => openDeleteTeam(team.teamId));

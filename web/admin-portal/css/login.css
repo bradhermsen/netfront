@@ -1,123 +1,87 @@
-:root {
-    color-scheme: light only;
+/* --------------------------------------------------
+   NetFront Login Page — Clean, Final Version
+-----------------------------------------------------*/
+
+/* Full-page split layout */
+.login-split {
+  display: flex;
+  height: 100vh;
+  width: 100%;
 }
 
-body {
-    margin: 0;
-    font-family: Calibri, system-ui, sans-serif;
-    font-size: 11pt;
-    background-color: #0d1b30;
-    color: #ffffff;
+/* LEFT SIDE — Brand Panel */
+.login-left {
+  flex: 1;
+  background: #0b1424; /* NetFront brand navy */
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 60px;
 }
 
-.login-frame {
-    border: 3px solid #1a2744;
-    background-color: #0d1b30;
-    margin: 40px auto;
-    max-width: 1100px;
-    min-height: 500px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Logo styling */
+.login-left img {
+  width: 180px;
+  margin-bottom: 5px;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
 }
 
-.login-box {
-    background-color: #162a4a;
-    border: 1px solid #2a3a5b;
-    border-radius: 12px;
-    padding: 40px 50px;
-    width: 380px;
-    text-align: center;
+/* LEFT SIDE text */
+.login-left h1 {
+  font-size: 2rem;
+  margin-bottom: 10px;
 }
 
-.login-logo {
-    font-size: 18pt;
-    font-weight: bold;
-    color: #FF8C00;
-    margin: 0 0 4px 0;
+.login-left p {
+  font-size: 1rem;
+  opacity: 0.85;
 }
 
-.login-subtitle {
-    font-size: 10pt;
-    color: #78909c;
-    margin: 0 0 24px 0;
+/* RIGHT SIDE — Login Card */
+.login-right {
+  flex: 1;
+  max-width: 420px;
+  margin: auto;
+  padding: 40px;
+  background: #ffffff;
+  color: #000000;
+  border-radius: 8px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.08);
 }
 
-.form-label {
-    font-size: 8pt;
-    color: #78909c;
-    font-weight: bold;
-    margin-bottom: 3px;
-    display: block;
-    text-align: left;
+/* Form labels */
+.login-right label {
+  display: block;
+  margin-top: 18px;
+  margin-bottom: 6px;
+  font-weight: 600;
 }
 
-.form-field {
-    background-color: #0d1b30;
-    border: 1px solid #2a3a5b;
-    border-radius: 6px;
-    padding: 8px 12px;
-    color: #b0bec5;
-    font-size: 9pt;
-    width: 100%;
-    box-sizing: border-box;
-    margin-bottom: 12px;
+/* Inputs */
+.login-right .nf-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d0d4dc;
+  border-radius: 6px;
+  font-size: 1rem;
 }
 
-.form-field:focus {
-    outline: none;
-    border-color: #FF8C00;
+/* Login button */
+.login-right .nf-btn {
+  margin-top: 24px;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background: #ff7b00 !important; /* your brand orange */
+  color: #ffffff !important;
 }
 
-.forgot-row {
-    text-align: right;
-    margin-bottom: 20px;
-}
-
-.forgot-link {
-    background: none;
-    border: none;
-    padding: 0;
-    font-size: 8pt;
-    color: #FF8C00;
-    cursor: pointer;
-}
-
-.btn-primary {
-    display: block;
-    width: 100%;
-    background-color: #FF8C00;
-    color: #0d1b30;
-    font-size: 11pt;
-    font-weight: bold;
-    padding: 10px 0;
-    border-radius: 6px;
-    cursor: pointer;
-    border: none;
-}
-
-.btn-primary:hover {
-    background-color: #ffa733;
-}
-
+/* Error message */
 .login-error {
-    margin-top: 10px;
-    font-size: 8pt;
-    color: #e53935;
-}
-
-.hidden {
-    display: none;
-}
-
-.login-role-box {
-    background-color: #0d1b30;
-    border: 1px solid #2a3a5b;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-top: 16px;
-    font-size: 7pt;
-    color: #546e7a;
-    text-align: left;
+  margin-top: 14px;
+  color: #d9534f;
+  text-align: center;
+  display: none;
 }

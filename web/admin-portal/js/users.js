@@ -1,146 +1,232 @@
-const tbody = document.querySelector(".users-table tbody");
-const modal = document.getElementById("user-modal");
-const modalTitle = document.getElementById("modal-title");
+//=================================================================
+// USERS PAGE LOGIC
+//=================================================================
 
-const firstInput = document.getElementById("user-first");
-const lastInput = document.getElementById("user-last");
-const emailInput = document.getElementById("user-email");
-const roleInput = document.getElementById("user-role");
-const orgInput = document.getElementById("user-org");
-const teamInput = document.getElementById("user-team");
-const statusInput = document.getElementById("user-status");
+const UsersPage = {
+  users: [],
+  organizations: [],
 
-let editingUserId = null;
+  init() {
+    this.loadOrganizations();
+    this.loadUsers();
 
-// Load orgs + teams
-async function loadDropdowns() {
-    const orgRes = await fetch("http://localhost:7071/api/organizations");
-    const orgs = await orgRes.json();
-
-    orgInput.innerHTML = "";
-    orgs.forEach(o => {
-        const opt = document.createElement("option");
-        opt.value = o.id;
-        opt.textContent = o.name;
-        orgInput.appendChild(opt);
+    // Add User button
+    document.addEventListener("click", (e) => {
+      if (e.target.id === "btnAddUser") {
+        UsersPage.openAddUserModal();
+      }
     });
 
-    const teamRes = await fetch("http://localhost:7071/api/teams");
-    const teams = await teamRes.json();
-
-    teamInput.innerHTML = "";
-    teams.forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t.id;
-        opt.textContent = t.name;
-        teamInput.appendChild(opt);
+    // Save button
+    document.addEventListener("click", (e) => {
+      if (e.target.id === "userSave") {
+        UsersPage.saveUser();
+      }
     });
-}
 
-// Load users
-async function loadUsers() {
-    const res = await fetch("http://localhost:7071/api/users");
-    const users = await res.json();
+    // Cancel button
+    document.addEventListener("click", (e) => {
+      if (e.target.id === "userCancel") {
+        AdminPage.closeModal();
+      }
+    });
+
+    // Delete confirm
+    document.addEventListener("click", (e) => {
+      if (e.target.id === "userDeleteConfirm") {
+        UsersPage.confirmDeleteUser();
+      }
+    });
+
+    // Delete cancel
+    document.addEventListener("click", (e) => {
+      if (e.target.id === "userDeleteCancel") {
+        AdminPage.closeModal();
+      }
+    });
+  },
+
+  //===============================================================
+  // LOAD USERS
+  //===============================================================
+  async loadUsers() {
+    try {
+      const res = await authFetch("/users"); // You will add this endpoint next
+      this.users = await res.json();
+      this.renderUsersTable();
+    } catch (err) {
+      console.error("Error loading users:", err);
+      AdminPage.showToast("Error loading users", "error");
+    }
+  },
+
+  //===============================================================
+  // RENDER TABLE
+  //===============================================================
+  renderUsersTable() {
+    const tbody = document.getElementById("userTableBody");
+    if (!tbody) return;
 
     tbody.innerHTML = "";
 
-    users.forEach(u => {
-        const tr = document.createElement("tr");
+    this.users.forEach((u) => {
+      const org = this.organizations.find((o) => o.id === u.organizationId);
 
-        tr.innerHTML = `
-            <td>${u.firstName} ${u.lastName}</td>
-            <td>${u.email}</td>
-            <td><span class="role-badge role-${u.role.toLowerCase().replace(' ', '')}">${u.role}</span></td>
-            <td>${u.organizationName ?? "—"}</td>
-            <td>${u.teamName ?? "—"}</td>
-            <td style="text-align:center;"><span class="badge-active">${u.status}</span></td>
-            <td style="text-align:center;">
-                <button class="btn-sm edit-btn" data-id="${u.id}">✏️ Edit</button>
-                <button class="btn-sm delete-btn" data-id="${u.id}">🗑️ Delete</button>
-            </td>
-        `;
-
-        tbody.appendChild(tr);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${u.firstName} ${u.lastName}</td>
+        <td>${u.email}</td>
+        <td>${u.role}</td>
+        <td>${org ? org.name : "—"}</td>
+        <td>${u.isActive ? "Active" : "Inactive"}</td>
+        <td class="actions-col">
+          <button class="nf-btn nf-btn-small nf-btn-secondary" onclick="UsersPage.openEditUserModal('${u.id}')">
+            Edit
+          </button>
+          <button class="nf-btn nf-btn-small nf-btn-danger" onclick="UsersPage.openDeleteUserModal('${u.id}')">
+            Delete
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
     });
+  },
 
-    document.querySelectorAll(".edit-btn").forEach(btn =>
-        btn.addEventListener("click", () => openEditModal(btn.dataset.id))
-    );
-}
+  //===============================================================
+  // LOAD ORGANIZATIONS FOR DROPDOWN
+  //===============================================================
+  async loadOrganizations() {
+    try {
+      const res = await authFetch("/organizations");
+      this.organizations = await res.json();
 
-function openAddModal() {
-    editingUserId = null;
-    modalTitle.textContent = "Add User";
+      const select = document.getElementById("user-organization");
+      if (select) {
+        select.innerHTML = `<option value="">None</option>`;
+        this.organizations.forEach((o) => {
+          const opt = document.createElement("option");
+          opt.value = o.id;
+          opt.textContent = o.name;
+          select.appendChild(opt);
+        });
+      }
+    } catch (err) {
+      console.error("Error loading organizations:", err);
+    }
+  },
 
-    firstInput.value = "";
-    lastInput.value = "";
-    emailInput.value = "";
-    roleInput.value = "Coach";
-    statusInput.value = "Active";
+  //===============================================================
+  // OPEN ADD USER MODAL
+  //===============================================================
+  openAddUserModal() {
+    document.getElementById("userModalTitle").textContent = "Add User";
 
-    modal.classList.remove("hidden");
-}
+    document.getElementById("user-first").value = "";
+    document.getElementById("user-last").value = "";
+    document.getElementById("user-email").value = "";
+    document.getElementById("user-password").value = "";
+    document.getElementById("user-role").value = "Admin";
+    document.getElementById("user-organization").value = "";
+    document.getElementById("user-active").checked = true;
 
-async function openEditModal(id) {
-    editingUserId = id;
+    document.getElementById("userSave").setAttribute("data-mode", "create");
 
-    const res = await fetch(`http://localhost:7071/api/users/${id}`);
-    const u = await res.json();
+    AdminPage.openModal("userModalOverlay");
+  },
 
-    modalTitle.textContent = "Edit User";
+  //===============================================================
+  // OPEN EDIT USER MODAL
+  //===============================================================
+  openEditUserModal(id) {
+    const user = this.users.find((u) => u.id === id);
+    if (!user) return;
 
-    firstInput.value = u.firstName;
-    lastInput.value = u.lastName;
-    emailInput.value = u.email;
-    roleInput.value = u.role;
-    orgInput.value = u.organizationId;
-    teamInput.value = u.teamId;
-    statusInput.value = u.status;
+    document.getElementById("userModalTitle").textContent = "Edit User";
 
-    modal.classList.remove("hidden");
-}
+    document.getElementById("user-first").value = user.firstName;
+    document.getElementById("user-last").value = user.lastName;
+    document.getElementById("user-email").value = user.email;
+    document.getElementById("user-password").value = ""; // blank on edit
+    document.getElementById("user-role").value = user.role;
+    document.getElementById("user-organization").value =
+      user.organizationId || "";
+    document.getElementById("user-active").checked = user.isActive;
 
-async function saveUser() {
+    document.getElementById("userSave").setAttribute("data-mode", "edit");
+    document.getElementById("userSave").setAttribute("data-id", id);
+
+    AdminPage.openModal("userModalOverlay");
+  },
+
+  //===============================================================
+  // SAVE USER (CREATE OR EDIT)
+  //===============================================================
+  async saveUser() {
+    const mode = document.getElementById("userSave").getAttribute("data-mode");
+
     const payload = {
-        firstName: firstInput.value,
-        lastName: lastInput.value,
-        email: emailInput.value,
-        role: roleInput.value,
-        organizationId: orgInput.value,
-        teamId: teamInput.value,
-        status: statusInput.value
+      firstName: document.getElementById("user-first").value,
+      lastName: document.getElementById("user-last").value,
+      email: document.getElementById("user-email").value,
+      password: document.getElementById("user-password").value,
+      role: document.getElementById("user-role").value,
+      organizationId:
+        document.getElementById("user-organization").value || null,
+      isActive: document.getElementById("user-active").checked,
     };
 
-    if (editingUserId) {
-        await fetch(`http://localhost:7071/api/users/${editingUserId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+    try {
+      if (mode === "create") {
+        await authFetch("/users", {
+          method: "POST",
+          body: JSON.stringify(payload),
         });
-    } else {
-        await fetch("http://localhost:7071/api/users", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+        AdminPage.showToast("User created", "success");
+      } else {
+        const id = document.getElementById("userSave").getAttribute("data-id");
+        await authFetch(`/users/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
         });
+        AdminPage.showToast("User updated", "success");
+      }
+
+      AdminPage.closeModal();
+      this.loadUsers();
+    } catch (err) {
+      console.error("Error saving user:", err);
+      AdminPage.showToast("Error saving user", "error");
     }
+  },
 
-    modal.classList.add("hidden");
-    loadUsers();
-}
+  //===============================================================
+  // DELETE USER
+  //===============================================================
+  openDeleteUserModal(id) {
+    document.getElementById("userDeleteConfirm").setAttribute("data-id", id);
+    AdminPage.openModal("userDeleteModalOverlay");
+  },
 
-// Event Listeners
-document.getElementById("add-user-btn").addEventListener("click", openAddModal);
-document.getElementById("cancel-modal").addEventListener("click", () => modal.classList.add("hidden"));
-document.getElementById("save-user-btn").addEventListener("click", saveUser);
+  async confirmDeleteUser() {
+    const id = document
+      .getElementById("userDeleteConfirm")
+      .getAttribute("data-id");
 
-// Logout
-document.getElementById("logout-btn").addEventListener("click", () => {
-    localStorage.removeItem("nf_admin_token");
-    localStorage.removeItem("nf_admin_role");
-    window.location.href = "./login.html";
+    try {
+      await authFetch(`/users/${id}`, { method: "DELETE" });
+      AdminPage.showToast("User deleted", "success");
+      AdminPage.closeModal();
+      this.loadUsers();
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      AdminPage.showToast("Error deleting user", "error");
+    }
+  },
+};
+
+// Initialize when page loads
+document.addEventListener("nf-page-ready", () => {
+  if (window.AdminPage?.currentPage === "users") {
+    UsersPage.init();
+  }
 });
-
-// Init
-await loadDropdowns();
-await loadUsers();

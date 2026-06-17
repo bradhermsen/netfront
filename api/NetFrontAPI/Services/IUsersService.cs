@@ -13,23 +13,33 @@ namespace NetFrontAPI.Services
             string role,
             Guid? organizationId,
             string firstName,
-            string lastName
-        );
+            string lastName);
+
+        // ⭐ NEW: Create a user when the password is already hashed (used for OrgOwner auto‑creation)
+        Task CreateUserWithHashAsync(
+            string email,
+            string passwordHash,
+            string role,
+            Guid? organizationId,
+            string firstName,
+            string lastName);
 
         Task<IEnumerable<User>> GetAllAsync();
+
         Task<User?> GetByIdAsync(Guid id);
 
         Task UpdateUserAsync(
             Guid id,
             string email,
-            string password,
-            string role,
-            Guid? organizationId,
             string firstName,
             string lastName,
-            bool isActive
-        );
+            Guid? organizationId,
+            string role,
+            bool isActive,
+            string? password);
 
         Task DeleteUserAsync(Guid id);
+
+        Task ResetPasswordAsync(Guid id, string newPassword);
     }
 }

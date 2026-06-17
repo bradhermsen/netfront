@@ -5,9 +5,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Text.Json;
-using NetFrontAPI.Repositories;
-using NetFrontAPI.Services;
-
 
 using NetFrontAPI.Repositories;
 using NetFrontAPI.Services;
@@ -31,13 +28,13 @@ var host = new HostBuilder()
     })
     .ConfigureServices((context, services) =>
     {
-        // 🔥 Load configuration (needed for JWT)
+        // Configuration
         services.AddSingleton<IConfiguration>(context.Configuration);
 
-        // 🔥 Register SQL connection factory (required for AuthLogin)
+        // SQL connection factory
         services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
 
-        // Existing DB connection (your repos use this)
+        // Raw DB connection
         var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
         services.AddScoped<IDbConnection>(sp => new SqlConnection(connectionString));
 
@@ -51,7 +48,6 @@ var host = new HostBuilder()
         services.AddScoped<IRosterEntriesRepository, RosterEntriesRepository>();
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IUsersRepository, UsersRepository>();
-       
 
         // Services
         services.AddScoped<IOrganizationService, OrganizationService>();

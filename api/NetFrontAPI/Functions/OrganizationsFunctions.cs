@@ -56,9 +56,14 @@ namespace NetFrontAPI.Functions
                 return bad;
             }
 
-            var id = await _service.CreateAsync(dto);
+            // Create the organization
+            var org = await _service.CreateAsync(dto);
+
+            // ⭐ AUTO‑CREATE ORG OWNER (this is the only new line)
+            await _service.CreateOrgOwnerForOrganizationAsync(org);
+
             var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(new { OrganizationId = id });
+            await response.WriteAsJsonAsync(new { OrganizationId = org.Id });
             return response;
         }
 

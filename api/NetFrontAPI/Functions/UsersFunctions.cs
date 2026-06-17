@@ -3,7 +3,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Newtonsoft.Json;
 using NetFrontAPI.DTOs;
 using NetFrontAPI.Services;
 
@@ -81,28 +80,51 @@ namespace NetFrontAPI.Functions
         }
 
         // ============================================================
-        // UPDATE USER
+        // UPDATE USER (profile + role + active + optional password)
         // ============================================================
         [Function("UpdateUser")]
         public async Task<HttpResponseData> UpdateUser(
             [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "users/{id:guid}")] HttpRequestData req,
             Guid id)
         {
-            var dto = await req.ReadFromJsonAsync<CreateUserDto>();
+            var dto = await req.ReadFromJsonAsync<UpdateUserDto>();
 
             try
             {
                 await _service.UpdateUserAsync(
                     id,
                     dto.Email,
-                    dto.Password,
-                    dto.Role,
-                    dto.OrganizationId,
                     dto.FirstName,
                     dto.LastName,
-                    dto.IsActive
+                    dto.OrganizationId,
+                    dto.Role,
+                    dto.IsActive,
+                    dto.Password
                 );
 
+                return req.CreateResponse(HttpStatusCode.NoContent);
+            }
+            catch (Exception ex)
+            {
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteStringAsync(ex.Message);
+                return bad;
+            }
+        }
+
+        // ============================================================
+        // RESET PASSWORD
+        // ============================================================
+        [Function("ResetPassword")]
+        public async Task<HttpResponseData> ResetPassword(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "users/{id:guid}/password")] HttpRequestData req,
+            Guid id)
+        {
+            var dto = await req.ReadFromJsonAsync<ResetPasswordDto>();
+
+            try
+            {
+                await _service.ResetPasswordAsync(id, dto.NewPassword);
                 return req.CreateResponse(HttpStatusCode.NoContent);
             }
             catch (Exception ex)

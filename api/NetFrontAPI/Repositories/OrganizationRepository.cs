@@ -4,6 +4,7 @@ using System.Data;
 using System.Threading.Tasks;
 using Dapper;
 using NetFrontAPI.DTOs;
+using NetFrontAPI.Models;
 
 namespace NetFrontAPI.Repositories
 {
@@ -31,7 +32,7 @@ SELECT
     o.Country,
     o.StreetAddress,
     o.ZipCode,
-    o.DistrictConference AS DistrictConference,
+    o.DistrictConference,
     o.Mascot,
     o.LeagueId,
     l.Name AS LeagueName,
@@ -108,12 +109,10 @@ WHERE o.OrganizationId = @Id;
         }
 
         // ============================================================
-        // CREATE
+        // CREATE (now accepts full Organization model)
         // ============================================================
-        public async Task<Guid> CreateAsync(CreateOrganizationDto dto)
+        public async Task CreateAsync(Organization org)
         {
-            var newId = Guid.NewGuid();
-
             var sql = @"
 INSERT INTO Organizations (
     OrganizationId,
@@ -169,30 +168,28 @@ VALUES (
 
             await _db.ExecuteAsync(sql, new
             {
-                OrganizationId = newId,
-                dto.Name,
-                dto.Abbreviation,
-                dto.City,
-                dto.State,
-                dto.Country,
-                dto.StreetAddress,
-                dto.ZipCode,
-                dto.DistrictConference,
-                dto.Mascot,
-                dto.LeagueId,
-                dto.PrimaryContactFirstName,
-                dto.PrimaryContactLastName,
-                dto.PrimaryContactEmail,
-                dto.BillingStreetAddress,
-                dto.BillingCity,
-                dto.BillingState,
-                dto.BillingZipCode,
-                dto.BillingContactName,
-                dto.BillingContactEmail,
-                dto.IsActive
+                OrganizationId = org.Id,
+                org.Name,
+                org.Abbreviation,
+                org.City,
+                org.State,
+                org.Country,
+                org.StreetAddress,
+                org.ZipCode,
+                org.DistrictConference,
+                org.Mascot,
+                org.LeagueId,
+                org.PrimaryContactFirstName,
+                org.PrimaryContactLastName,
+                org.PrimaryContactEmail,
+                org.BillingStreetAddress,
+                org.BillingCity,
+                org.BillingState,
+                org.BillingZipCode,
+                org.BillingContactName,
+                org.BillingContactEmail,
+                org.IsActive
             });
-
-            return newId;
         }
 
         // ============================================================

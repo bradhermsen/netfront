@@ -96,7 +96,11 @@ window.AdminPage = {
 
   async loadData() {
     this.allItems = await this.config.api.getAll();
-    this.applySearch();
+    // Clear search bar on page load
+    if (this.searchInput) {
+      this.searchInput.value = "";
+    }
+    this.config.renderTable(this.allItems);
   },
 
   // -------------------------------------------------------

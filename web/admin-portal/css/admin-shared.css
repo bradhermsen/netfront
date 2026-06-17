@@ -966,6 +966,9 @@
   font-size: 12px;
   opacity: 0.85;
 }
+.actions-col i {
+  pointer-events: none;
+}
 
 .edit-btn {
   color: #90caf9;

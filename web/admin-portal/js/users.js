@@ -1,232 +1,140 @@
-//=================================================================
-// USERS PAGE LOGIC
-//=================================================================
+// =========================================================
+// USERS PAGE — MODERN ADMINPAGE VERSION
+// =========================================================
 
-const UsersPage = {
-  users: [],
-  organizations: [],
-
+window.UsersPage = {
+  // -------------------------------------------------------
+  // INITIALIZE PAGE
+  // -------------------------------------------------------
   init() {
-    this.loadOrganizations();
-    this.loadUsers();
+    AdminPage.init({
+      tableBodyId: "userTableBody",
+      searchInputId: "user-search-bar",
 
-    // Add User button
-    document.addEventListener("click", (e) => {
-      if (e.target.id === "btnAddUser") {
-        UsersPage.openAddUserModal();
-      }
-    });
+      modalId: "userModalOverlay",
+      modalTitleId: "userModalTitle",
+      addButtonId: "btnAddUser",
+      saveButtonId: "userSave",
+      cancelButtonId: "userCancel",
 
-    // Save button
-    document.addEventListener("click", (e) => {
-      if (e.target.id === "userSave") {
-        UsersPage.saveUser();
-      }
-    });
+      deleteModalId: "userDeleteModalOverlay",
+      deleteConfirmId: "userDeleteConfirm",
+      deleteCancelId: "userDeleteCancel",
 
-    // Cancel button
-    document.addEventListener("click", (e) => {
-      if (e.target.id === "userCancel") {
-        AdminPage.closeModal();
-      }
-    });
+      addTitle: "Add User",
+      editTitle: "Edit User",
 
-    // Delete confirm
-    document.addEventListener("click", (e) => {
-      if (e.target.id === "userDeleteConfirm") {
-        UsersPage.confirmDeleteUser();
-      }
-    });
+      api: UsersAPI,
+      renderTable: this.renderTable,
+      clearForm: this.clearForm,
+      populateForm: this.populateForm,
+      collectFormData: this.collectFormData,
 
-    // Delete cancel
-    document.addEventListener("click", (e) => {
-      if (e.target.id === "userDeleteCancel") {
-        AdminPage.closeModal();
-      }
+      editHandlerName: "openEditUser",
+      deleteHandlerName: "openDeleteUser",
     });
   },
 
-  //===============================================================
-  // LOAD USERS
-  //===============================================================
-  async loadUsers() {
-    try {
-      const res = await authFetch("/users"); // You will add this endpoint next
-      this.users = await res.json();
-      this.renderUsersTable();
-    } catch (err) {
-      console.error("Error loading users:", err);
-      AdminPage.showToast("Error loading users", "error");
-    }
-  },
-
-  //===============================================================
+  // -------------------------------------------------------
   // RENDER TABLE
-  //===============================================================
-  renderUsersTable() {
-    const tbody = document.getElementById("userTableBody");
-    if (!tbody) return;
+  // -------------------------------------------------------
+  renderTable(users) {
+    const body = document.getElementById("userTableBody");
+    body.innerHTML = "";
 
-    tbody.innerHTML = "";
+    users.forEach((u) => {
+      const row = document.createElement("tr");
 
-    this.users.forEach((u) => {
-      const org = this.organizations.find((o) => o.id === u.organizationId);
+      row.innerHTML = `
+      <td>${u.firstName || ""} ${u.lastName || ""}</td>
+      <td>${u.email || ""}</td>
+      <td>${u.role || "None"}</td>
+      <td>${u.organizationName || "None"}</td>
+      <td>${u.teams?.length || 0}</td>
+      <td>${u.isActive ? "Active" : "Inactive"}</td>
+      <td class="actions-col">
+        <button type="button" class="nf-btn-icon edit">
+          <i class="fa-solid fa-pen-to-square"></i>
+        </button>
+        <button type="button" class="nf-btn-icon delete">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </td>
+    `;
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${u.firstName} ${u.lastName}</td>
-        <td>${u.email}</td>
-        <td>${u.role}</td>
-        <td>${org ? org.name : "—"}</td>
-        <td>${u.isActive ? "Active" : "Inactive"}</td>
-        <td class="actions-col">
-          <button class="nf-btn nf-btn-small nf-btn-secondary" onclick="UsersPage.openEditUserModal('${u.id}')">
-            Edit
-          </button>
-          <button class="nf-btn nf-btn-small nf-btn-danger" onclick="UsersPage.openDeleteUserModal('${u.id}')">
-            Delete
-          </button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+      const [btnEdit, btnDelete] = row.querySelectorAll("button");
+
+      btnEdit.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        openEditUser(u.id);
+      });
+
+      btnDelete.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        openDeleteUser(u.id);
+      });
+
+      body.appendChild(row);
     });
   },
 
-  //===============================================================
-  // LOAD ORGANIZATIONS FOR DROPDOWN
-  //===============================================================
-  async loadOrganizations() {
-    try {
-      const res = await authFetch("/organizations");
-      this.organizations = await res.json();
-
-      const select = document.getElementById("user-organization");
-      if (select) {
-        select.innerHTML = `<option value="">None</option>`;
-        this.organizations.forEach((o) => {
-          const opt = document.createElement("option");
-          opt.value = o.id;
-          opt.textContent = o.name;
-          select.appendChild(opt);
-        });
-      }
-    } catch (err) {
-      console.error("Error loading organizations:", err);
-    }
+  // -------------------------------------------------------
+  // FORM HELPERS
+  // -------------------------------------------------------
+  clearForm() {
+    [
+      "user-first",
+      "user-last",
+      "user-email",
+      "user-password",
+      "user-organization",
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
   },
 
-  //===============================================================
-  // OPEN ADD USER MODAL
-  //===============================================================
-  openAddUserModal() {
-    document.getElementById("userModalTitle").textContent = "Add User";
-
-    document.getElementById("user-first").value = "";
-    document.getElementById("user-last").value = "";
-    document.getElementById("user-email").value = "";
-    document.getElementById("user-password").value = "";
-    document.getElementById("user-role").value = "Admin";
-    document.getElementById("user-organization").value = "";
-    document.getElementById("user-active").checked = true;
-
-    document.getElementById("userSave").setAttribute("data-mode", "create");
-
-    AdminPage.openModal("userModalOverlay");
+  populateForm(u) {
+    document.getElementById("user-first").value = u.firstName || "";
+    document.getElementById("user-last").value = u.lastName || "";
+    document.getElementById("user-email").value = u.email || "";
+    document.getElementById("user-password").value = ""; // never prefill passwords
+    document.getElementById("user-organization").value = u.organizationId || "";
   },
 
-  //===============================================================
-  // OPEN EDIT USER MODAL
-  //===============================================================
-  openEditUserModal(id) {
-    const user = this.users.find((u) => u.id === id);
-    if (!user) return;
-
-    document.getElementById("userModalTitle").textContent = "Edit User";
-
-    document.getElementById("user-first").value = user.firstName;
-    document.getElementById("user-last").value = user.lastName;
-    document.getElementById("user-email").value = user.email;
-    document.getElementById("user-password").value = ""; // blank on edit
-    document.getElementById("user-role").value = user.role;
-    document.getElementById("user-organization").value =
-      user.organizationId || "";
-    document.getElementById("user-active").checked = user.isActive;
-
-    document.getElementById("userSave").setAttribute("data-mode", "edit");
-    document.getElementById("userSave").setAttribute("data-id", id);
-
-    AdminPage.openModal("userModalOverlay");
-  },
-
-  //===============================================================
-  // SAVE USER (CREATE OR EDIT)
-  //===============================================================
-  async saveUser() {
-    const mode = document.getElementById("userSave").getAttribute("data-mode");
-
-    const payload = {
+  collectFormData() {
+    return {
       firstName: document.getElementById("user-first").value,
       lastName: document.getElementById("user-last").value,
       email: document.getElementById("user-email").value,
-      password: document.getElementById("user-password").value,
-      role: document.getElementById("user-role").value,
+      password: document.getElementById("user-password").value || null,
       organizationId:
         document.getElementById("user-organization").value || null,
-      isActive: document.getElementById("user-active").checked,
     };
-
-    try {
-      if (mode === "create") {
-        await authFetch("/users", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        AdminPage.showToast("User created", "success");
-      } else {
-        const id = document.getElementById("userSave").getAttribute("data-id");
-        await authFetch(`/users/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        AdminPage.showToast("User updated", "success");
-      }
-
-      AdminPage.closeModal();
-      this.loadUsers();
-    } catch (err) {
-      console.error("Error saving user:", err);
-      AdminPage.showToast("Error saving user", "error");
-    }
-  },
-
-  //===============================================================
-  // DELETE USER
-  //===============================================================
-  openDeleteUserModal(id) {
-    document.getElementById("userDeleteConfirm").setAttribute("data-id", id);
-    AdminPage.openModal("userDeleteModalOverlay");
-  },
-
-  async confirmDeleteUser() {
-    const id = document
-      .getElementById("userDeleteConfirm")
-      .getAttribute("data-id");
-
-    try {
-      await authFetch(`/users/${id}`, { method: "DELETE" });
-      AdminPage.showToast("User deleted", "success");
-      AdminPage.closeModal();
-      this.loadUsers();
-    } catch (err) {
-      console.error("Error deleting user:", err);
-      AdminPage.showToast("Error deleting user", "error");
-    }
   },
 };
 
-// Initialize when page loads
-document.addEventListener("nf-page-ready", () => {
-  if (window.AdminPage?.currentPage === "users") {
-    UsersPage.init();
-  }
+// =========================================================
+// GLOBAL HANDLERS (MATCHING PLAYERS PATTERN)
+// =========================================================
+function openAddUser() {
+  AdminPage.openAdd();
+}
+
+async function openEditUser(id) {
+  await AdminPage.waitForModal();
+  AdminPage.openEdit(id);
+}
+
+function openDeleteUser(id) {
+  AdminPage.openDelete(id);
+}
+
+// =========================================================
+// BOOTSTRAP PAGE
+// =========================================================
+document.addEventListener("DOMContentLoaded", () => {
+  UsersPage.init();
 });

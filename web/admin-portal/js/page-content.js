@@ -1081,7 +1081,7 @@ window.PageContentRegistry.users = () => `
     <div class="page-header-row">
       <div class="page-header-text">
         <h1 class="page-header">Users</h1>
-        <p class="page-subtext">Manage admin accounts, roles, and access</p>
+        <p class="page-subtext">Manage admin accounts, roles, teams, and organization access</p>
       </div>
 
       <div class="page-header-actions">
@@ -1093,7 +1093,7 @@ window.PageContentRegistry.users = () => `
   </div>
 
   <!-- ========================================================= -->
-  <!-- USERS FILTER BAR COMPONENT                               -->
+  <!-- USERS FILTER BAR COMPONENT (Search Only)                  -->
   <!-- ========================================================= -->
   <div class="nf-card">
     <div class="nf-filter-bar" id="user-filter-bar-component">
@@ -1105,21 +1105,6 @@ window.PageContentRegistry.users = () => `
         type="text"
         placeholder="🔍  Search users…"
       />
-
-      <!-- Role Filter -->
-      <select id="filter-role" class="nf-select">
-        <option value="">Role: All</option>
-        <option value="Admin">Admin</option>
-        <option value="Coach">Coach</option>
-        <option value="Staff">Staff</option>
-      </select>
-
-      <!-- Status Filter -->
-      <select id="filter-user-status" class="nf-select">
-        <option value="">Status: All</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
 
     </div>
   </div>
@@ -1133,6 +1118,7 @@ window.PageContentRegistry.users = () => `
             <th>Email</th>
             <th>Role</th>
             <th>Organization</th>
+            <th>Teams</th>
             <th>Status</th>
             <th class="actions-col">Actions</th>
           </tr>

@@ -37,7 +37,10 @@ namespace NetFrontAPI.Functions
                     dto.LastName
                 );
 
-                return req.CreateResponse(HttpStatusCode.Created);
+                var res = req.CreateResponse(HttpStatusCode.OK);
+                await res.WriteAsJsonAsync(new { success = true });
+                return res;
+
             }
             catch (Exception ex)
             {
@@ -102,7 +105,10 @@ namespace NetFrontAPI.Functions
                     dto.Password
                 );
 
-                return req.CreateResponse(HttpStatusCode.NoContent);
+                var res = req.CreateResponse(HttpStatusCode.OK);
+                await res.WriteAsJsonAsync(new { success = true });
+                return res;
+
             }
             catch (Exception ex)
             {

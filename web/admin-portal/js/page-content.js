@@ -1159,9 +1159,14 @@ window.PageContentRegistry.usersModals = () => `
             <input id="user-email" class="nf-input" />
           </div>
 
-          <div>
-            <label>Password</label>
-            <input id="user-password" type="password" class="nf-input" />
+          <div class="form-group">
+            <label for="user-password">Password</label>
+            <div class="password-row">
+              <input id="user-password" type="text" placeholder="Enter or generate password" />
+              <button type="button" id="btnGeneratePassword" class="nf-btn-icon">
+                <i class="fa-solid fa-key"></i>
+              </button>
+            </div>
           </div>
 
           <div>
@@ -1169,7 +1174,7 @@ window.PageContentRegistry.usersModals = () => `
             <select id="user-role" class="nf-input">
               <option value="Admin">Admin</option>
               <option value="Coach">Coach</option>
-              <option value="Staff">Staff</option>
+              <option value="OrgOwner">OrgOwner</option>
             </select>
           </div>
 
@@ -1184,6 +1189,7 @@ window.PageContentRegistry.usersModals = () => `
             <input type="checkbox" id="user-active" />
             <label for="user-active">Active User</label>
           </div>
+
         </div>
       </div>
 

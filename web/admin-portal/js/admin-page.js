@@ -35,7 +35,7 @@ window.AdminPage = {
     this.btnSave = document.getElementById(c.saveButtonId);
     this.btnCancel = document.getElementById(c.cancelButtonId);
 
-    this.deleteModal = document.getElementById(c.deleteModalId); // overlay
+    this.deleteModal = document.getElementById(c.deleteModalId);
     this.btnDeleteConfirm = document.getElementById(c.deleteConfirmId);
     this.btnDeleteCancel = document.getElementById(c.deleteCancelId);
 
@@ -96,10 +96,12 @@ window.AdminPage = {
 
   async loadData() {
     this.allItems = await this.config.api.getAll();
-    // Clear search bar on page load
+
+    // Reset search bar on load
     if (this.searchInput) {
       this.searchInput.value = "";
     }
+
     this.config.renderTable(this.allItems);
   },
 
@@ -126,43 +128,39 @@ window.AdminPage = {
     this.editingId = null;
     this.modalTitle.textContent = this.config.addTitle;
     this.config.clearForm();
-    this.modal.classList.add("active"); // overlay
+
+    // Activate overlay
+    this.modal.classList.add("active");
+
+    // Activate modal panel
+    const panel = this.modal.querySelector(".nf-modal");
+    if (panel) panel.classList.add("active");
   },
 
   async openEdit(id) {
     this.editingId = id;
 
-    // Reset form
     this.config.clearForm();
-
-    // Set title
     this.modalTitle.textContent = this.config.editTitle;
 
-    // Load data
     const item = await this.config.api.getById(id);
     this.config.populateForm(item);
 
-    // ⭐ Activate overlay
+    // Activate overlay
     this.modal.classList.add("active");
 
-    // ⭐ Activate modal panel
+    // Activate modal panel
     const panel = this.modal.querySelector(".nf-modal");
     if (panel) panel.classList.add("active");
   },
 
   openDelete(id) {
     this.deleteId = id;
-    this.deleteModal.classList.add("active"); // overlay
+    this.deleteModal.classList.add("active");
   },
 
   closeModal() {
-    console.log(
-      "🔥 closeModal called on:",
-      this.modalOverlay,
-      this.modalOverlay?.id,
-    );
-
-    // Remove overlay active
+    // Remove overlay
     this.modal.classList.remove("active");
 
     // Remove modal panel active
@@ -179,16 +177,15 @@ window.AdminPage = {
   async save() {
     const payload = this.config.collectFormData();
 
+    console.log("🔥 Payload being sent to API:", payload);
+
     if (this.editingId) {
       await this.config.api.update(this.editingId, payload);
     } else {
       await this.config.api.create(payload);
     }
 
-    // ✅ Re‑resolve modal reference before closing
-    this.modal = document.getElementById(this.config.modalId);
     this.closeModal();
-
     this.loadData();
   },
 };

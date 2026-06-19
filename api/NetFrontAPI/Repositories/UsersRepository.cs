@@ -124,11 +124,23 @@ namespace NetFrontAPI.Repositories
             using var conn = _connectionFactory.CreateConnection();
             using var tx = conn.BeginTransaction();
 
+            // Get the original email for this user
+            var originalEmail = await conn.QueryFirstOrDefaultAsync<string>(
+                "SELECT Email FROM Users WHERE Id = @Id",
+                new { Id = id },
+                tx
+            );
+
+            if (originalEmail == null)
+                throw new InvalidOperationException("User not found.");
+
+            // Update profile (including email + org)
             string profileSql = @"
                 UPDATE Users
                 SET FirstName = @FirstName,
                     LastName = @LastName,
-                    OrganizationId = @OrganizationId
+                    OrganizationId = @OrganizationId,
+                    Email = @Email
                 WHERE Id = @Id;
             ";
 
@@ -137,14 +149,28 @@ namespace NetFrontAPI.Repositories
                 Id = id,
                 FirstName = firstName,
                 LastName = lastName,
-                OrganizationId = organizationId
+                OrganizationId = organizationId,
+                Email = email
             }, tx);
 
-            await UpdateAuthUserAsync(email, role, isActive, tx);
+            // Update AuthUsers role/active using original email
+            await UpdateAuthUserAsync(originalEmail, role, isActive, tx);
 
+            // If email changed, propagate to AuthUsers
+            if (!string.Equals(originalEmail, email, StringComparison.OrdinalIgnoreCase))
+            {
+                await conn.ExecuteAsync(
+                    "UPDATE AuthUsers SET Email = @NewEmail WHERE Email = @OldEmail",
+                    new { NewEmail = email, OldEmail = originalEmail },
+                    tx
+                );
+            }
+
+            // Optional password change (hash before saving)
             if (!string.IsNullOrWhiteSpace(password))
             {
-                await UpdatePasswordAsync(email, password, tx);
+                var hash = BCrypt.Net.BCrypt.HashPassword(password);
+                await UpdatePasswordAsync(email, hash, tx);
             }
 
             tx.Commit();

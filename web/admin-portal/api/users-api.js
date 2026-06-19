@@ -7,7 +7,7 @@ const UsersAPI = {
   // GET ALL USERS (DTO LIST)
   // -------------------------------------------------------
   async getAll() {
-    const res = await fetch(`${window.apiBase}/users`);
+    const res = await authFetch("/users");
     if (!res.ok) throw new Error("Failed to load users");
     return await res.json();
   },
@@ -16,7 +16,7 @@ const UsersAPI = {
   // GET USER BY ID
   // -------------------------------------------------------
   async getById(id) {
-    const res = await fetch(`${window.apiBase}/users/${id}`);
+    const res = await authFetch(`/users/${id}`);
     if (!res.ok) throw new Error("Failed to load user");
     return await res.json();
   },
@@ -25,9 +25,8 @@ const UsersAPI = {
   // CREATE USER
   // -------------------------------------------------------
   async create(data) {
-    const res = await fetch(`${window.apiBase}/users`, {
+    const res = await authFetch("/users", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
@@ -39,29 +38,28 @@ const UsersAPI = {
   // UPDATE USER
   // -------------------------------------------------------
   async update(id, data) {
-    const res = await fetch(`${window.apiBase}/users/${id}`, {
+    const res = await authFetch(`/users/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     if (!res.ok) throw new Error("Failed to update user");
 
-    // Some APIs return 204 No Content on update
-    if (res.status === 204) return true;
-
-    return await res.json();
+    // AdminPage expects a boolean
+    return true;
   },
 
   // -------------------------------------------------------
   // DELETE USER
   // -------------------------------------------------------
   async delete(id) {
-    const res = await fetch(`${window.apiBase}/users/${id}`, {
+    const res = await authFetch(`/users/${id}`, {
       method: "DELETE",
     });
 
     if (!res.ok) throw new Error("Failed to delete user");
+
+    // AdminPage expects a boolean
     return true;
   },
 };

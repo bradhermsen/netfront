@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Dapper;
 using BCrypt.Net;
 using NetFrontAPI.Models;
 using NetFrontAPI.Repositories;
@@ -145,22 +146,24 @@ namespace NetFrontAPI.Services
         // ============================================================
         public async Task ResetPasswordAsync(Guid id, string newPassword)
         {
-            // Get the email for this user
             var email = await _repo.GetEmailByUserIdAsync(id);
             if (email == null)
                 throw new InvalidOperationException("User not found.");
 
-            // Hash the new password
             var hash = BCrypt.Net.BCrypt.HashPassword(newPassword);
 
             using var conn = _connectionFactory.CreateConnection();
             using var tx = conn.BeginTransaction();
 
-            // Update password in AuthUsers
-            await _repo.UpdatePasswordAsync(email, hash, tx);
+            await conn.ExecuteAsync(
+                "UPDATE AuthUsers SET PasswordHash = @Hash WHERE Email = @Email",
+                new { Hash = hash, Email = email },
+                tx
+            );
 
             tx.Commit();
         }
+
 
         // ============================================================
         // DELETE USER (AuthUsers + Users)

@@ -28,7 +28,7 @@ window.AdminPage = {
     this.tableBody = document.getElementById(c.tableBodyId);
     this.searchInput = document.getElementById(c.searchInputId);
 
-    this.modal = document.getElementById(c.modalId); // overlay
+    this.modal = document.getElementById(c.modalId);
     this.modalTitle = document.getElementById(c.modalTitleId);
 
     this.btnAdd = document.getElementById(c.addButtonId);
@@ -45,13 +45,21 @@ window.AdminPage = {
   },
 
   // -------------------------------------------------------
-  // EVENT BINDING
+  // EVENT BINDING (NOW SUPPORTS CUSTOM HANDLERS)
   // -------------------------------------------------------
   bindEvents() {
     const c = this.config;
 
-    if (this.btnAdd)
-      this.btnAdd.addEventListener("click", () => this.openAdd());
+    // ⭐ FIXED: Add button now supports custom handler
+    if (this.btnAdd) {
+      this.btnAdd.addEventListener("click", () => {
+        if (c.addHandler) {
+          c.addHandler();
+        } else {
+          this.openAdd();
+        }
+      });
+    }
 
     if (this.btnSave) this.btnSave.addEventListener("click", () => this.save());
 
@@ -80,9 +88,29 @@ window.AdminPage = {
       this.searchInput.addEventListener("input", () => this.applySearch());
     }
 
-    // Global edit/delete handlers
-    window[c.editHandlerName] = (id) => this.openEdit(id);
-    window[c.deleteHandlerName] = (id) => this.openDelete(id);
+    // ⭐ FIXED: Edit/Delete now support custom handlers
+    if (c.editHandler) window[c.editHandlerName] = (id) => c.editHandler(id);
+    else window[c.editHandlerName] = (id) => this.openEdit(id);
+
+    if (c.deleteHandler)
+      window[c.deleteHandlerName] = (id) => c.deleteHandler(id);
+    else window[c.deleteHandlerName] = (id) => this.openDelete(id);
+  },
+
+  // -------------------------------------------------------
+  // WAIT FOR MODAL (ASYNC SAFE)
+  // -------------------------------------------------------
+  waitForModal() {
+    return new Promise((resolve) => {
+      // If modal is already active, resolve immediately
+      if (this.modal && this.modal.classList.contains("active")) {
+        resolve();
+        return;
+      }
+
+      // Otherwise wait one frame
+      requestAnimationFrame(() => resolve());
+    });
   },
 
   // -------------------------------------------------------
@@ -97,7 +125,6 @@ window.AdminPage = {
   async loadData() {
     this.allItems = await this.config.api.getAll();
 
-    // Reset search bar on load
     if (this.searchInput) {
       this.searchInput.value = "";
     }
@@ -122,17 +149,15 @@ window.AdminPage = {
   },
 
   // -------------------------------------------------------
-  // MODAL CONTROL — UPDATED FOR .active SYSTEM
+  // MODAL CONTROL
   // -------------------------------------------------------
   openAdd() {
     this.editingId = null;
     this.modalTitle.textContent = this.config.addTitle;
     this.config.clearForm();
 
-    // Activate overlay
     this.modal.classList.add("active");
 
-    // Activate modal panel
     const panel = this.modal.querySelector(".nf-modal");
     if (panel) panel.classList.add("active");
   },
@@ -146,10 +171,8 @@ window.AdminPage = {
     const item = await this.config.api.getById(id);
     this.config.populateForm(item);
 
-    // Activate overlay
     this.modal.classList.add("active");
 
-    // Activate modal panel
     const panel = this.modal.querySelector(".nf-modal");
     if (panel) panel.classList.add("active");
   },
@@ -160,10 +183,8 @@ window.AdminPage = {
   },
 
   closeModal() {
-    // Remove overlay
     this.modal.classList.remove("active");
 
-    // Remove modal panel active
     const panel = this.modal.querySelector(".nf-modal");
     if (panel) panel.classList.remove("active");
 
@@ -175,6 +196,13 @@ window.AdminPage = {
   // SAVE
   // -------------------------------------------------------
   async save() {
+    // ✅ If a custom save handler is provided, use it and EXIT.
+    // This is what Teams will use (saveTeam).
+    if (this.config.saveHandler) {
+      return await this.config.saveHandler();
+    }
+
+    // ✅ Everyone else keeps the old behavior.
     const payload = this.config.collectFormData();
 
     console.log("🔥 Payload being sent to API:", payload);

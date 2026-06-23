@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NetFrontAPI.DTOs;
 using NetFrontAPI.Repositories;
+using NetFrontAPI.Models;
 
 namespace NetFrontAPI.Services
 {
@@ -21,7 +22,7 @@ namespace NetFrontAPI.Services
         public Task<TeamDetailDto?> GetByIdAsync(Guid id) =>
             _repo.GetByIdAsync(id);
 
-        public Task CreateAsync(TeamCreateUpdateDto dto) =>
+        public Task<Guid> CreateAsync(TeamCreateUpdateDto dto) =>
             _repo.CreateAsync(dto);
 
         public Task UpdateAsync(Guid id, TeamCreateUpdateDto dto) =>
@@ -29,5 +30,9 @@ namespace NetFrontAPI.Services
 
         public Task DeleteAsync(Guid id) =>
             _repo.DeleteAsync(id);
+
+        // NEW
+        public Task<IEnumerable<Team>> GetTeamsByOrganizationAsync(Guid organizationId) =>
+            _repo.GetTeamsByOrganizationAsync(organizationId);
     }
 }

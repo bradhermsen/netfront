@@ -18,7 +18,7 @@ namespace NetFrontAPI.Functions
         }
 
         // ============================================================
-        // CREATE USER
+        // CREATE USER — NOW RETURNS CREATED USER OBJECT
         // ============================================================
         [Function("CreateUser")]
         public async Task<HttpResponseData> CreateUser(
@@ -28,7 +28,7 @@ namespace NetFrontAPI.Functions
 
             try
             {
-                await _service.CreateUserAsync(
+                var created = await _service.CreateUserAsync(
                     dto.Email,
                     dto.Password,
                     dto.Role,
@@ -38,9 +38,8 @@ namespace NetFrontAPI.Functions
                 );
 
                 var res = req.CreateResponse(HttpStatusCode.OK);
-                await res.WriteAsJsonAsync(new { success = true });
+                await res.WriteAsJsonAsync(created);
                 return res;
-
             }
             catch (Exception ex)
             {
@@ -83,7 +82,7 @@ namespace NetFrontAPI.Functions
         }
 
         // ============================================================
-        // UPDATE USER (profile + role + active + optional password)
+        // UPDATE USER
         // ============================================================
         [Function("UpdateUser")]
         public async Task<HttpResponseData> UpdateUser(
@@ -108,7 +107,6 @@ namespace NetFrontAPI.Functions
                 var res = req.CreateResponse(HttpStatusCode.OK);
                 await res.WriteAsJsonAsync(new { success = true });
                 return res;
-
             }
             catch (Exception ex)
             {
@@ -139,6 +137,37 @@ namespace NetFrontAPI.Functions
                 await bad.WriteStringAsync(ex.Message);
                 return bad;
             }
+        }
+
+        // ============================================================
+        // GET USER BY EMAIL (QUERY STRING)
+        // ============================================================
+        [Function("GetUserByEmail")]
+        public async Task<HttpResponseData> GetUserByEmail(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "users/by-email")] HttpRequestData req)
+        {
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var email = query["email"];
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteStringAsync("Email is required");
+                return bad;
+            }
+
+            var user = await _service.GetByEmailAsync(email);
+
+            if (user == null)
+            {
+                var notFound = req.CreateResponse(HttpStatusCode.NotFound);
+                await notFound.WriteStringAsync("User not found");
+                return notFound;
+            }
+
+            var ok = req.CreateResponse(HttpStatusCode.OK);
+            await ok.WriteAsJsonAsync(user);
+            return ok;
         }
 
         // ============================================================

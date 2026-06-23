@@ -4,7 +4,7 @@
 
 const UsersAPI = {
   // -------------------------------------------------------
-  // GET ALL USERS (DTO LIST)
+  // GET ALL USERS
   // -------------------------------------------------------
   async getAll() {
     const res = await authFetch("/users");
@@ -18,6 +18,24 @@ const UsersAPI = {
   async getById(id) {
     const res = await authFetch(`/users/${id}`);
     if (!res.ok) throw new Error("Failed to load user");
+    return await res.json();
+  },
+
+  // -------------------------------------------------------
+  // GET USER BY EMAIL (404 = user not found)
+  // -------------------------------------------------------
+  async getByEmail(email) {
+    const encoded = encodeURIComponent(email);
+    const res = await authFetch(`/users/by-email?email=${encoded}`);
+
+    if (res.status === 404) {
+      return null; // user does not exist — this is OK
+    }
+
+    if (!res.ok) {
+      throw new Error("Failed to load user");
+    }
+
     return await res.json();
   },
 
@@ -44,8 +62,6 @@ const UsersAPI = {
     });
 
     if (!res.ok) throw new Error("Failed to update user");
-
-    // AdminPage expects a boolean
     return true;
   },
 
@@ -58,8 +74,6 @@ const UsersAPI = {
     });
 
     if (!res.ok) throw new Error("Failed to delete user");
-
-    // AdminPage expects a boolean
     return true;
   },
 };

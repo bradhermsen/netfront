@@ -13,12 +13,15 @@ const TeamApi = {
 
   async create(payload) {
     console.log(">>> TeamApi.create() payload:", payload);
-    await fetch(this.baseUrl, {
+
+    const res = await fetch(this.baseUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    // No JSON to return
+
+    const data = await res.json();
+    return data.teamId; // ⭐ IMPORTANT
   },
 
   async update(id, payload) {
@@ -27,7 +30,6 @@ const TeamApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    // No JSON to return
   },
 
   async delete(id) {

@@ -1,9 +1,11 @@
+console.log("Teams.js loaded");
+
 // =========================================================
 // TEAMS PAGE — MODERNIZED + MATCHED DESIGN
 // =========================================================
 
 // =========================================================
-// LOAD ALL TEAM DROPDOWNS (NEW + COMPLETE)
+// LOAD ALL TEAM DROPDOWNS
 // =========================================================
 async function loadAllTeamDropdowns() {
   await Promise.all([
@@ -32,7 +34,6 @@ async function loadTeamOrganizations() {
       select.appendChild(opt);
     });
 
-    // Populate filter dropdown
     const filter = document.getElementById("filter-org");
     if (filter) {
       filter.innerHTML = `<option value="">Organization: All</option>`;
@@ -67,7 +68,6 @@ async function loadTeamLevels() {
       select.appendChild(opt);
     });
 
-    // Populate filter dropdown
     const filter = document.getElementById("filter-level");
     if (filter) {
       filter.innerHTML = `<option value="">Level: All</option>`;
@@ -84,26 +84,138 @@ async function loadTeamLevels() {
 }
 
 // ------------------------------
-// SEASONS DROPDOWN
+// SEASONS DISPLAY
 // ------------------------------
 async function loadTeamSeasons() {
   try {
+    console.log("loadTeamSeasons() fired");
+
     const res = await fetch(`${window.apiBase}/seasons`);
     const seasons = await res.json();
 
-    const select = document.getElementById("team-season");
-    if (!select) return;
+    const display = document.getElementById("team-season-display");
+    if (!display) return;
 
-    select.innerHTML = `<option value="">Select Season</option>`;
-    seasons.forEach((s) => {
-      const opt = document.createElement("option");
-      opt.value = s.seasonId;
-      opt.textContent = s.seasonName;
-      select.appendChild(opt);
-    });
+    console.log("Seasons:", seasons);
+
+    const activeSeason = seasons.find(
+      (s) => s.isActive === true || s.isActive === "true",
+    );
+
+    console.log("Active season:", activeSeason);
+
+    // Store globally for new teams
+    window.activeSeasonId = activeSeason?.seasonId || null;
+
+    if (activeSeason) {
+      display.textContent = activeSeason.seasonName;
+    } else {
+      display.textContent = "No Active Season";
+    }
   } catch (err) {
     console.error("Failed to load seasons:", err);
   }
+}
+
+// =========================================================
+// ABBREVIATION GENERATION
+// =========================================================
+function generateTeamAbbreviation(
+  teamName,
+  levelName,
+  existingAbbreviations = [],
+) {
+  if (!teamName || !levelName) return "";
+
+  const highSchoolLevels = [
+    "Varsity Boys",
+    "Varsity Girls",
+    "JV Boys",
+    "JV Girls",
+  ];
+
+  const removeWords = [
+    "High School",
+    "Senior",
+    "School",
+    "HS",
+    "North",
+    "South",
+    "East",
+    "West",
+  ];
+
+  let cleaned = teamName;
+  removeWords.forEach((w) => {
+    cleaned = cleaned.replace(new RegExp(w, "gi"), "");
+  });
+
+  cleaned = cleaned.trim();
+
+  const consonants = cleaned
+    .replace(/[^A-Za-z]/g, "")
+    .replace(/[AEIOU]/gi, "")
+    .toUpperCase();
+
+  const teamPrefix = consonants.substring(0, 3);
+
+  const typePrefix = highSchoolLevels.includes(levelName) ? "HS" : "YO";
+
+  const levelParts = levelName.split(" ");
+  const levelPrefix = levelParts
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+  const base = `${teamPrefix}-${typePrefix}-${levelPrefix}`;
+
+  let finalAbbr = base;
+  let counter = 2;
+
+  while (existingAbbreviations.includes(finalAbbr)) {
+    finalAbbr = `${base}-${counter}`;
+    counter++;
+  }
+
+  return finalAbbr;
+}
+
+function updateTeamAbbreviation() {
+  const nameEl = document.getElementById("team-name");
+  const levelSelect = document.getElementById("team-level");
+  const abbrEl = document.getElementById("team-abbreviation");
+
+  if (!nameEl || !levelSelect || !abbrEl) return;
+
+  const currentAbbr = abbrEl.value?.trim();
+
+  // Don’t overwrite existing abbreviation when editing unless it’s empty
+  if (AdminPage?.editingId && currentAbbr) return;
+
+  const name = nameEl.value;
+  const levelName =
+    levelSelect.options[levelSelect.selectedIndex]?.textContent || "";
+
+  if (!name || !levelName) {
+    return;
+  }
+
+  const existing =
+    (window.loadedTeams || []).map((t) => t.abbreviation).filter((a) => !!a) ||
+    [];
+
+  const abbr = generateTeamAbbreviation(name, levelName, existing);
+  abbrEl.value = abbr;
+}
+
+function wireTeamAbbreviation() {
+  const nameEl = document.getElementById("team-name");
+  const levelSelect = document.getElementById("team-level");
+
+  if (!nameEl || !levelSelect) return;
+
+  nameEl.addEventListener("input", updateTeamAbbreviation);
+  levelSelect.addEventListener("change", updateTeamAbbreviation);
 }
 
 // =========================================================
@@ -116,7 +228,6 @@ function initTeamsPage() {
     tableBodyId: "teamsBody",
     searchInputId: "teams-search-bar",
 
-    // ⭐ FIXED MODAL IDS
     modalId: "teamModalOverlay",
     modalTitleId: "teamModalTitle",
     addButtonId: "btnAddTeam",
@@ -134,6 +245,8 @@ function initTeamsPage() {
     addTitle: "Add Team",
     editTitle: "Edit Team",
 
+    saveHandler: saveTeam,
+
     api: TeamApi,
 
     // -------------------------------------------------------
@@ -142,6 +255,8 @@ function initTeamsPage() {
     loadDropdowns: async () => {
       await loadAllTeamDropdowns();
       wireTeamFilterEvents();
+      wireAssistantCoachLoginToggles();
+      wireTeamAbbreviation();
 
       if (window.orgIdFromUrl) {
         const orgFilter = document.getElementById("filter-org");
@@ -158,6 +273,9 @@ function initTeamsPage() {
     renderTable: (teams) => {
       const body = document.getElementById("teamsBody");
       body.innerHTML = "";
+
+      // Keep a copy for abbreviation duplicate detection
+      window.loadedTeams = teams || [];
 
       teams.forEach((team) => {
         const row = document.createElement("tr");
@@ -195,9 +313,6 @@ function initTeamsPage() {
 
         const [btnView, btnEdit, btnDelete] = row.querySelectorAll("button");
 
-        
-        
-
         btnEdit.addEventListener("click", () => openEditTeam(team.teamId));
         btnDelete.addEventListener("click", () => openDeleteTeam(team.teamId));
 
@@ -216,7 +331,6 @@ function initTeamsPage() {
         "team-abbreviation",
         "team-org",
         "team-level",
-        "team-season",
         "team-head-coach",
         "team-asst1",
         "team-asst2",
@@ -225,11 +339,35 @@ function initTeamsPage() {
         "team-notes",
         "team-score-code",
         "team-stat-code",
-      ].forEach((id) => (document.getElementById(id).value = ""));
+        "team-head-coach-email",
+        "team-asst1-email",
+        "team-asst2-email",
+        "team-asst3-email",
+        "team-asst4-email",
+      ].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+
+      [
+        "team-asst1-has-login",
+        "team-asst2-has-login",
+        "team-asst3-has-login",
+        "team-asst4-has-login",
+      ].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.checked = false;
+          el.disabled = true;
+        }
+      });
 
       document.getElementById("team-active").checked = true;
       document.getElementById("team-external").checked = false;
       document.getElementById("team-org").disabled = false;
+
+      // Re-wire toggles after clearing
+      wireAssistantCoachLoginToggles();
     },
 
     // -------------------------------------------------------
@@ -241,7 +379,6 @@ function initTeamsPage() {
         team.abbreviation ?? "";
       document.getElementById("team-org").value = team.organizationId || "";
       document.getElementById("team-level").value = team.levelId || "";
-      document.getElementById("team-season").value = team.seasonId || "";
 
       document.getElementById("team-head-coach").value =
         team.headCoachName ?? "";
@@ -254,16 +391,58 @@ function initTeamsPage() {
       document.getElementById("team-asst4").value =
         team.assistantCoach4Name ?? "";
 
-      document.getElementById("team-notes").value = team.notes ?? "";
+      document.getElementById("team-head-coach-email").value =
+        team.headCoachEmail ?? "";
+      document.getElementById("team-asst1-email").value =
+        team.assistantCoach1Email ?? "";
+      document.getElementById("team-asst2-email").value =
+        team.assistantCoach2Email ?? "";
+      document.getElementById("team-asst3-email").value =
+        team.assistantCoach3Email ?? "";
+      document.getElementById("team-asst4-email").value =
+        team.assistantCoach4Email ?? "";
+
       document.getElementById("team-score-code").value =
         team.scorekeeperCode ?? "";
       document.getElementById("team-stat-code").value =
         team.statManagerCode ?? "";
 
-      document.getElementById("team-active").checked = !!team.isActive;
-      document.getElementById("team-external").checked = !!team.isExternal;
+      const togglePairs = [
+        {
+          email: "team-asst1-email",
+          toggle: "team-asst1-has-login",
+          value: team.assistantCoach1HasLogin,
+        },
+        {
+          email: "team-asst2-email",
+          toggle: "team-asst2-has-login",
+          value: team.assistantCoach2HasLogin,
+        },
+        {
+          email: "team-asst3-email",
+          toggle: "team-asst3-has-login",
+          value: team.assistantCoach3HasLogin,
+        },
+        {
+          email: "team-asst4-email",
+          toggle: "team-asst4-has-login",
+          value: team.assistantCoach4HasLogin,
+        },
+      ];
 
-      document.getElementById("team-org").disabled = !!team.isExternal;
+      togglePairs.forEach(({ email, toggle, value }) => {
+        const emailEl = document.getElementById(email);
+        const toggleEl = document.getElementById(toggle);
+
+        if (!emailEl || !toggleEl) return;
+
+        const hasEmail = emailEl.value.trim().length > 0;
+        toggleEl.disabled = !hasEmail;
+        toggleEl.checked = hasEmail ? !!value : false;
+      });
+
+      // Re-wire toggles after populating
+      wireAssistantCoachLoginToggles();
     },
 
     // -------------------------------------------------------
@@ -279,13 +458,35 @@ function initTeamsPage() {
         organizationId: isExternal
           ? null
           : document.getElementById("team-org").value || null,
+
+        // Correct season logic
+        seasonId: AdminPage.editingId
+          ? window.editingSeasonId
+          : window.activeSeasonId,
+
         levelId: document.getElementById("team-level").value || null,
-        seasonId: document.getElementById("team-season").value || null,
+
         headCoachName: document.getElementById("team-head-coach").value,
         assistantCoach1Name: document.getElementById("team-asst1").value,
         assistantCoach2Name: document.getElementById("team-asst2").value,
         assistantCoach3Name: document.getElementById("team-asst3").value,
         assistantCoach4Name: document.getElementById("team-asst4").value,
+
+        headCoachEmail: document.getElementById("team-head-coach-email").value,
+        assistantCoach1Email: document.getElementById("team-asst1-email").value,
+        assistantCoach2Email: document.getElementById("team-asst2-email").value,
+        assistantCoach3Email: document.getElementById("team-asst3-email").value,
+        assistantCoach4Email: document.getElementById("team-asst4-email").value,
+
+        assistantCoach1HasLogin: document.getElementById("team-asst1-has-login")
+          .checked,
+        assistantCoach2HasLogin: document.getElementById("team-asst2-has-login")
+          .checked,
+        assistantCoach3HasLogin: document.getElementById("team-asst3-has-login")
+          .checked,
+        assistantCoach4HasLogin: document.getElementById("team-asst4-has-login")
+          .checked,
+
         notes: document.getElementById("team-notes").value,
         scorekeeperCode: document.getElementById("team-score-code").value,
         statManagerCode: document.getElementById("team-stat-code").value,
@@ -295,22 +496,89 @@ function initTeamsPage() {
     },
   });
 
-  // Map AdminPage internal add handler
   AdminPage.openAdd = openAddTeam;
 }
 
 // =========================================================
-// ADD TEAM (FIXED)
+// ASSISTANT COACH LOGIN TOGGLE LOGIC
+// =========================================================
+function wireAssistantCoachLoginToggles() {
+  const pairs = [
+    { email: "team-asst1-email", toggle: "team-asst1-has-login" },
+    { email: "team-asst2-email", toggle: "team-asst2-has-login" },
+    { email: "team-asst3-email", toggle: "team-asst3-has-login" },
+    { email: "team-asst4-email", toggle: "team-asst4-has-login" },
+  ];
+
+  pairs.forEach(({ email, toggle }) => {
+    const emailEl = document.getElementById(email);
+    const toggleEl = document.getElementById(toggle);
+
+    if (!emailEl || !toggleEl) return;
+
+    const update = () => {
+      const hasEmail = emailEl.value.trim().length > 0;
+      toggleEl.disabled = !hasEmail;
+      if (!hasEmail) toggleEl.checked = false;
+    };
+
+    emailEl.addEventListener("input", update);
+    update();
+  });
+}
+
+// =========================================================
+// USER CREATION + TEAM ASSIGNMENT
+// =========================================================
+async function ensureCoachUser(name, email, orgId, teamId) {
+  if (!email) return;
+
+  const [first, ...rest] = (name || "").trim().split(" ");
+  const last = rest.join(" ");
+
+  let user = null;
+
+  try {
+    user = await UsersAPI.getByEmail(email);
+  } catch {
+    user = null;
+  }
+
+  if (!user) {
+    const password = "Temp1234!";
+
+    const payload = {
+      firstName: first || "",
+      lastName: last || "",
+      email,
+      role: "Coach",
+      organizationId: orgId,
+      isActive: true,
+      password,
+    };
+
+    user = await UsersAPI.create(payload);
+  }
+
+  await CoachTeamsApi.assign(user.id, teamId);
+}
+
+// =========================================================
+// ADD TEAM
 // =========================================================
 function openAddTeam() {
   AdminPage.editingId = null;
   AdminPage.config.clearForm();
+
   document.getElementById("teamModalTitle").textContent = "Add Team";
   document.getElementById("teamModalOverlay").classList.add("active");
+
+  // Re-wire toggles for a fresh form
+  wireAssistantCoachLoginToggles();
 }
 
 // =========================================================
-// EDIT TEAM (FIXED)
+// EDIT TEAM
 // =========================================================
 async function openEditTeam(id) {
   try {
@@ -327,11 +595,87 @@ async function openEditTeam(id) {
 }
 
 // =========================================================
-// DELETE TEAM (FIXED)
+// DELETE TEAM
 // =========================================================
 function openDeleteTeam(id) {
   AdminPage.deleteId = id;
   document.getElementById("teamDeleteModalOverlay").classList.add("active");
+}
+
+// =========================================================
+// SAVE TEAM (AUTO-CREATE COACH USERS)
+// =========================================================
+async function saveTeam() {
+  console.log(">>> saveTeam() START");
+  console.log(">>> saveTeam() FIRED");
+
+  const payload = AdminPage.config.collectFormData();
+  console.log(">>> PAYLOAD:", payload);
+
+  let teamId;
+  const orgId = payload.organizationId;
+
+  if (AdminPage.editingId) {
+    console.log(">>> Updating existing team:", AdminPage.editingId);
+    await TeamApi.update(AdminPage.editingId, payload);
+    teamId = AdminPage.editingId;
+  } else {
+    console.log(">>> Creating NEW team...");
+    teamId = await TeamApi.create(payload);
+    console.log(">>> Team created with ID:", teamId);
+  }
+
+  console.log(">>> Processing HEAD COACH");
+  console.log(">>> Head coach name:", payload.headCoachName);
+  console.log(">>> Head coach email:", payload.headCoachEmail);
+
+  await ensureCoachUser(
+    payload.headCoachName,
+    payload.headCoachEmail,
+    orgId,
+    teamId,
+  );
+
+  const assistants = [
+    {
+      name: payload.assistantCoach1Name,
+      email: payload.assistantCoach1Email,
+      hasLogin: payload.assistantCoach1HasLogin,
+    },
+    {
+      name: payload.assistantCoach2Name,
+      email: payload.assistantCoach2Email,
+      hasLogin: payload.assistantCoach2HasLogin,
+    },
+    {
+      name: payload.assistantCoach3Name,
+      email: payload.assistantCoach3Email,
+      hasLogin: payload.assistantCoach3HasLogin,
+    },
+    {
+      name: payload.assistantCoach4Name,
+      email: payload.assistantCoach4Email,
+      hasLogin: payload.assistantCoach4HasLogin,
+    },
+  ];
+
+  console.log(">>> Assistant coaches payload:", assistants);
+
+  for (const ac of assistants) {
+    console.log(">>> Checking assistant:", ac);
+
+    if (ac.hasLogin && ac.email) {
+      console.log(">>> Calling ensureCoachUser for assistant:", ac.email);
+      await ensureCoachUser(ac.name, ac.email, orgId, teamId);
+    } else {
+      console.log(">>> Skipping assistant (no login or no email):", ac.email);
+    }
+  }
+
+  console.log(">>> saveTeam() COMPLETE — closing modal and reloading data");
+
+  AdminPage.closeModal();
+  AdminPage.loadData();
 }
 
 // =========================================================
@@ -372,6 +716,19 @@ function wireTeamFilterEvents() {
     },
   );
 }
+
+// =========================================================
+// GENERATE ACCESS CODES
+// =========================================================
+document.addEventListener("click", (e) => {
+  if (e.target.id === "btnGenerateCodes") {
+    const sk = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const sm = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    document.getElementById("team-score-code").value = sk;
+    document.getElementById("team-stat-code").value = sm;
+  }
+});
 
 // =========================================================
 // INIT

@@ -48,6 +48,7 @@ var host = new HostBuilder()
         services.AddScoped<IRosterEntriesRepository, RosterEntriesRepository>();
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IUsersRepository, UsersRepository>();
+        services.AddScoped<ICoachTeamsRepository, CoachTeamsRepository>();
 
         // Services
         services.AddScoped<IOrganizationService, OrganizationService>();
@@ -59,6 +60,7 @@ var host = new HostBuilder()
         services.AddScoped<IRosterEntriesService, RosterEntriesService>();
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IUsersService, UsersService>();
+        services.AddScoped<ICoachTeamsService, CoachTeamsService>();
     })
     .Build();
 

@@ -4,6 +4,7 @@ using System.Data;
 using System.Threading.Tasks;
 using Dapper;
 using NetFrontAPI.DTOs;
+using NetFrontAPI.Models;
 
 namespace NetFrontAPI.Repositories
 {
@@ -24,11 +25,11 @@ namespace NetFrontAPI.Repositories
             var sql = @"
                 SELECT 
                     t.Id AS TeamId,
-                    t.OrganizationId AS OrganizationId,
-                    t.LevelId AS LevelId,
-                    t.SeasonId AS SeasonId,
+                    t.OrganizationId,
+                    t.LevelId,
+                    t.SeasonId,
                     t.Name,
-                    t.Abbreviation,                     -- ⭐ ADDED
+                    t.Abbreviation,
                     o.Name AS OrganizationName,
                     l.Name AS LevelName,
                     s.SeasonName,
@@ -37,7 +38,19 @@ namespace NetFrontAPI.Repositories
                     t.ScorekeeperCode,
                     t.StatManagerCode,
                     t.IsActive,
-                    t.IsExternal
+                    t.IsExternal,
+
+                    t.HeadCoachEmail,
+                    t.AssistantCoach1Email,
+                    t.AssistantCoach2Email,
+                    t.AssistantCoach3Email,
+                    t.AssistantCoach4Email,
+
+                    t.AssistantCoach1HasLogin,
+                    t.AssistantCoach2HasLogin,
+                    t.AssistantCoach3HasLogin,
+                    t.AssistantCoach4HasLogin
+
                 FROM Teams t
                 LEFT JOIN Organizations o ON t.OrganizationId = o.OrganizationId
                 LEFT JOIN Levels l ON t.LevelId = l.Id
@@ -55,25 +68,38 @@ namespace NetFrontAPI.Repositories
             var sql = @"
                 SELECT 
                     t.Id AS TeamId,
-                    t.OrganizationId AS OrganizationId,
-                    o.Name AS OrganizationName,
-                    t.LevelId AS LevelId,
-                    l.Name AS LevelName,
-                    t.SeasonId AS SeasonId,
-                    s.SeasonName,
-                    (SELECT COUNT(*) FROM RosterEntries r WHERE r.TeamId = t.Id) AS RosterCount,
+                    t.OrganizationId,
+                    t.LevelId,
+                    t.SeasonId,
                     t.Name,
-                    t.Abbreviation AS Abbreviation,                     
+                    t.Gender,
+                    t.Abbreviation,
+
                     t.HeadCoachName,
                     t.AssistantCoach1Name,
                     t.AssistantCoach2Name,
                     t.AssistantCoach3Name,
                     t.AssistantCoach4Name,
+
+                    t.HeadCoachEmail,
+                    t.AssistantCoach1Email,
+                    t.AssistantCoach2Email,
+                    t.AssistantCoach3Email,
+                    t.AssistantCoach4Email,
+
+                    t.AssistantCoach1HasLogin,
+                    t.AssistantCoach2HasLogin,
+                    t.AssistantCoach3HasLogin,
+                    t.AssistantCoach4HasLogin,
+
                     t.ScorekeeperCode,
                     t.StatManagerCode,
                     t.IsActive,
                     t.IsExternal,
-                    t.Notes
+                    t.Notes,
+
+                    (SELECT COUNT(*) FROM RosterEntries r WHERE r.TeamId = t.Id) AS RosterCount
+
                 FROM Teams t
                 LEFT JOIN Organizations o ON t.OrganizationId = o.OrganizationId
                 LEFT JOIN Levels l ON t.LevelId = l.Id
@@ -87,8 +113,10 @@ namespace NetFrontAPI.Repositories
         // =========================================================
         // CREATE
         // =========================================================
-        public async Task CreateAsync(TeamCreateUpdateDto dto)
+        public async Task<Guid> CreateAsync(TeamCreateUpdateDto dto)
         {
+            var id = Guid.NewGuid();
+
             var sql = @"
                 INSERT INTO Teams (
                     Id,
@@ -96,12 +124,26 @@ namespace NetFrontAPI.Repositories
                     LevelId,
                     SeasonId,
                     Name,
-                    Abbreviation,                       -- ⭐ ADDED
+                    Gender,
+                    Abbreviation,
+
                     HeadCoachName,
                     AssistantCoach1Name,
                     AssistantCoach2Name,
                     AssistantCoach3Name,
                     AssistantCoach4Name,
+
+                    HeadCoachEmail,
+                    AssistantCoach1Email,
+                    AssistantCoach2Email,
+                    AssistantCoach3Email,
+                    AssistantCoach4Email,
+
+                    AssistantCoach1HasLogin,
+                    AssistantCoach2HasLogin,
+                    AssistantCoach3HasLogin,
+                    AssistantCoach4HasLogin,
+
                     ScorekeeperCode,
                     StatManagerCode,
                     IsActive,
@@ -114,12 +156,26 @@ namespace NetFrontAPI.Repositories
                     @LevelId,
                     @SeasonId,
                     @Name,
-                    @Abbreviation,                      -- ⭐ ADDED
+                    @Gender,
+                    @Abbreviation,
+
                     @HeadCoachName,
                     @AssistantCoach1Name,
                     @AssistantCoach2Name,
                     @AssistantCoach3Name,
                     @AssistantCoach4Name,
+
+                    @HeadCoachEmail,
+                    @AssistantCoach1Email,
+                    @AssistantCoach2Email,
+                    @AssistantCoach3Email,
+                    @AssistantCoach4Email,
+
+                    @AssistantCoach1HasLogin,
+                    @AssistantCoach2HasLogin,
+                    @AssistantCoach3HasLogin,
+                    @AssistantCoach4HasLogin,
+
                     @ScorekeeperCode,
                     @StatManagerCode,
                     @IsActive,
@@ -129,23 +185,39 @@ namespace NetFrontAPI.Repositories
 
             await _db.ExecuteAsync(sql, new
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 dto.OrganizationId,
                 dto.LevelId,
                 dto.SeasonId,
                 dto.Name,
-                dto.Abbreviation,                      // ⭐ ADDED
+                dto.Gender,
+                dto.Abbreviation,
+
                 dto.HeadCoachName,
                 dto.AssistantCoach1Name,
                 dto.AssistantCoach2Name,
                 dto.AssistantCoach3Name,
                 dto.AssistantCoach4Name,
+
+                dto.HeadCoachEmail,
+                dto.AssistantCoach1Email,
+                dto.AssistantCoach2Email,
+                dto.AssistantCoach3Email,
+                dto.AssistantCoach4Email,
+
+                dto.AssistantCoach1HasLogin,
+                dto.AssistantCoach2HasLogin,
+                dto.AssistantCoach3HasLogin,
+                dto.AssistantCoach4HasLogin,
+
                 dto.ScorekeeperCode,
                 dto.StatManagerCode,
                 dto.IsActive,
                 dto.IsExternal,
                 dto.Notes
             });
+
+            return id;
         }
 
         // =========================================================
@@ -160,12 +232,26 @@ namespace NetFrontAPI.Repositories
                     LevelId = @LevelId,
                     SeasonId = @SeasonId,
                     Name = @Name,
-                    Abbreviation = @Abbreviation,       -- ⭐ ADDED
+                    Gender = @Gender,
+                    Abbreviation = @Abbreviation,
+
                     HeadCoachName = @HeadCoachName,
                     AssistantCoach1Name = @AssistantCoach1Name,
                     AssistantCoach2Name = @AssistantCoach2Name,
                     AssistantCoach3Name = @AssistantCoach3Name,
                     AssistantCoach4Name = @AssistantCoach4Name,
+
+                    HeadCoachEmail = @HeadCoachEmail,
+                    AssistantCoach1Email = @AssistantCoach1Email,
+                    AssistantCoach2Email = @AssistantCoach2Email,
+                    AssistantCoach3Email = @AssistantCoach3Email,
+                    AssistantCoach4Email = @AssistantCoach4Email,
+
+                    AssistantCoach1HasLogin = @AssistantCoach1HasLogin,
+                    AssistantCoach2HasLogin = @AssistantCoach2HasLogin,
+                    AssistantCoach3HasLogin = @AssistantCoach3HasLogin,
+                    AssistantCoach4HasLogin = @AssistantCoach4HasLogin,
+
                     ScorekeeperCode = @ScorekeeperCode,
                     StatManagerCode = @StatManagerCode,
                     IsActive = @IsActive,
@@ -180,12 +266,26 @@ namespace NetFrontAPI.Repositories
                 dto.LevelId,
                 dto.SeasonId,
                 dto.Name,
-                dto.Abbreviation,                      
+                dto.Gender,
+                dto.Abbreviation,
+
                 dto.HeadCoachName,
                 dto.AssistantCoach1Name,
                 dto.AssistantCoach2Name,
                 dto.AssistantCoach3Name,
                 dto.AssistantCoach4Name,
+
+                dto.HeadCoachEmail,
+                dto.AssistantCoach1Email,
+                dto.AssistantCoach2Email,
+                dto.AssistantCoach3Email,
+                dto.AssistantCoach4Email,
+
+                dto.AssistantCoach1HasLogin,
+                dto.AssistantCoach2HasLogin,
+                dto.AssistantCoach3HasLogin,
+                dto.AssistantCoach4HasLogin,
+
                 dto.ScorekeeperCode,
                 dto.StatManagerCode,
                 dto.IsActive,
@@ -201,6 +301,15 @@ namespace NetFrontAPI.Repositories
         {
             var sql = @"DELETE FROM Teams WHERE Id = @Id";
             await _db.ExecuteAsync(sql, new { Id = id });
+        }
+
+        // =========================================================
+        // NEW: FILTER TEAMS BY ORGANIZATION
+        // =========================================================
+        public async Task<IEnumerable<Team>> GetTeamsByOrganizationAsync(Guid organizationId)
+        {
+            var sql = @"SELECT * FROM Teams WHERE OrganizationId = @OrganizationId ORDER BY Name";
+            return await _db.QueryAsync<Team>(sql, new { OrganizationId = organizationId });
         }
     }
 }

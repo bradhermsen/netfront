@@ -19,14 +19,26 @@ namespace NetFrontAPI.Models
         public string? AssistantCoach3Name { get; set; }
         public string? AssistantCoach4Name { get; set; }
 
-        public string? Notes { get; set; }
+        public string? HeadCoachEmail { get; set; }
+        public string? AssistantCoach1Email { get; set; }
+        public string? AssistantCoach2Email { get; set; }
+        public string? AssistantCoach3Email { get; set; }
+        public string? AssistantCoach4Email { get; set; }
+
+        public bool AssistantCoach1HasLogin { get; set; }
+        public bool AssistantCoach2HasLogin { get; set; }
+        public bool AssistantCoach3HasLogin { get; set; }
+        public bool AssistantCoach4HasLogin { get; set; }
+
         public string? ScorekeeperCode { get; set; }
         public string? StatManagerCode { get; set; }
+        public string? Notes { get; set; }
 
         public bool IsActive { get; set; }
+        public bool IsExternal { get; set; }
 
-        // System
-        public DateTime CreatedAt { get; set; }
+        public int? SortOrder { get; set; }
+
         public DateTime UpdatedAt { get; set; }
     }
 }

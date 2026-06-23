@@ -1,5 +1,5 @@
 // =========================================================
-// USERS PAGE — MODERN ADMINPAGE VERSION
+// USERS PAGE — MODERN ADMINPAGE VERSION (TEAM SUPPORT ADDED)
 // =========================================================
 
 window.UsersPage = {
@@ -30,11 +30,9 @@ window.UsersPage = {
       populateForm: this.populateForm,
       collectFormData: this.collectFormData,
 
-      editHandlerName: "openEditUser",
-      deleteHandlerName: "openDeleteUser",
-
-      // ⭐ REQUIRED FOR ORGANIZATION DROPDOWN
-      loadDropdowns: () => UsersPage.loadDropdowns(),
+      addHandler: openAddUser,
+      editHandler: openEditUser,
+      deleteHandler: openDeleteUser,
     });
   },
 
@@ -42,15 +40,46 @@ window.UsersPage = {
   // LOAD ORGANIZATION DROPDOWN
   // -------------------------------------------------------
   async loadDropdowns() {
-    const orgs = await OrganizationsAPI.getAll();
+    const orgs = await OrgApi.getAll();
     const select = document.getElementById("user-organization");
 
+    if (!select) return;
+
     select.innerHTML = `
-      <option value="">Select Organization</option>
+      <option value="">None</option>
       ${orgs
         .map((o) => `<option value="${o.organizationId}">${o.name}</option>`)
         .join("")}
     `;
+  },
+
+  // -------------------------------------------------------
+  // LOAD TEAMS FOR SELECTED ORG
+  // -------------------------------------------------------
+  async loadTeamsForOrganization(orgId) {
+    const teamSelect = document.getElementById("user-team");
+    if (!teamSelect) return;
+
+    // IMPORTANT: Clear existing options
+    teamSelect.innerHTML = `<option value="">None</option>`;
+
+    if (!orgId) return;
+
+    try {
+      const res = await fetch(
+        `${window.apiBase}/teams/by-organization/${orgId}`,
+      );
+      const teams = await res.json();
+
+      teams.forEach((t) => {
+        const opt = document.createElement("option");
+        opt.value = t.id; // or t.teamId depending on your API
+        opt.textContent = `${t.name} (${t.abbreviation})`;
+        teamSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.error("Failed to load teams:", err);
+    }
   },
 
   // -------------------------------------------------------
@@ -68,7 +97,7 @@ window.UsersPage = {
         <td>${u.email || ""}</td>
         <td>${u.role || "None"}</td>
         <td>${u.organizationName || "None"}</td>
-        <td>${u.teams?.length || 0}</td>
+        <td>${u.teamName || "None"}</td>
         <td>${u.isActive ? "Active" : "Inactive"}</td>
         <td class="actions-col">
           <button type="button" class="nf-btn-icon edit">
@@ -99,7 +128,7 @@ window.UsersPage = {
   },
 
   // -------------------------------------------------------
-  // FORM HELPERS
+  // CLEAR FORM
   // -------------------------------------------------------
   clearForm() {
     [
@@ -108,22 +137,40 @@ window.UsersPage = {
       "user-email",
       "user-password",
       "user-organization",
+      "user-team",
     ].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });
+
+    document.getElementById("user-role").value = "Coach";
+    document.getElementById("user-active").checked = true;
   },
 
-  populateForm(u) {
+  // -------------------------------------------------------
+  // POPULATE FORM
+  // -------------------------------------------------------
+  async populateForm(u) {
     document.getElementById("user-first").value = u.firstName || "";
     document.getElementById("user-last").value = u.lastName || "";
     document.getElementById("user-email").value = u.email || "";
-    document.getElementById("user-password").value = ""; // never prefill passwords
+    document.getElementById("user-password").value = "";
+
     document.getElementById("user-organization").value = u.organizationId || "";
+
+    // Load teams for this org
+    await UsersPage.loadTeamsForOrganization(u.organizationId);
+
+    // Select team
+    document.getElementById("user-team").value = u.teamId || "";
+
     document.getElementById("user-role").value = u.role || "Coach";
     document.getElementById("user-active").checked = u.isActive ?? true;
   },
 
+  // -------------------------------------------------------
+  // COLLECT FORM DATA
+  // -------------------------------------------------------
   collectFormData() {
     return {
       email: document.getElementById("user-email").value,
@@ -131,6 +178,7 @@ window.UsersPage = {
       lastName: document.getElementById("user-last").value,
       organizationId:
         document.getElementById("user-organization").value || null,
+      teamId: document.getElementById("user-team").value || null,
       role: document.getElementById("user-role").value,
       isActive: document.getElementById("user-active").checked,
       password: document.getElementById("user-password").value || null,
@@ -139,15 +187,30 @@ window.UsersPage = {
 };
 
 // =========================================================
-// GLOBAL HANDLERS (MATCHING PLAYERS PATTERN)
+// GLOBAL HANDLERS
 // =========================================================
-function openAddUser() {
+async function openAddUser() {
   AdminPage.openAdd();
+  await AdminPage.waitForModal();
+  await UsersPage.loadDropdowns();
+
+  document
+    .getElementById("user-organization")
+    .addEventListener("change", (e) => {
+      UsersPage.loadTeamsForOrganization(e.target.value);
+    });
 }
 
 async function openEditUser(id) {
-  await AdminPage.waitForModal();
   AdminPage.openEdit(id);
+  await AdminPage.waitForModal();
+  await UsersPage.loadDropdowns();
+
+  document
+    .getElementById("user-organization")
+    .addEventListener("change", (e) => {
+      UsersPage.loadTeamsForOrganization(e.target.value);
+    });
 }
 
 function openDeleteUser(id) {
@@ -176,7 +239,7 @@ function copyPassword() {
 }
 
 // =========================================================
-// BOOTSTRAP PAGE + ATTACH PASSWORD BUTTONS
+// BOOTSTRAP PAGE
 // =========================================================
 document.addEventListener("DOMContentLoaded", () => {
   UsersPage.init();

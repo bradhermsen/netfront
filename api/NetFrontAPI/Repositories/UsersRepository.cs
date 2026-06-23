@@ -134,7 +134,7 @@ namespace NetFrontAPI.Repositories
             if (originalEmail == null)
                 throw new InvalidOperationException("User not found.");
 
-            // Update profile (including email + org)
+            // Update profile
             string profileSql = @"
                 UPDATE Users
                 SET FirstName = @FirstName,
@@ -153,7 +153,7 @@ namespace NetFrontAPI.Repositories
                 Email = email
             }, tx);
 
-            // Update AuthUsers role/active using original email
+            // Update AuthUsers role/active
             await UpdateAuthUserAsync(originalEmail, role, isActive, tx);
 
             // If email changed, propagate to AuthUsers
@@ -166,7 +166,7 @@ namespace NetFrontAPI.Repositories
                 );
             }
 
-            // Optional password change (hash before saving)
+            // Optional password update
             if (!string.IsNullOrWhiteSpace(password))
             {
                 var hash = BCrypt.Net.BCrypt.HashPassword(password);
@@ -287,6 +287,60 @@ namespace NetFrontAPI.Repositories
                 "SELECT Email FROM Users WHERE Id = @Id",
                 new { Id = id }
             );
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+
+            string sql = @"
+                SELECT 
+                    u.Id,
+                    u.OrganizationId,
+                    o.Name AS OrganizationName,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.CreatedAt,
+                    au.Role,
+                    au.IsActive
+                FROM Users u
+                INNER JOIN AuthUsers au ON u.Email = au.Email
+                LEFT JOIN Organizations o ON u.OrganizationId = o.OrganizationId
+                WHERE u.Email = @Email;
+            ";
+
+            var user = await conn.QueryFirstOrDefaultAsync<User>(sql, new { Email = email });
+            if (user == null)
+                return null;
+
+            var teams = await GetTeamsForUserAsync(user.Id);
+            user.Teams = teams.ToList();
+
+            return user;
+        }
+
+        public async Task UpdatePasswordHashAsync(Guid id, string passwordHash)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+
+            var email = await conn.QueryFirstOrDefaultAsync<string>(
+                "SELECT Email FROM Users WHERE Id = @Id",
+                new { Id = id },
+                tx
+            );
+
+            if (email == null)
+                throw new InvalidOperationException("User not found.");
+
+            await conn.ExecuteAsync(
+                "UPDATE AuthUsers SET PasswordHash = @Hash WHERE Email = @Email",
+                new { Hash = passwordHash, Email = email },
+                tx
+            );
+
+            tx.Commit();
         }
     }
 }

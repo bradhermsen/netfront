@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NetFrontAPI.DTOs;
+using NetFrontAPI.Models;
 
 namespace NetFrontAPI.Repositories
 {
@@ -9,8 +10,11 @@ namespace NetFrontAPI.Repositories
     {
         Task<IEnumerable<TeamsListItemDto>> GetAllAsync();
         Task<TeamDetailDto?> GetByIdAsync(Guid id);
-        Task CreateAsync(TeamCreateUpdateDto dto);
+        Task<Guid> CreateAsync(TeamCreateUpdateDto dto);
         Task UpdateAsync(Guid id, TeamCreateUpdateDto dto);
         Task DeleteAsync(Guid id);
+
+        // NEW
+        Task<IEnumerable<Team>> GetTeamsByOrganizationAsync(Guid organizationId);
     }
 }

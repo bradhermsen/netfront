@@ -7,7 +7,10 @@ namespace NetFrontAPI.Services
 {
     public interface IUsersService
     {
-        Task CreateUserAsync(
+        // ============================================================
+        // CREATE USER — RETURNS CREATED USER
+        // ============================================================
+        Task<User> CreateUserAsync(
             string email,
             string password,
             string role,
@@ -15,8 +18,10 @@ namespace NetFrontAPI.Services
             string firstName,
             string lastName);
 
-        // ⭐ NEW: Create a user when the password is already hashed (used for OrgOwner auto‑creation)
-        Task CreateUserWithHashAsync(
+        // ============================================================
+        // CREATE USER WITH PRE-HASHED PASSWORD — RETURNS CREATED USER
+        // ============================================================
+        Task<User> CreateUserWithHashAsync(
             string email,
             string passwordHash,
             string role,
@@ -24,10 +29,24 @@ namespace NetFrontAPI.Services
             string firstName,
             string lastName);
 
+        // ============================================================
+        // GET ALL USERS
+        // ============================================================
         Task<IEnumerable<User>> GetAllAsync();
 
+        // ============================================================
+        // GET USER BY ID
+        // ============================================================
         Task<User?> GetByIdAsync(Guid id);
 
+        // ============================================================
+        // GET USER BY EMAIL
+        // ============================================================
+        Task<User?> GetByEmailAsync(string email);
+
+        // ============================================================
+        // UPDATE USER
+        // ============================================================
         Task UpdateUserAsync(
             Guid id,
             string email,
@@ -38,8 +57,19 @@ namespace NetFrontAPI.Services
             bool isActive,
             string? password);
 
-        Task DeleteUserAsync(Guid id);
-
+        // ============================================================
+        // RESET PASSWORD
+        // ============================================================
         Task ResetPasswordAsync(Guid id, string newPassword);
+
+        // ============================================================
+        // UPDATE PASSWORD HASH
+        // ============================================================
+        Task UpdatePasswordHashAsync(Guid id, string passwordHash);
+
+        // ============================================================
+        // DELETE USER
+        // ============================================================
+        Task DeleteUserAsync(Guid id);
     }
 }

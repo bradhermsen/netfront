@@ -43,33 +43,41 @@ window.loadLayout = async function (pageKey) {
       }
     });
 
-    // 3) Inject page content
-    if (window.PageContentRegistry && window.PageContentRegistry[pageKey]) {
-      const pageContent = document.getElementById("pageContent");
-      pageContent.innerHTML = window.PageContentRegistry[pageKey]();
-      window.AdminPage = window.AdminPage || {};
-      window.AdminPage.currentPage = pageKey;
-    }
-
-    // 3b) Inject page-specific modals
+    // =====================================================
+    // 3) Inject page-specific modals FIRST
+    // =====================================================
     if (
       window.PageContentRegistry &&
       window.PageContentRegistry[pageKey + "Modals"]
     ) {
-      ["playerModalOverlay", "playerDeleteModalOverlay"].forEach((id) => {
-        const old = document.getElementById(id);
-        if (old) old.remove();
-      });
+      // Remove any existing modals for this page
+      const existingOverlays = document.querySelectorAll(
+        `.nf-modal-overlay[data-page="${pageKey}"]`,
+      );
+      existingOverlays.forEach((el) => el.remove());
 
+      // Generate modal HTML
       const modalsHtml = window.PageContentRegistry[pageKey + "Modals"]();
       const temp = document.createElement("div");
       temp.innerHTML = modalsHtml;
 
+      // Append each overlay to <body>
       const overlays = temp.querySelectorAll(".nf-modal-overlay");
       overlays.forEach((overlay) => {
         overlay.setAttribute("data-page", pageKey);
         document.body.appendChild(overlay);
       });
+    }
+
+    // =====================================================
+    // 3b) Inject page content SECOND
+    // =====================================================
+    if (window.PageContentRegistry && window.PageContentRegistry[pageKey]) {
+      const pageContent = document.getElementById("pageContent");
+      pageContent.innerHTML = window.PageContentRegistry[pageKey]();
+
+      window.AdminPage = window.AdminPage || {};
+      window.AdminPage.currentPage = pageKey;
     }
 
     // 4) Fire page-ready events

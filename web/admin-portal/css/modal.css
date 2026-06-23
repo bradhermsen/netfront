@@ -13,7 +13,6 @@
   opacity: 0;
 }
 
-/* Visible state */
 .nf-modal-overlay.active {
   display: flex;
   opacity: 1;
@@ -37,9 +36,7 @@
   position: relative;
   z-index: 10000 !important;
 }
-}
 
-/* Size variants */
 .nf-modal.small {
   width: 420px;
 }
@@ -65,7 +62,6 @@
   color: var(--nf-accent);
 }
 
-/* Close button */
 .modal-close {
   background: none;
   border: none;
@@ -91,8 +87,68 @@
   gap: 18px 24px;
 }
 
-.nf-modal-body.full {
-  grid-column: 1 / 3;
+/* =========================================================
+   TEAM MODAL GRID SYSTEM — FINAL FIXED VERSION
+========================================================= */
+
+/* Wrapper spans full modal width */
+.clean-team-grid {
+  grid-column: 1 / -1; /* <-- restores full-width section headers + spacing */
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Section headers now span full width again */
+.clean-team-grid .section-header {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #ddd; /* <-- white divider line restored */
+}
+
+/* Standard 2-column layout */
+.clean-team-grid .two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%; /* <-- prevents small boxes */
+}
+
+/* 3-column layout for coaching rows */
+.clean-team-grid .three-col {
+  display: grid;
+  grid-template-columns: 2fr 2fr 120px;
+  gap: 16px;
+  align-items: end;
+  width: 100%; /* <-- prevents small boxes */
+}
+
+/* Full-width utility */
+.clean-team-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+/* Checkbox alignment */
+.clean-team-grid .checkbox-col {
+  display: flex;
+  align-items: center;
+}
+
+.clean-team-grid .checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Season display label */
+.season-display {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  padding: 8px 0;
 }
 
 /* =========================================================
@@ -124,12 +180,6 @@
 .nf-modal textarea:focus {
   border-color: var(--nf-accent);
   box-shadow: 0 0 4px var(--nf-accent);
-}
-
-/* Error state */
-.field-error {
-  border-color: #ff4d4d !important;
-  box-shadow: 0 0 4px #ff4d4d;
 }
 
 /* =========================================================
@@ -183,7 +233,6 @@
 input:checked + .slider {
   background-color: var(--nf-accent);
 }
-
 input:checked + .slider:before {
   transform: translateX(22px);
 }
@@ -200,38 +249,4 @@ input:checked + .slider:before {
     transform: scale(1);
     opacity: 1;
   }
-}
-/* Force horizontal layout for the filter bar inside the Roster Manager modal */
-#rosterManagerOverlay #rosterManagerModal .nf-filter-bar {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-/* Search expands */
-#rosterManagerModal .nf-filter-bar .nf-search {
-  flex: 1 1 auto;
-  min-width: 200px;
-}
-
-/* Selects compact */
-#rosterManagerModal .nf-filter-bar .nf-select {
-  width: auto;
-  min-width: 140px;
-}
-
-/* Add Player button pushed right */
-#rosterManagerModal #rm-add-player {
-  margin-left: auto !important;
-}
-/* Roster Manager modal uses a single-column layout */
-#rosterManagerModal .nf-modal-body {
-  display: block;
-  max-height: 70vh;
-  overflow-y: auto;
-  padding: 22px;
 }

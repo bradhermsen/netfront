@@ -90,95 +90,135 @@ window.PageContentRegistry.teamsModals = () => `
       </div>
 
       <div class="nf-modal-body">
-        <div class="modal-grid">
-          <div>
-            <label>Team Name</label>
-            <input id="team-name" type="text" class="nf-input" />
-          </div>
+        <div class="clean-team-grid">
 
-          <div>
-            <label>Abbreviation</label>
-            <input id="team-abbreviation" type="text" class="nf-input" placeholder="e.g., WSHS-VB" />
-          </div>
+          <!-- =============================== -->
+          <!-- TEAM INFORMATION -->
+          <!-- =============================== -->
+          <h3 class="section-header">Team Information</h3>
 
-          <div>
-            <label>Organization</label>
-            <select id="team-org" class="nf-input"></select>
-          </div>
-
-          <div>
-            <label>Level</label>
-            <select id="team-level" class="nf-input"></select>
-          </div>
-
-          <div>
-            <label>Season</label>
-            <select id="team-season" class="nf-input"></select>
-          </div>
-
-          <div>
-            <label>Head Coach</label>
-            <input id="team-head-coach" type="text" class="nf-input" />
-          </div>
-
-          <div>
-            <label>Assistant Coach 1</label>
-            <input id="team-asst1" type="text" class="nf-input" />
-          </div>
-
-          <div>
-            <label>Assistant Coach 2</label>
-            <input id="team-asst2" type="text" class="nf-input" />
-          </div>
-
-          <div>
-            <label>Assistant Coach 3</label>
-            <input id="team-asst3" type="text" class="nf-input" />
-          </div>
-
-          <div>
-            <label>Assistant Coach 4</label>
-            <input id="team-asst4" type="text" class="nf-input" />
-          </div>
-
-          <div class="full-width">
-            <label>Notes</label>
-            <textarea id="team-notes" class="nf-input"></textarea>
-          </div>
-
-          <div>
-            <label>Scorekeeper Code</label>
-            <input id="team-score-code" type="text" class="nf-input" />
-          </div>
-
-          <div>
-            <label>Stat Manager Code</label>
-            <input id="team-stat-code" type="text" class="nf-input" />
-          </div>
-
-          <div class="full-width">
-            <button id="btnGenerateCodes" class="nf-btn nf-btn-primary">
-              Generate Access Codes
-            </button>
-          </div>
-
-          <div class="full-width">
-            <div class="toggle-row">
-              <label>Active</label>
-              <label class="switch">
-                <input type="checkbox" id="team-active" />
-                <span class="slider round"></span>
-              </label>
+          <div class="two-col">
+            <div>
+              <label>Team Name</label>
+              <input id="team-name" type="text" class="nf-input" />
             </div>
 
-            <div class="toggle-row">
-              <label>External Team</label>
-              <label class="switch">
-                <input type="checkbox" id="team-external" />
-                <span class="slider round"></span>
-              </label>
+            <div>
+              <label>Abbreviation</label>
+              <input id="team-abbreviation" type="text" class="nf-input" readonly />
+            </div>
+
+            <div>
+              <label>Organization</label>
+              <select id="team-org" class="nf-input"></select>
+            </div>
+
+            <div>
+              <label>Level</label>
+              <select id="team-level" class="nf-input"></select>
+            </div>
+
+            <div>
+              <label>Season</label>
+              <div id="team-season-display" class="season-display"></div>
+            </div>
+
+            <div class="full-width">
+              <label>Notes</label>
+              <textarea id="team-notes" class="nf-input" rows="2"></textarea>
             </div>
           </div>
+
+          <!-- =============================== -->
+          <!-- COACHING STAFF -->
+          <!-- =============================== -->
+          <h3 class="section-header">Coaching Staff</h3>
+
+          <!-- HEAD COACH -->
+          <div class="three-col">
+            <div>
+              <label>Head Coach Name</label>
+              <input id="team-head-coach" type="text" class="nf-input" />
+            </div>
+
+            <div>
+              <label>Head Coach Email</label>
+              <input id="team-head-coach-email" type="email" class="nf-input" />
+            </div>
+
+            <div class="checkbox-col"></div>
+          </div>
+
+          <!-- ASSISTANT COACHES -->
+          ${[1, 2, 3, 4]
+            .map(
+              (i) => `
+            <div class="three-col">
+              <div>
+                <label>Assistant Coach ${i} Name</label>
+                <input id="team-asst${i}" type="text" class="nf-input" />
+              </div>
+
+              <div>
+                <label>Assistant Coach ${i} Email</label>
+                <input id="team-asst${i}-email" type="email" class="nf-input" />
+              </div>
+
+              <div class="checkbox-col">
+                <label class="checkbox-inline">
+                  <input type="checkbox" id="team-asst${i}-has-login" disabled />
+                  Create Login
+                </label>
+              </div>
+            </div>
+          `,
+            )
+            .join("")}
+
+          <!-- =============================== -->
+          <!-- ACCESS CODES -->
+          <!-- =============================== -->
+          <h3 class="section-header">Access Codes</h3>
+
+          <div class="two-col">
+            <div>
+              <label>Scorekeeper Code</label>
+              <input id="team-score-code" type="text" class="nf-input" readonly />
+            </div>
+
+            <div>
+              <label>Stat Manager Code</label>
+              <input id="team-stat-code" type="text" class="nf-input" readonly />
+            </div>
+
+            <div class="full-width">
+              <button id="btnGenerateCodes" class="nf-btn nf-btn-primary">
+                Generate Access Codes
+              </button>
+            </div>
+          </div>
+
+          <!-- =============================== -->
+          <!-- SETTINGS -->
+          <!-- =============================== -->
+          <h3 class="section-header">Settings</h3>
+
+          <div class="toggle-row">
+            <label>Active</label>
+            <label class="switch">
+              <input type="checkbox" id="team-active" />
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <label>External Team</label>
+            <label class="switch">
+              <input type="checkbox" id="team-external" />
+              <span class="slider round"></span>
+            </label>
+          </div>
+
         </div>
       </div>
 
@@ -206,6 +246,7 @@ window.PageContentRegistry.teamsModals = () => `
       </div>
     </div>
   </div>
+
 `;
 
 //=================================================================
@@ -727,114 +768,152 @@ window.PageContentRegistry.schedules = () => `
 `;
 
 //=================================================================
-// GAME SCHEDULES MODALS (FULL CRUD, OVERLAY-BASED)
+// GAME SCHEDULES MODALS (MODERNIZED TO MATCH USERS + TEAMS)
 //=================================================================
 window.PageContentRegistry.schedulesModals = () => `
   <!-- ADD / EDIT GAME MODAL -->
   <div id="gameModalOverlay" class="nf-modal-overlay">
     <div id="gameModal" class="nf-modal large">
+
+      <!-- HEADER -->
       <div class="nf-modal-header">
         <h2 id="gameModalTitle">Add Game</h2>
         <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
       </div>
 
+      <!-- BODY -->
       <div class="nf-modal-body">
-        <h3 class="modal-section-title">Teams</h3>
-        <div class="modal-grid">
-          <div>
-            <label>Home Team</label>
-            <select id="game-home-team" class="nf-input"></select>
-          </div>
-          <div>
-            <label>Away Team</label>
-            <select id="game-away-team" class="nf-input"></select>
-          </div>
-        </div>
+        <div class="clean-team-grid">
 
-        <h3 class="modal-section-title">Date & Time</h3>
-        <div class="modal-grid">
-          <div>
-            <label>Date</label>
-            <input id="game-date" type="date" class="nf-input" />
-          </div>
-          <div>
-            <label>Time</label>
-            <input id="game-time" type="time" class="nf-input" />
-          </div>
-        </div>
+          <!-- ========================= -->
+          <!-- TEAMS SECTION -->
+          <!-- ========================= -->
+          <h3 class="section-header">Teams</h3>
 
-        <h3 class="modal-section-title">Location</h3>
-        <div class="modal-grid">
-          <div>
-            <label>Arena (select or type)</label>
-            <select id="game-arena-select" class="nf-input">
-              <option value="">Select Arena</option>
-              <option value="Four Seasons Centre">Four Seasons Centre</option>
-              <option value="Bud King Ice Arena">Bud King Ice Arena</option>
-              <option value="Riverside Arena">Riverside Arena</option>
-              <option value="Northfield Ice Arena">Northfield Ice Arena</option>
-              <option value="Albert Lea City Arena">Albert Lea City Arena</option>
-              <option value="Mankato All Seasons Arena">Mankato All Seasons Arena</option>
-              <option value="Faribault Ice Arena">Faribault Ice Arena</option>
-              <option value="Budking">Budking</option>
-            </select>
-          </div>
-          <div>
-            <label>Custom Arena</label>
-            <input id="game-arena-custom" type="text" class="nf-input" placeholder="Override arena name" />
-          </div>
-          <div>
-            <label>Rink (select or type)</label>
-            <select id="game-rink-select" class="nf-input">
-              <option value="">Select Rink</option>
-              <option value="Rink 1">Rink 1</option>
-              <option value="Rink 2">Rink 2</option>
-              <option value="North">North</option>
-              <option value="South">South</option>
-              <option value="Main">Main</option>
-              <option value="West">West</option>
-            </select>
-          </div>
-          <div>
-            <label>Custom Rink</label>
-            <input id="game-rink-custom" type="text" class="nf-input" placeholder="Override rink name" />
-          </div>
-        </div>
+          <div class="two-col">
+            <div class="form-group">
+              <label for="game-home-team">Home Team</label>
+              <select id="game-home-team" class="nf-input"></select>
+            </div>
 
-        <h3 class="modal-section-title">Classification</h3>
-        <div class="modal-grid">
-          <div>
-            <label>Game Type</label>
-            <select id="game-type" class="nf-input"></select>
+            <div class="form-group">
+              <label for="game-away-team">Away Team</label>
+              <select id="game-away-team" class="nf-input"></select>
+            </div>
           </div>
-          <div>
-            <label>Game Round</label>
-            <select id="game-round" class="nf-input"></select>
-          </div>
-        </div>
 
-        <h3 class="modal-section-title">Notes & Status</h3>
-        <div class="modal-grid">
-          <div>
-            <label>Notes</label>
-            <textarea id="game-notes" class="nf-input"></textarea>
+          <!-- ========================= -->
+          <!-- DATE & TIME -->
+          <!-- ========================= -->
+          <h3 class="section-header">Date & Time</h3>
+
+          <div class="two-col">
+            <div class="form-group">
+              <label for="game-date">Date</label>
+              <input id="game-date" type="date" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="game-time">Time</label>
+              <input id="game-time" type="time" class="nf-input" />
+            </div>
           </div>
-          <div>
-            <label>Status</label>
-            <select id="game-status" class="nf-input">
-              <option value="Scheduled">Scheduled</option>
-              <option value="Final">Final</option>
-              <option value="Cancelled">Cancelled</option>
-              <option value="Postponed">Postponed</option>
-            </select>
+
+          <!-- ========================= -->
+          <!-- LOCATION -->
+          <!-- ========================= -->
+          <h3 class="section-header">Location</h3>
+
+          <div class="two-col">
+            <div class="form-group">
+              <label for="game-arena-select">Arena (select or type)</label>
+              <select id="game-arena-select" class="nf-input">
+                <option value="">Select Arena</option>
+                <option value="Four Seasons Centre">Four Seasons Centre</option>
+                <option value="Bud King Ice Arena">Bud King Ice Arena</option>
+                <option value="Riverside Arena">Riverside Arena</option>
+                <option value="Northfield Ice Arena">Northfield Ice Arena</option>
+                <option value="Albert Lea City Arena">Albert Lea City Arena</option>
+                <option value="Mankato All Seasons Arena">Mankato All Seasons Arena</option>
+                <option value="Faribault Ice Arena">Faribault Ice Arena</option>
+                <option value="Budking">Budking</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="game-arena-custom">Custom Arena</label>
+              <input id="game-arena-custom" type="text" class="nf-input" placeholder="Override arena name" />
+            </div>
           </div>
+
+          <div class="two-col">
+            <div class="form-group">
+              <label for="game-rink-select">Rink (select or type)</label>
+              <select id="game-rink-select" class="nf-input">
+                <option value="">Select Rink</option>
+                <option value="Rink 1">Rink 1</option>
+                <option value="Rink 2">Rink 2</option>
+                <option value="North">North</option>
+                <option value="South">South</option>
+                <option value="Main">Main</option>
+                <option value="West">West</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="game-rink-custom">Custom Rink</label>
+              <input id="game-rink-custom" type="text" class="nf-input" placeholder="Override rink name" />
+            </div>
+          </div>
+
+          <!-- ========================= -->
+          <!-- CLASSIFICATION -->
+          <!-- ========================= -->
+          <h3 class="section-header">Classification</h3>
+
+          <div class="two-col">
+            <div class="form-group">
+              <label for="game-type">Game Type</label>
+              <select id="game-type" class="nf-input"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="game-round">Game Round</label>
+              <select id="game-round" class="nf-input"></select>
+            </div>
+          </div>
+
+          <!-- ========================= -->
+          <!-- NOTES & STATUS -->
+          <!-- ========================= -->
+          <h3 class="section-header">Notes & Status</h3>
+
+          <div class="two-col">
+            <div class="form-group full-width">
+              <label for="game-notes">Notes</label>
+              <textarea id="game-notes" class="nf-input"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="game-status">Status</label>
+              <select id="game-status" class="nf-input">
+                <option value="Scheduled">Scheduled</option>
+                <option value="Final">Final</option>
+                <option value="Cancelled">Cancelled</option>
+                <option value="Postponed">Postponed</option>
+              </select>
+            </div>
+          </div>
+
         </div>
       </div>
 
+      <!-- FOOTER -->
       <div class="nf-modal-footer">
         <button id="gameCancel" class="nf-btn nf-btn-secondary">Cancel</button>
         <button id="gameSave" class="nf-btn nf-btn-primary">Save</button>
       </div>
+
     </div>
   </div>
 
@@ -856,6 +935,7 @@ window.PageContentRegistry.schedulesModals = () => `
     </div>
   </div>
 `;
+
 //=================================================================
 // PLAYERS PAGE CONTENT (TABLE + FILTER BAR)
 //=================================================================
@@ -935,125 +1015,152 @@ window.PageContentRegistry.players = () => `
 
 `;
 //=================================================================
-// PLAYERS MODALS (OVERLAY-BASED)
+// PLAYERS MODALS (MODERNIZED TO MATCH USERS + TEAMS)
 //=================================================================
 window.PageContentRegistry.playersModals = () => `
 <div id="playersModalsRoot">
 
-<!-- ADD / EDIT PLAYER MODAL -->
-<div id="playerModalOverlay" class="nf-modal-overlay" data-page="players">
-  <div id="playerModal" class="nf-modal medium">
-    <div class="nf-modal-header">
-      <h2 id="playerModalTitle">Add Player</h2>
-      <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
-    </div>
+  <!-- ADD / EDIT PLAYER MODAL -->
+  <div id="playerModalOverlay" class="nf-modal-overlay" data-page="players">
+    <div id="playerModal" class="nf-modal medium">
 
-    <div class="nf-modal-body">
-      <div class="modal-grid">
-
-        <div>
-          <label>First Name</label>
-          <input id="player-first-name" class="nf-input" />
-        </div>
-
-        <div>
-          <label>Last Name</label>
-          <input id="player-last-name" class="nf-input" />
-        </div>
-
-        <div>
-          <label>Birthdate</label>
-          <input id="player-birthdate" type="date" class="nf-input" />
-        </div>
-
-        <div>
-          <label>Grade</label>
-          <input id="player-grade" type="number" class="nf-input" />
-        </div>
-
-        <div>
-          <label>Height (inches)</label>
-          <input id="player-height" type="number" class="nf-input" />
-        </div>
-
-        <div>
-          <label>Weight (lbs)</label>
-          <input id="player-weight" type="number" class="nf-input" />
-        </div>
-
-        <div>
-          <label>Shoots</label>
-          <select id="player-shoots" class="nf-input">
-            <option value="">Select</option>
-            <option value="L">Left</option>
-            <option value="R">Right</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Position</label>
-          <select id="player-position" class="nf-input">
-            <option value="">Select</option>
-            <option value="F">Forward</option>
-            <option value="D">Defense</option>
-            <option value="G">Goalie</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Jersey #</label>
-          <input id="player-jersey" type="number" class="nf-input" />
-        </div>
-
-        <div>
-          <label>Organization</label>
-          <select id="player-org" class="nf-input"></select>
-        </div>
-
-        <div>
-          <label>Team</label>
-          <select id="player-team" class="nf-input"></select>
-        </div>
-
-        <div>
-          <label>Level</label>
-          <select id="player-level" class="nf-input"></select>
-        </div>
-
-        <div class="toggle-row full-width">
-          <label>Active</label>
-          <label class="switch">
-            <input type="checkbox" id="player-active" />
-            <span class="slider round"></span>
-          </label>
-        </div>
-
+      <!-- HEADER -->
+      <div class="nf-modal-header">
+        <h2 id="playerModalTitle">Add Player</h2>
+        <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
       </div>
-    </div>
 
-    <div class="nf-modal-footer">
-      <button id="playerCancel" class="nf-btn nf-btn-secondary">Cancel</button>
-      <button id="playerSave" class="nf-btn nf-btn-primary">Save</button>
+      <!-- BODY -->
+      <div class="nf-modal-body">
+        <div class="clean-team-grid">
+
+          <!-- SECTION HEADER -->
+          <h3 class="section-header">Player Information</h3>
+
+          <!-- NAME -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="player-first-name">First Name</label>
+              <input id="player-first-name" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="player-last-name">Last Name</label>
+              <input id="player-last-name" class="nf-input" />
+            </div>
+          </div>
+
+          <!-- BIRTHDATE + GRADE -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="player-birthdate">Birthdate</label>
+              <input id="player-birthdate" type="date" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="player-grade">Grade</label>
+              <input id="player-grade" type="number" class="nf-input" />
+            </div>
+          </div>
+
+          <!-- HEIGHT + WEIGHT -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="player-height">Height (inches)</label>
+              <input id="player-height" type="number" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="player-weight">Weight (lbs)</label>
+              <input id="player-weight" type="number" class="nf-input" />
+            </div>
+          </div>
+
+          <!-- SHOOTS + POSITION -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="player-shoots">Shoots</label>
+              <select id="player-shoots" class="nf-input">
+                <option value="">Select</option>
+                <option value="L">Left</option>
+                <option value="R">Right</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="player-position">Position</label>
+              <select id="player-position" class="nf-input">
+                <option value="">Select</option>
+                <option value="F">Forward</option>
+                <option value="D">Defense</option>
+                <option value="G">Goalie</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- JERSEY -->
+          <div class="form-group full-width">
+            <label for="player-jersey">Jersey #</label>
+            <input id="player-jersey" type="number" class="nf-input" />
+          </div>
+
+          <!-- ORG + TEAM -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="player-org">Organization</label>
+              <select id="player-org" class="nf-input"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="player-team">Team</label>
+              <select id="player-team" class="nf-input"></select>
+            </div>
+          </div>
+
+          <!-- LEVEL -->
+          <div class="form-group full-width">
+            <label for="player-level">Level</label>
+            <select id="player-level" class="nf-input"></select>
+          </div>
+
+          <!-- ACTIVE -->
+          <div class="checkbox-col full-width">
+            <input type="checkbox" id="player-active" />
+            <label for="player-active">Active Player</label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="nf-modal-footer">
+        <button id="playerCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="playerSave" class="nf-btn nf-btn-primary">Save</button>
+      </div>
+
     </div>
   </div>
-</div>  
 
-<!-- DELETE PLAYER MODAL -->
-<div id="playerDeleteModalOverlay" class="nf-modal-overlay" data-page="players">
-  <div id="playerDeleteModal" class="nf-modal small">
-     <div class="nf-modal-header">
-      <h2>Delete Player</h2>
+  <!-- DELETE PLAYER MODAL -->
+  <div id="playerDeleteModalOverlay" class="nf-modal-overlay" data-page="players">
+    <div id="playerDeleteModal" class="nf-modal small">
+
+      <div class="nf-modal-header">
+        <h2>Delete Player</h2>
+      </div>
+
+      <div class="nf-modal-body full">
+        Are you sure you want to delete this player?
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="playerDeleteCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="playerDeleteConfirm" class="nf-btn nf-btn-danger">Delete</button>
+      </div>
+
+    </div>
   </div>
 
-    <div class="nf-modal-body full">
-      Are you sure you want to delete this player?
-    </div>
-
-    <div class="nf-modal-footer">
-      <button id="playerDeleteCancel" class="nf-btn nf-btn-secondary">Cancel</button>
-      <button id="playerDeleteConfirm" class="nf-btn nf-btn-danger">Delete</button>
-    </div>
-  </div>
 </div>
 `;
 
@@ -1129,92 +1236,189 @@ window.PageContentRegistry.users = () => `
   </div>
 `;
 //=================================================================
-// USERS MODALS (OVERLAY-BASED)
+// ORGANIZATIONS MODALS (OVERLAY-BASED)
 //=================================================================
-window.PageContentRegistry.usersModals = () => `
-  <!-- ADD / EDIT USER MODAL -->
-  <div id="userModalOverlay" class="nf-modal-overlay">
-    <div id="userModal" class="nf-modal medium">
+window.PageContentRegistry.organizationsModals = () => `
+  <!-- ADD / EDIT ORGANIZATION MODAL -->
+  <div id="orgModalOverlay" class="nf-modal-overlay">
+    <div id="orgModal" class="nf-modal medium">
+
+      <!-- HEADER -->
       <div class="nf-modal-header">
-        <h2 id="userModalTitle"></h2>
+        <h2 id="orgModalTitle"></h2>
         <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
       </div>
 
+      <!-- BODY -->
       <div class="nf-modal-body">
-        <h3 class="modal-section-title">User Information</h3>
+        <div class="clean-team-grid">
 
-        <div class="modal-grid">
-          <div>
-            <label>First Name</label>
-            <input id="user-first" class="nf-input" />
-          </div>
+          <!-- SECTION HEADER -->
+          <h3 class="section-header">Organization Information</h3>
 
-          <div>
-            <label>Last Name</label>
-            <input id="user-last" class="nf-input" />
-          </div>
+          <!-- NAME + ABBREVIATION -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="org-name">Organization Name</label>
+              <input id="org-name" class="nf-input" />
+            </div>
 
-          <div>
-            <label>Email</label>
-            <input id="user-email" class="nf-input" />
-          </div>
-
-          <div class="form-group">
-            <label for="user-password">Password</label>
-            <div class="password-row">
-              <input id="user-password" type="text" placeholder="Enter or generate password" />
-              <button type="button" id="btnGeneratePassword" class="nf-btn-icon">
-                <i class="fa-solid fa-key"></i>
-              </button>
+            <div class="form-group">
+              <label for="org-abbrev">Abbreviation</label>
+              <input id="org-abbrev" class="nf-input" />
             </div>
           </div>
 
-          <div>
-            <label>Role</label>
-            <select id="user-role" class="nf-input">
-              <option value="Admin">Admin</option>
-              <option value="Coach">Coach</option>
-              <option value="OrgOwner">OrgOwner</option>
-            </select>
+          <!-- STREET + CITY -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="org-street">Street Address</label>
+              <input id="org-street" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="org-city">City</label>
+              <input id="org-city" class="nf-input" />
+            </div>
           </div>
 
-          <div>
-            <label>Organization</label>
-            <select id="user-organization" class="nf-input">
-              <option value="">None</option>
-            </select>
+          <!-- STATE + ZIP -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="org-state">State</label>
+              <input id="org-state" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="org-zip">Zip Code</label>
+              <input id="org-zip" class="nf-input" />
+            </div>
           </div>
 
-          <div class="checkbox-row">
-            <input type="checkbox" id="user-active" />
-            <label for="user-active">Active User</label>
+          <!-- COUNTRY + DISTRICT -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="org-country">Country</label>
+              <input id="org-country" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="org-district">District / Conference</label>
+              <input id="org-district" class="nf-input" />
+            </div>
+          </div>
+
+          <!-- MASCOT + LEAGUE -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="org-mascot">Mascot</label>
+              <input id="org-mascot" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="org-league">League</label>
+              <select id="org-league" class="nf-input">
+                <option value="">None</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- CONTACT FIRST + LAST -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="org-contact-first">Primary Contact First Name</label>
+              <input id="org-contact-first" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="org-contact-last">Primary Contact Last Name</label>
+              <input id="org-contact-last" class="nf-input" />
+            </div>
+          </div>
+
+          <!-- CONTACT EMAIL -->
+          <div class="form-group full-width">
+            <label for="org-contact-email">Primary Contact Email</label>
+            <input id="org-contact-email" class="nf-input" />
+          </div>
+
+          <!-- BILLING SECTION HEADER -->
+          <h3 class="section-header">Billing Information</h3>
+
+          <!-- BILLING STREET + CITY -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="billing-street">Billing Street</label>
+              <input id="billing-street" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="billing-city">Billing City</label>
+              <input id="billing-city" class="nf-input" />
+            </div>
+          </div>
+
+          <!-- BILLING STATE + ZIP -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="billing-state">Billing State</label>
+              <input id="billing-state" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="billing-zip">Billing Zip Code</label>
+              <input id="billing-zip" class="nf-input" />
+            </div>
+          </div>
+
+          <!-- BILLING CONTACT NAME + EMAIL -->
+          <div class="two-col">
+            <div class="form-group">
+              <label for="billing-contact-name">Billing Contact Name</label>
+              <input id="billing-contact-name" class="nf-input" />
+            </div>
+
+            <div class="form-group">
+              <label for="billing-contact-email">Billing Contact Email</label>
+              <input id="billing-contact-email" class="nf-input" />
+            </div>
+          </div>
+
+          <!-- ACTIVE CHECKBOX -->
+          <div class="checkbox-col full-width">
+            <input type="checkbox" id="org-active" />
+            <label for="org-active">Active Organization</label>
           </div>
 
         </div>
       </div>
 
+      <!-- FOOTER -->
       <div class="nf-modal-footer">
-        <button id="userCancel" class="nf-btn nf-btn-secondary">Cancel</button>
-        <button id="userSave" class="nf-btn nf-btn-primary">Save</button>
+        <button id="orgCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="orgSave" class="nf-btn nf-btn-primary">Save</button>
       </div>
+
     </div>
   </div>
 
-  <!-- DELETE USER MODAL -->
-  <div id="userDeleteModalOverlay" class="nf-modal-overlay">
-    <div id="userDeleteModal" class="nf-modal small">
+  <!-- DELETE ORGANIZATION MODAL -->
+  <div id="orgDeleteModalOverlay" class="nf-modal-overlay">
+    <div id="orgDeleteModal" class="nf-modal small">
+
       <div class="nf-modal-header">
         <h2>Confirm Delete</h2>
       </div>
 
       <div class="nf-modal-body full">
-        Are you sure you want to delete this user?
+        Are you sure you want to delete this organization?
       </div>
 
       <div class="nf-modal-footer">
-        <button id="userDeleteCancel" class="nf-btn nf-btn-secondary">Cancel</button>
-        <button id="userDeleteConfirm" class="nf-btn nf-btn-danger">Delete</button>
+        <button id="deleteCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="deleteConfirm" class="nf-btn nf-btn-danger">Delete</button>
       </div>
+
     </div>
   </div>
 `;

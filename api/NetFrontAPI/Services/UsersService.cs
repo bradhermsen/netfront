@@ -21,9 +21,9 @@ namespace NetFrontAPI.Services
         }
 
         // ============================================================
-        // CREATE USER (AuthUsers + Users) - PLAINTEXT PASSWORD
+        // CREATE USER (AuthUsers + Users) - RETURNS CREATED USER
         // ============================================================
-        public async Task CreateUserAsync(
+        public async Task<User> CreateUserAsync(
             string email,
             string password,
             string role,
@@ -56,14 +56,18 @@ namespace NetFrontAPI.Services
                 Email = email
             };
 
-            // Create both records (transaction handled in repo)
+            // Create both records
             await _repo.CreateLinkedUserAsync(authUser, profile);
+
+            // ⭐ Return the created user profile
+            return profile;
         }
 
         // ============================================================
-        // ⭐ NEW: CREATE USER WITH PRE-HASHED PASSWORD (OrgOwner)
+        // CREATE USER WITH PRE-HASHED PASSWORD (OrgOwner)
+        // RETURNS CREATED USER
         // ============================================================
-        public async Task CreateUserWithHashAsync(
+        public async Task<User> CreateUserWithHashAsync(
             string email,
             string passwordHash,
             string role,
@@ -81,7 +85,7 @@ namespace NetFrontAPI.Services
             {
                 Id = Guid.NewGuid(),
                 Email = email,
-                PasswordHash = passwordHash,   // Already hashed
+                PasswordHash = passwordHash,
                 Role = role,
                 IsActive = true
             };
@@ -98,6 +102,9 @@ namespace NetFrontAPI.Services
 
             // Create both records
             await _repo.CreateLinkedUserAsync(authUser, profile);
+
+            // ⭐ Return created profile
+            return profile;
         }
 
         // ============================================================
@@ -164,9 +171,24 @@ namespace NetFrontAPI.Services
             tx.Commit();
         }
 
+        // ============================================================
+        // GET USER BY EMAIL
+        // ============================================================
+        public Task<User?> GetByEmailAsync(string email)
+        {
+            return _repo.GetUserByEmailAsync(email);
+        }
 
         // ============================================================
-        // DELETE USER (AuthUsers + Users)
+        // UPDATE PASSWORD HASH
+        // ============================================================
+        public Task UpdatePasswordHashAsync(Guid id, string passwordHash)
+        {
+            return _repo.UpdatePasswordHashAsync(id, passwordHash);
+        }
+
+        // ============================================================
+        // DELETE USER
         // ============================================================
         public Task DeleteUserAsync(Guid id)
         {

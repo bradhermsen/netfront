@@ -47,8 +47,11 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "teams")] HttpRequestData req)
         {
             var dto = await req.ReadFromJsonAsync<TeamCreateUpdateDto>();
-            await _service.CreateAsync(dto);
-            return req.CreateResponse(HttpStatusCode.Created);
+            var teamId = await _service.CreateAsync(dto);
+
+            var response = req.CreateResponse(HttpStatusCode.Created);
+            await response.WriteAsJsonAsync(new { teamId });
+            return response;
         }
 
         [Function("UpdateTeam")]
@@ -68,6 +71,20 @@ namespace NetFrontAPI.Functions
         {
             await _service.DeleteAsync(id);
             return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+
+        // NEW: FILTER TEAMS BY ORGANIZATION
+        [Function("GetTeamsByOrganization")]
+        public async Task<HttpResponseData> GetTeamsByOrganization(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "teams/by-organization/{organizationId}")]
+            HttpRequestData req,
+            string organizationId)
+        {
+            var teams = await _service.GetTeamsByOrganizationAsync(Guid.Parse(organizationId));
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(teams);
+            return response;
         }
     }
 }

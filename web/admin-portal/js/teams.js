@@ -118,7 +118,7 @@ async function loadTeamSeasons() {
 }
 
 // =========================================================
-// ABBREVIATION GENERATION
+/* ABBREVIATION GENERATION */
 // =========================================================
 function generateTeamAbbreviation(
   teamName,
@@ -240,7 +240,6 @@ function initTeamsPage() {
 
     editHandlerName: "openEditTeam",
     deleteHandlerName: "openDeleteTeam",
-    addHandlerName: "openAddTeam",
 
     addTitle: "Add Team",
     editTitle: "Edit Team",
@@ -380,6 +379,9 @@ function initTeamsPage() {
       document.getElementById("team-org").value = team.organizationId || "";
       document.getElementById("team-level").value = team.levelId || "";
 
+      // Store seasonId for editing so collectFormData can use it
+      window.editingSeasonId = team.seasonId || null;
+
       document.getElementById("team-head-coach").value =
         team.headCoachName ?? "";
       document.getElementById("team-asst1").value =
@@ -495,8 +497,6 @@ function initTeamsPage() {
       };
     },
   });
-
-  AdminPage.openAdd = openAddTeam;
 }
 
 // =========================================================
@@ -528,39 +528,69 @@ function wireAssistantCoachLoginToggles() {
 }
 
 // =========================================================
-// USER CREATION + TEAM ASSIGNMENT
+// USER CREATION + TEAM ASSIGNMENT (FIXED VERSION)
 // =========================================================
-async function ensureCoachUser(name, email, orgId, teamId) {
-  if (!email) return;
+function generatePassword() {
+  return "Temp1234!";
+}
 
-  const [first, ...rest] = (name || "").trim().split(" ");
-  const last = rest.join(" ");
+async function ensureCoachUser(name, email, orgId, teamId) {
+  console.log(">>> ensureCoachUser() START");
+
+  if (!email || email.trim() === "") {
+    console.log(">>> No email provided — skipping coach user creation");
+    return;
+  }
+
+  const parts = (name || "").trim().split(" ");
+  const firstName = parts[0] || "";
+  const lastName = parts.slice(1).join(" ") || "";
+
+  console.log(">>> Parsed coach name:", { firstName, lastName });
 
   let user = null;
 
   try {
     user = await UsersAPI.getByEmail(email);
+    console.log(">>> Existing user found:", user);
   } catch {
-    user = null;
+    console.log(">>> No existing user found — will create new one");
   }
 
   if (!user) {
-    const password = "Temp1234!";
+    const password = generatePassword();
 
     const payload = {
-      firstName: first || "",
-      lastName: last || "",
       email,
+      password,
       role: "Coach",
       organizationId: orgId,
+      firstName,
+      lastName,
       isActive: true,
-      password,
     };
 
-    user = await UsersAPI.create(payload);
+    console.log(">>> Creating NEW coach user:", payload);
+
+    try {
+      user = await UsersAPI.create(payload);
+      console.log(">>> Coach user created:", user);
+    } catch (err) {
+      console.error("❌ Failed to create coach user:", err);
+      throw err;
+    }
   }
 
-  await CoachTeamsApi.assign(user.id, teamId);
+  try {
+    console.log(`>>> Assigning coach ${user.id} to team ${teamId}`);
+    await CoachTeamsApi.assign(user.id, teamId);
+    console.log(">>> Coach assigned successfully");
+  } catch (err) {
+    console.error("❌ Failed to assign coach to team:", err);
+    throw err;
+  }
+
+  console.log(">>> ensureCoachUser() COMPLETE");
 }
 
 // =========================================================
@@ -568,12 +598,12 @@ async function ensureCoachUser(name, email, orgId, teamId) {
 // =========================================================
 function openAddTeam() {
   AdminPage.editingId = null;
+  window.editingSeasonId = null;
   AdminPage.config.clearForm();
 
   document.getElementById("teamModalTitle").textContent = "Add Team";
   document.getElementById("teamModalOverlay").classList.add("active");
 
-  // Re-wire toggles for a fresh form
   wireAssistantCoachLoginToggles();
 }
 

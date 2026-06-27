@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using NetFrontAPI.DTOs; 
 
 namespace NetFrontAPI.Models
 {
@@ -33,6 +34,6 @@ namespace NetFrontAPI.Models
         public bool IsActive { get; set; }
 
         [JsonPropertyName("teams")]
-        public List<string> Teams { get; set; } = new();
+        public List<TeamSummaryDto> Teams { get; set; } = new();
     }
 }

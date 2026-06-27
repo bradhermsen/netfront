@@ -16,15 +16,23 @@ namespace NetFrontAPI.Services
         }
 
         public Task AssignAsync(Guid userId, Guid teamId)
-            => _repo.AssignAsync(userId, teamId);
+        {
+            return _repo.AssignCoachToTeamAsync(userId, teamId);
+        }
 
         public Task RemoveAsync(Guid userId, Guid teamId)
-            => _repo.RemoveAsync(userId, teamId);
+        {
+            return _repo.RemoveAsync(userId, teamId);
+        }
 
         public Task<IEnumerable<CoachTeamDetailDto>> GetTeamsForCoachAsync(Guid userId)
-            => _repo.GetTeamsForCoachAsync(userId);
+        {
+            return _repo.GetTeamsForCoachAsync(userId);
+        }
 
         public Task<IEnumerable<CoachTeamDetailDto>> GetCoachesForTeamAsync(Guid teamId)
-            => _repo.GetCoachesForTeamAsync(teamId);
+        {
+            return _repo.GetCoachesForTeamAsync(teamId);
+        }
     }
 }

@@ -1,11 +1,8 @@
 // =========================================================
-// USERS PAGE — MODERN ADMINPAGE VERSION (TEAM SUPPORT ADDED)
+// USERS PAGE — MODERN ADMINPAGE VERSION
 // =========================================================
 
 window.UsersPage = {
-  // -------------------------------------------------------
-  // INITIALIZE PAGE
-  // -------------------------------------------------------
   init() {
     AdminPage.init({
       tableBodyId: "userTableBody",
@@ -25,10 +22,10 @@ window.UsersPage = {
       editTitle: "Edit User",
 
       api: UsersAPI,
-      renderTable: this.renderTable,
-      clearForm: this.clearForm,
-      populateForm: this.populateForm,
-      collectFormData: this.collectFormData,
+      renderTable: this.renderTable.bind(this),
+      clearForm: this.clearForm.bind(this),
+      populateForm: this.populateForm.bind(this),
+      collectFormData: this.collectFormData.bind(this),
 
       addHandler: openAddUser,
       editHandler: openEditUser,
@@ -43,43 +40,39 @@ window.UsersPage = {
     const orgs = await OrgApi.getAll();
     const select = document.getElementById("user-organization");
 
-    if (!select) return;
-
     select.innerHTML = `
       <option value="">None</option>
-      ${orgs
-        .map((o) => `<option value="${o.organizationId}">${o.name}</option>`)
-        .join("")}
+      ${orgs.map((o) => `<option value="${o.organizationId}">${o.name}</option>`).join("")}
     `;
   },
 
   // -------------------------------------------------------
-  // LOAD TEAMS FOR SELECTED ORG
+  // LOAD TEAMS FOR ORG (TOGGLES)
   // -------------------------------------------------------
-  async loadTeamsForOrganization(orgId) {
-    const teamSelect = document.getElementById("user-team");
-    if (!teamSelect) return;
-
-    // IMPORTANT: Clear existing options
-    teamSelect.innerHTML = `<option value="">None</option>`;
+  async loadTeamsForOrganization(orgId, selectedTeamIds = []) {
+    const container = document.getElementById("user-teams-container");
+    container.innerHTML = "";
 
     if (!orgId) return;
 
-    try {
-      const res = await fetch(
-        `${window.apiBase}/teams/by-organization/${orgId}`,
-      );
-      const teams = await res.json();
+    const res = await fetch(`${window.apiBase}/teams/by-organization/${orgId}`);
+    const teams = await res.json();
 
-      teams.forEach((t) => {
-        const opt = document.createElement("option");
-        opt.value = t.id; // or t.teamId depending on your API
-        opt.textContent = `${t.name} (${t.abbreviation})`;
-        teamSelect.appendChild(opt);
-      });
-    } catch (err) {
-      console.error("Failed to load teams:", err);
-    }
+    teams.forEach((t) => {
+      const row = document.createElement("div");
+      row.className = "team-toggle-row";
+
+      row.innerHTML = `
+        <label class="switch">
+          <input type="checkbox" class="team-toggle-input" value="${t.id}"
+            ${selectedTeamIds.includes(t.id) ? "checked" : ""}>
+          <span class="slider"></span>
+        </label>
+        <span class="label-text">${t.name}</span>
+      `;
+
+      container.appendChild(row);
+    });
   },
 
   // -------------------------------------------------------
@@ -92,36 +85,23 @@ window.UsersPage = {
     users.forEach((u) => {
       const row = document.createElement("tr");
 
+      const teamList = u.teams?.map((t) => t.teamName).join(", ") || "None";
+
       row.innerHTML = `
-        <td>${u.firstName || ""} ${u.lastName || ""}</td>
-        <td>${u.email || ""}</td>
-        <td>${u.role || "None"}</td>
+        <td>${u.firstName} ${u.lastName}</td>
+        <td>${u.email}</td>
+        <td>${u.role}</td>
         <td>${u.organizationName || "None"}</td>
-        <td>${u.teamName || "None"}</td>
+        <td>${teamList}</td>
         <td>${u.isActive ? "Active" : "Inactive"}</td>
         <td class="actions-col">
-          <button type="button" class="nf-btn-icon edit">
-            <i class="fa-solid fa-pen-to-square"></i>
-          </button>
-          <button type="button" class="nf-btn-icon delete">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+          <button class="nf-btn-icon edit"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="nf-btn-icon delete"><i class="fa-solid fa-trash"></i></button>
         </td>
       `;
 
-      const [btnEdit, btnDelete] = row.querySelectorAll("button");
-
-      btnEdit.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        openEditUser(u.id);
-      });
-
-      btnDelete.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        openDeleteUser(u.id);
-      });
+      row.querySelector(".edit").onclick = () => openEditUser(u.id);
+      row.querySelector(".delete").onclick = () => openDeleteUser(u.id);
 
       body.appendChild(row);
     });
@@ -137,48 +117,47 @@ window.UsersPage = {
       "user-email",
       "user-password",
       "user-organization",
-      "user-team",
-    ].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
+    ].forEach((id) => (document.getElementById(id).value = ""));
 
     document.getElementById("user-role").value = "Coach";
     document.getElementById("user-active").checked = true;
+
+    document.getElementById("user-teams-container").innerHTML = "";
   },
 
   // -------------------------------------------------------
   // POPULATE FORM
   // -------------------------------------------------------
   async populateForm(u) {
-    document.getElementById("user-first").value = u.firstName || "";
-    document.getElementById("user-last").value = u.lastName || "";
-    document.getElementById("user-email").value = u.email || "";
+    document.getElementById("user-first").value = u.firstName;
+    document.getElementById("user-last").value = u.lastName;
+    document.getElementById("user-email").value = u.email;
     document.getElementById("user-password").value = "";
 
     document.getElementById("user-organization").value = u.organizationId || "";
 
-    // Load teams for this org
-    await UsersPage.loadTeamsForOrganization(u.organizationId);
+    const selectedTeamIds = u.teams?.map((t) => t.teamId) || [];
+    await this.loadTeamsForOrganization(u.organizationId, selectedTeamIds);
 
-    // Select team
-    document.getElementById("user-team").value = u.teamId || "";
-
-    document.getElementById("user-role").value = u.role || "Coach";
-    document.getElementById("user-active").checked = u.isActive ?? true;
+    document.getElementById("user-role").value = u.role;
+    document.getElementById("user-active").checked = u.isActive;
   },
 
   // -------------------------------------------------------
   // COLLECT FORM DATA
   // -------------------------------------------------------
   collectFormData() {
+    const selectedTeams = [
+      ...document.querySelectorAll(".team-toggle-input:checked"),
+    ].map((t) => t.value);
+
     return {
       email: document.getElementById("user-email").value,
       firstName: document.getElementById("user-first").value,
       lastName: document.getElementById("user-last").value,
       organizationId:
         document.getElementById("user-organization").value || null,
-      teamId: document.getElementById("user-team").value || null,
+      teamIds: selectedTeams,
       role: document.getElementById("user-role").value,
       isActive: document.getElementById("user-active").checked,
       password: document.getElementById("user-password").value || null,
@@ -186,76 +165,48 @@ window.UsersPage = {
   },
 };
 
-// =========================================================
+// -------------------------------------------------------
 // GLOBAL HANDLERS
-// =========================================================
+// -------------------------------------------------------
 async function openAddUser() {
   AdminPage.openAdd();
-  await AdminPage.waitForModal();
   await UsersPage.loadDropdowns();
 
-  document
-    .getElementById("user-organization")
-    .addEventListener("change", (e) => {
-      UsersPage.loadTeamsForOrganization(e.target.value);
-    });
+  const orgSelect = document.getElementById("user-organization");
+  orgSelect.onchange = (e) =>
+    UsersPage.loadTeamsForOrganization(e.target.value);
 }
 
 async function openEditUser(id) {
   AdminPage.openEdit(id);
-  await AdminPage.waitForModal();
   await UsersPage.loadDropdowns();
 
-  document
-    .getElementById("user-organization")
-    .addEventListener("change", (e) => {
-      UsersPage.loadTeamsForOrganization(e.target.value);
-    });
+  const orgSelect = document.getElementById("user-organization");
+  orgSelect.onchange = (e) =>
+    UsersPage.loadTeamsForOrganization(e.target.value);
 }
 
 function openDeleteUser(id) {
   AdminPage.openDelete(id);
 }
 
-// =========================================================
-// PASSWORD GENERATOR + COPY
-// =========================================================
+// -------------------------------------------------------
+// PASSWORD GENERATOR
+// -------------------------------------------------------
 function generatePassword(length = 12) {
   const charset =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password += charset[Math.floor(Math.random() * charset.length)];
-  }
-  return password;
+  return [...Array(length)]
+    .map(() => charset[Math.floor(Math.random() * charset.length)])
+    .join("");
 }
 
-function copyPassword() {
-  const field = document.getElementById("user-password");
-  if (field && field.value) {
-    navigator.clipboard.writeText(field.value);
-    alert("Password copied to clipboard");
-  }
-}
-
-// =========================================================
-// BOOTSTRAP PAGE
-// =========================================================
 document.addEventListener("DOMContentLoaded", () => {
   UsersPage.init();
 
   document.addEventListener("nf-page-ready", () => {
-    const btnGen = document.getElementById("btnGeneratePassword");
-    if (btnGen) {
-      btnGen.addEventListener("click", () => {
-        const field = document.getElementById("user-password");
-        field.value = generatePassword();
-      });
-    }
-
-    const btnCopy = document.getElementById("btnCopyPassword");
-    if (btnCopy) {
-      btnCopy.addEventListener("click", copyPassword);
-    }
+    document.getElementById("btnGeneratePassword").onclick = () => {
+      document.getElementById("user-password").value = generatePassword();
+    };
   });
 });

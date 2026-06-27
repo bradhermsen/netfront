@@ -76,7 +76,7 @@
 }
 
 /* =========================================================
-   BODY
+   BODY — 2 COLUMN GRID
 ========================================================= */
 .nf-modal-body {
   padding: 22px;
@@ -87,68 +87,36 @@
   gap: 18px 24px;
 }
 
-/* =========================================================
-   TEAM MODAL GRID SYSTEM — FINAL FIXED VERSION
-========================================================= */
-
-/* Wrapper spans full modal width */
-.clean-team-grid {
-  grid-column: 1 / -1; /* <-- restores full-width section headers + spacing */
+/* Full-width section wrapper */
+.full-width-section {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
-/* Section headers now span full width again */
-.clean-team-grid .section-header {
-  grid-column: 1 / -1;
-  margin: 0;
+/* Section header */
+.section-header {
   font-size: 1.1rem;
   font-weight: 600;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #ddd; /* <-- white divider line restored */
+  padding-bottom: 6px;
+  border-bottom: 1px solid #ffffff33;
+  color: #fff;
+  margin: 0;
 }
 
-/* Standard 2-column layout */
-.clean-team-grid .two-col {
+/* 2-column internal layout */
+.two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  width: 100%; /* <-- prevents small boxes */
+  gap: 16px 24px;
 }
 
-/* 3-column layout for coaching rows */
-.clean-team-grid .three-col {
-  display: grid;
-  grid-template-columns: 2fr 2fr 120px;
-  gap: 16px;
-  align-items: end;
-  width: 100%; /* <-- prevents small boxes */
-}
-
-/* Full-width utility */
-.clean-team-grid .full-width {
+/* White divider */
+.section-divider {
+  border: 1px solid #ffffff;
+  opacity: 0.4;
   grid-column: 1 / -1;
-}
-
-/* Checkbox alignment */
-.clean-team-grid .checkbox-col {
-  display: flex;
-  align-items: center;
-}
-
-.clean-team-grid .checkbox-inline {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Season display label */
-.season-display {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #ffffff;
-  padding: 8px 0;
 }
 
 /* =========================================================
@@ -182,6 +150,13 @@
   box-shadow: 0 0 4px var(--nf-accent);
 }
 
+/* Password row */
+.password-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 /* =========================================================
    FOOTER
 ========================================================= */
@@ -194,7 +169,7 @@
 }
 
 /* =========================================================
-   TOGGLE SWITCHES
+   TOGGLE SWITCHES (Account Status + Teams)
 ========================================================= */
 .switch {
   position: relative;
@@ -233,8 +208,51 @@
 input:checked + .slider {
   background-color: var(--nf-accent);
 }
+
 input:checked + .slider:before {
   transform: translateX(22px);
+}
+
+/* Team toggle list */
+.teams-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 2px;
+}
+/* Each row: switch + label */
+.teams-toggle-list .switch {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+}
+
+/* Ensure slider stays aligned and doesn’t shrink */
+.teams-toggle-list .slider {
+  flex-shrink: 0;
+}
+
+/* Team name label */
+.teams-toggle-list .label-text {
+  color: var(--nf-text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.2;
+  user-select: none;
+  margin-top: 1px;
+}
+
+/* Optional: prevent wrapping for long names */
+.teams-toggle-list .label-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.team-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 /* =========================================================

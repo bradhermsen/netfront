@@ -32,7 +32,8 @@ var host = new HostBuilder()
         services.AddSingleton<IConfiguration>(context.Configuration);
 
         // SQL connection factory
-        services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
+        services.AddScoped<ISqlConnectionFactory, SqlConnectionFactory>();
+
 
         // Raw DB connection
         var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
@@ -47,8 +48,12 @@ var host = new HostBuilder()
         services.AddScoped<IPlayersRepository, PlayersRepository>();
         services.AddScoped<IRosterEntriesRepository, RosterEntriesRepository>();
         services.AddScoped<IGameRepository, GameRepository>();
-        services.AddScoped<IUsersRepository, UsersRepository>();
+
+        // MUST come before UsersRepository
         services.AddScoped<ICoachTeamsRepository, CoachTeamsRepository>();
+
+        // Now UsersRepository can resolve both dependencies
+        services.AddScoped<IUsersRepository, UsersRepository>();
 
         // Services
         services.AddScoped<IOrganizationService, OrganizationService>();

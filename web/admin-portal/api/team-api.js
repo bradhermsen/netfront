@@ -21,7 +21,7 @@ const TeamApi = {
     });
 
     const data = await res.json();
-    return data.teamId; // ⭐ IMPORTANT
+    return data.teamId; // ✔ correct
   },
 
   async update(id, payload) {

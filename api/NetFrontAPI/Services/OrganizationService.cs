@@ -10,14 +10,14 @@ namespace NetFrontAPI.Services
     public class OrganizationService : IOrganizationService
     {
         private readonly IOrganizationRepository _repo;
-        private readonly IUsersRepository _usersRepo;
+        private readonly IUsersService _usersService;
 
         public OrganizationService(
             IOrganizationRepository repo,
-            IUsersRepository usersRepo)
+            IUsersService usersService)
         {
             _repo = repo;
-            _usersRepo = usersRepo;
+            _usersService = usersService;
         }
 
         public Task<IEnumerable<OrganizationListItemDto>> GetAllAsync()
@@ -70,27 +70,15 @@ namespace NetFrontAPI.Services
             var tempPassword = "NetFront2024!";
             var hash = BCrypt.Net.BCrypt.HashPassword(tempPassword, 10);
 
-            var authUser = new AuthUser
-            {
-                Id = Guid.NewGuid(),
-                Email = org.PrimaryContactEmail,
-                PasswordHash = hash,
-                Role = "OrgOwner",
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                Email = org.PrimaryContactEmail,
-                OrganizationId = org.Id,
-                FirstName = org.PrimaryContactFirstName ?? "",
-                LastName = org.PrimaryContactLastName ?? "",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _usersRepo.CreateLinkedUserWithHashAsync(authUser, user);
+            await _usersService.CreateUserWithHashAsync(
+                org.PrimaryContactEmail,
+                hash,
+                "OrgOwner",
+                org.Id,
+                org.PrimaryContactFirstName ?? "",
+                org.PrimaryContactLastName ?? "",
+                new List<Guid>() // OrgOwner has no team assignments
+            );
         }
 
         public Task UpdateAsync(Guid id, UpdateOrganizationDto dto)

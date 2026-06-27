@@ -6,17 +6,21 @@ window.AdminPage = {
   config: {},
 
   // -------------------------------------------------------
-  // INITIALIZER
+  // INITIALIZER — now supports BOTH event systems
   // -------------------------------------------------------
   init(config) {
     this.config = config;
 
-    document.addEventListener("nf-page-ready", () => {
+    const startAdminPage = () => {
       this.resolveDom();
       this.bindEvents();
       this.loadDropdowns();
       this.loadData();
-    });
+    };
+
+    // Support legacy + new event systems
+    document.addEventListener("nf-page-ready", startAdminPage);
+    document.addEventListener("layoutLoaded", startAdminPage);
   },
 
   // -------------------------------------------------------
@@ -45,76 +49,85 @@ window.AdminPage = {
   },
 
   // -------------------------------------------------------
-  // EVENT BINDING (NOW SUPPORTS CUSTOM HANDLERS)
+  // WAIT FOR MODAL TO BE READY (required by UsersPage)
+  // -------------------------------------------------------
+  waitForModal() {
+    return new Promise((resolve) => {
+      // Wait for next animation frame so DOM updates apply
+      requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  },
+
+  // -------------------------------------------------------
+  // EVENT BINDING (supports custom handlers)
   // -------------------------------------------------------
   bindEvents() {
     const c = this.config;
 
-    // ⭐ FIXED: Add button now supports custom handler
+    // ADD
     if (this.btnAdd) {
-      this.btnAdd.addEventListener("click", () => {
-        if (c.addHandler) {
-          c.addHandler();
-        } else {
-          this.openAdd();
-        }
-      });
+      this.btnAdd.onclick = () => {
+        if (c.addHandler) c.addHandler();
+        else this.openAdd();
+      };
     }
 
-    if (this.btnSave) this.btnSave.addEventListener("click", () => this.save());
+    // SAVE
+    if (this.btnSave) {
+      this.btnSave.onclick = () => this.save();
+    }
 
-    if (this.btnCancel)
-      this.btnCancel.addEventListener("click", () => this.closeModal());
+    // CANCEL
+    if (this.btnCancel) {
+      this.btnCancel.onclick = () => this.closeModal();
+    }
 
+    // DELETE CANCEL
     if (this.btnDeleteCancel) {
-      this.btnDeleteCancel.addEventListener("click", () => {
+      this.btnDeleteCancel.onclick = () => {
         this.deleteId = null;
         this.deleteModal.classList.remove("active");
-      });
+      };
     }
 
+    // DELETE CONFIRM
     if (this.btnDeleteConfirm) {
-      this.btnDeleteConfirm.addEventListener("click", async () => {
+      this.btnDeleteConfirm.onclick = async () => {
         if (this.deleteId) {
           await c.api.delete(this.deleteId);
           this.deleteId = null;
           this.deleteModal.classList.remove("active");
           this.loadData();
         }
-      });
+      };
     }
 
+    // SEARCH
     if (this.searchInput) {
-      this.searchInput.addEventListener("input", () => this.applySearch());
+      this.searchInput.oninput = () => this.applySearch();
     }
 
-    // ⭐ FIXED: Edit/Delete now support custom handlers
-    if (c.editHandler) window[c.editHandlerName] = (id) => c.editHandler(id);
-    else window[c.editHandlerName] = (id) => this.openEdit(id);
+    // EDIT HANDLER
+    if (c.editHandlerName) {
+      window[c.editHandlerName] = (id) => {
+        if (c.editHandler) c.editHandler(id);
+        else this.openEdit(id);
+      };
+    }
 
-    if (c.deleteHandler)
-      window[c.deleteHandlerName] = (id) => c.deleteHandler(id);
-    else window[c.deleteHandlerName] = (id) => this.openDelete(id);
+    // DELETE HANDLER
+    if (c.deleteHandlerName) {
+      window[c.deleteHandlerName] = (id) => {
+        if (c.deleteHandler) c.deleteHandler(id);
+        else this.openDelete(id);
+      };
+    }
   },
 
   // -------------------------------------------------------
-  // WAIT FOR MODAL (ASYNC SAFE)
-  // -------------------------------------------------------
-  waitForModal() {
-    return new Promise((resolve) => {
-      // If modal is already active, resolve immediately
-      if (this.modal && this.modal.classList.contains("active")) {
-        resolve();
-        return;
-      }
-
-      // Otherwise wait one frame
-      requestAnimationFrame(() => resolve());
-    });
-  },
-
-  // -------------------------------------------------------
-  // DATA LOADING
+  // LOAD DROPDOWNS
   // -------------------------------------------------------
   async loadDropdowns() {
     if (this.config.loadDropdowns) {
@@ -122,6 +135,9 @@ window.AdminPage = {
     }
   },
 
+  // -------------------------------------------------------
+  // LOAD DATA
+  // -------------------------------------------------------
   async loadData() {
     this.allItems = await this.config.api.getAll();
 
@@ -133,7 +149,7 @@ window.AdminPage = {
   },
 
   // -------------------------------------------------------
-  // SEARCH + RENDER
+  // SEARCH
   // -------------------------------------------------------
   applySearch() {
     let filtered = [...this.allItems];
@@ -149,11 +165,15 @@ window.AdminPage = {
   },
 
   // -------------------------------------------------------
-  // MODAL CONTROL
+  // MODAL CONTROL — ADD
   // -------------------------------------------------------
   openAdd() {
     this.editingId = null;
-    this.modalTitle.textContent = this.config.addTitle;
+
+    if (this.modalTitle) {
+      this.modalTitle.textContent = this.config.addTitle;
+    }
+
     this.config.clearForm();
 
     this.modal.classList.add("active");
@@ -162,14 +182,20 @@ window.AdminPage = {
     if (panel) panel.classList.add("active");
   },
 
+  // -------------------------------------------------------
+  // MODAL CONTROL — EDIT
+  // -------------------------------------------------------
   async openEdit(id) {
     this.editingId = id;
 
     this.config.clearForm();
-    this.modalTitle.textContent = this.config.editTitle;
+
+    if (this.modalTitle) {
+      this.modalTitle.textContent = this.config.editTitle;
+    }
 
     const item = await this.config.api.getById(id);
-    this.config.populateForm(item);
+    await this.config.populateForm(item);
 
     this.modal.classList.add("active");
 
@@ -177,11 +203,17 @@ window.AdminPage = {
     if (panel) panel.classList.add("active");
   },
 
+  // -------------------------------------------------------
+  // OPEN DELETE
+  // -------------------------------------------------------
   openDelete(id) {
     this.deleteId = id;
     this.deleteModal.classList.add("active");
   },
 
+  // -------------------------------------------------------
+  // CLOSE MODAL
+  // -------------------------------------------------------
   closeModal() {
     this.modal.classList.remove("active");
 
@@ -196,15 +228,12 @@ window.AdminPage = {
   // SAVE
   // -------------------------------------------------------
   async save() {
-    // ✅ If a custom save handler is provided, use it and EXIT.
-    // This is what Teams will use (saveTeam).
+    // Custom save handler (Teams uses this)
     if (this.config.saveHandler) {
       return await this.config.saveHandler();
     }
 
-    // ✅ Everyone else keeps the old behavior.
     const payload = this.config.collectFormData();
-
     console.log("🔥 Payload being sent to API:", payload);
 
     if (this.editingId) {

@@ -1,0 +1,11 @@
+using System;
+
+namespace NetFrontAPI.DTOs
+{
+    public class TeamSummaryDto
+    {
+        public Guid TeamId { get; set; }
+        public string TeamName { get; set; }
+        public string? Abbreviation { get; set; }
+    }
+}

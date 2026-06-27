@@ -1,52 +1,38 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using NetFrontAPI.DTOs;
 using NetFrontAPI.Models;
 
 namespace NetFrontAPI.Services
 {
     public interface IUsersService
     {
-        // ============================================================
-        // CREATE USER — RETURNS CREATED USER
-        // ============================================================
+        // CREATE
         Task<User> CreateUserAsync(
             string email,
             string password,
             string role,
             Guid? organizationId,
             string firstName,
-            string lastName);
+            string lastName,
+            List<Guid> teamIds);
 
-        // ============================================================
-        // CREATE USER WITH PRE-HASHED PASSWORD — RETURNS CREATED USER
-        // ============================================================
         Task<User> CreateUserWithHashAsync(
             string email,
             string passwordHash,
             string role,
             Guid? organizationId,
             string firstName,
-            string lastName);
+            string lastName,
+            List<Guid> teamIds);
 
-        // ============================================================
-        // GET ALL USERS
-        // ============================================================
-        Task<IEnumerable<User>> GetAllAsync();
+        // READ (DTOs for UI)
+        Task<IEnumerable<UserListItemDto>> GetAllAsync();
+        Task<UserListItemDto?> GetByIdAsync(Guid id);
+        Task<UserListItemDto?> GetByEmailAsync(string email);
 
-        // ============================================================
-        // GET USER BY ID
-        // ============================================================
-        Task<User?> GetByIdAsync(Guid id);
-
-        // ============================================================
-        // GET USER BY EMAIL
-        // ============================================================
-        Task<User?> GetByEmailAsync(string email);
-
-        // ============================================================
-        // UPDATE USER
-        // ============================================================
+        // UPDATE
         Task UpdateUserAsync(
             Guid id,
             string email,
@@ -55,21 +41,13 @@ namespace NetFrontAPI.Services
             Guid? organizationId,
             string role,
             bool isActive,
-            string? password);
+            string? password,
+            List<Guid> teamIds);
 
-        // ============================================================
-        // RESET PASSWORD
-        // ============================================================
+        // PASSWORD
         Task ResetPasswordAsync(Guid id, string newPassword);
 
-        // ============================================================
-        // UPDATE PASSWORD HASH
-        // ============================================================
-        Task UpdatePasswordHashAsync(Guid id, string passwordHash);
-
-        // ============================================================
-        // DELETE USER
-        // ============================================================
+        // DELETE
         Task DeleteUserAsync(Guid id);
     }
 }

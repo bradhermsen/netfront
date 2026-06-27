@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
@@ -18,13 +19,31 @@ namespace NetFrontAPI.Functions
         }
 
         // ============================================================
-        // CREATE USER — NOW RETURNS CREATED USER OBJECT
+        // CREATE USER
         // ============================================================
         [Function("CreateUser")]
         public async Task<HttpResponseData> CreateUser(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "users")] HttpRequestData req)
         {
-            var dto = await req.ReadFromJsonAsync<CreateUserDto>();
+            CreateUserDto dto;
+
+            try
+            {
+                dto = await req.ReadFromJsonAsync<CreateUserDto>();
+
+                if (dto == null)
+                {
+                    var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await bad.WriteStringAsync("Request body could not be deserialized into CreateUserDto.");
+                    return bad;
+                }
+            }
+            catch (Exception ex)
+            {
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteStringAsync($"JSON deserialization error: {ex.Message}");
+                return bad;
+            }
 
             try
             {
@@ -34,7 +53,8 @@ namespace NetFrontAPI.Functions
                     dto.Role,
                     dto.OrganizationId,
                     dto.FirstName,
-                    dto.LastName
+                    dto.LastName,
+                    dto.TeamIds ?? new List<Guid>()
                 );
 
                 var res = req.CreateResponse(HttpStatusCode.OK);
@@ -64,14 +84,14 @@ namespace NetFrontAPI.Functions
         }
 
         // ============================================================
-        // GET USER BY ID
+        // GET USER BY ID — Unified ID Model + Teams + Auth Info
         // ============================================================
         [Function("GetUserById")]
         public async Task<HttpResponseData> GetUserById(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "users/{id:guid}")] HttpRequestData req,
             Guid id)
         {
-            var user = await _service.GetByIdAsync(id);
+            var user = await _service.GetByIdAsync(id); // now returns UserListItemDto
 
             if (user == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -80,6 +100,7 @@ namespace NetFrontAPI.Functions
             await response.WriteAsJsonAsync(user);
             return response;
         }
+
 
         // ============================================================
         // UPDATE USER
@@ -101,7 +122,8 @@ namespace NetFrontAPI.Functions
                     dto.OrganizationId,
                     dto.Role,
                     dto.IsActive,
-                    dto.Password
+                    dto.Password,
+                    dto.TeamIds ?? new List<Guid>()
                 );
 
                 var res = req.CreateResponse(HttpStatusCode.OK);
@@ -140,7 +162,7 @@ namespace NetFrontAPI.Functions
         }
 
         // ============================================================
-        // GET USER BY EMAIL (QUERY STRING)
+        // GET USER BY EMAIL
         // ============================================================
         [Function("GetUserByEmail")]
         public async Task<HttpResponseData> GetUserByEmail(

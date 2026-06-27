@@ -33,7 +33,9 @@ const UsersAPI = {
     }
 
     if (!res.ok) {
-      throw new Error("Failed to load user");
+      const backendError = await res.text();
+      console.error("❌ UsersAPI.getByEmail() backend error:", backendError);
+      throw new Error(backendError);
     }
 
     return await res.json();
@@ -48,7 +50,12 @@ const UsersAPI = {
       body: JSON.stringify(data),
     });
 
-    if (!res.ok) throw new Error("Failed to create user");
+    if (!res.ok) {
+      const backendError = await res.text();
+      console.error("❌ UsersAPI.create() backend error:", backendError);
+      throw new Error(backendError);
+    }
+
     return await res.json();
   },
 

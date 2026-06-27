@@ -1,5 +1,5 @@
 // =========================================================
-// PLAYERS PAGE — MODERN ADMINPAGE VERSION (FINAL)
+// PLAYERS PAGE — MODERN ADMINPAGE VERSION (FIXED)
 // =========================================================
 
 // =========================================================
@@ -8,8 +8,8 @@
 async function loadPlayerDropdowns() {
   await Promise.all([
     loadPlayerOrganizations(),
-    loadPlayerTeams(),
     loadPlayerLevels(),
+    loadPlayerTeamsForFilter(), // correct for filter
   ]);
 }
 
@@ -35,33 +35,6 @@ async function loadPlayerOrganizations() {
       const opt = document.createElement("option");
       opt.value = o.organizationId;
       opt.textContent = o.name;
-      filter.appendChild(opt);
-    });
-  }
-}
-
-async function loadPlayerTeams() {
-  const res = await fetch(`${window.apiBase}/teams`);
-  const teams = await res.json();
-
-  const select = document.getElementById("player-team");
-  if (select) {
-    select.innerHTML = `<option value="">Select Team</option>`;
-    teams.forEach((t) => {
-      const opt = document.createElement("option");
-      opt.value = t.teamId;
-      opt.textContent = t.name;
-      select.appendChild(opt);
-    });
-  }
-
-  const filter = document.getElementById("filter-player-team");
-  if (filter) {
-    filter.innerHTML = `<option value="">Team: All</option>`;
-    teams.forEach((t) => {
-      const opt = document.createElement("option");
-      opt.value = t.teamId;
-      opt.textContent = t.name;
       filter.appendChild(opt);
     });
   }
@@ -95,6 +68,80 @@ async function loadPlayerLevels() {
 }
 
 // =========================================================
+// LOAD TEAMS FOR PLAYER MODAL (FILTERED BY ORG)
+// =========================================================
+async function loadTeamsForPlayer(orgId) {
+  const teamSelect = document.getElementById("player-team");
+  if (!teamSelect) return;
+
+  teamSelect.innerHTML = `<option value="">Select Team</option>`;
+
+  if (!orgId) return;
+
+  try {
+    const res = await fetch(`${window.apiBase}/teams/by-organization/${orgId}`);
+    const teams = await res.json();
+
+    teams.forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t.id; // FIXED: Teams API uses id
+      opt.textContent = `${t.name}`;
+      teamSelect.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Failed to load teams:", err);
+  }
+}
+
+// =========================================================
+// LOAD TEAMS FOR FILTER DROPDOWN (ALL TEAMS)
+// =========================================================
+async function loadPlayerTeamsForFilter() {
+  const filter = document.getElementById("filter-player-team");
+  if (!filter) return;
+
+  filter.innerHTML = `<option value="">Team: All</option>`;
+
+  try {
+    const res = await fetch(`${window.apiBase}/teams`);
+    const teams = await res.json();
+
+    teams.forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t.teamId; // CORRECT: /teams returns teamId
+      opt.textContent = t.name;
+      filter.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Failed to load teams for filter:", err);
+  }
+}
+
+// =========================================================
+// RELOAD TEAM FILTER WHEN ORG FILTER CHANGES
+// =========================================================
+async function reloadTeamFilterByOrg(orgId) {
+  const filter = document.getElementById("filter-player-team");
+  if (!filter) return;
+
+  filter.innerHTML = `<option value="">Team: All</option>`;
+
+  if (!orgId) {
+    return loadPlayerTeamsForFilter();
+  }
+
+  const res = await fetch(`${window.apiBase}/teams/by-organization/${orgId}`);
+  const teams = await res.json();
+
+  teams.forEach((t) => {
+    const opt = document.createElement("option");
+    opt.value = t.id; // FIXED
+    opt.textContent = t.name;
+    filter.appendChild(opt);
+  });
+}
+
+// =========================================================
 // MAIN PAGE INITIALIZER
 // =========================================================
 function initPlayersPage() {
@@ -114,10 +161,6 @@ function initPlayersPage() {
     deleteConfirmId: "playerDeleteConfirm",
     deleteCancelId: "playerDeleteCancel",
 
-    editHandlerName: "openEditPlayer",
-    deleteHandlerName: "openDeletePlayer",
-    addHandlerName: "openAddPlayer",
-
     addTitle: "Add Player",
     editTitle: "Edit Player",
 
@@ -126,6 +169,13 @@ function initPlayersPage() {
     loadDropdowns: async () => {
       await loadPlayerDropdowns();
       wirePlayerFilterEvents();
+
+      const orgSelect = document.getElementById("player-org");
+      if (orgSelect) {
+        orgSelect.addEventListener("change", (e) => {
+          loadTeamsForPlayer(e.target.value);
+        });
+      }
     },
 
     renderTable: (players) => {
@@ -187,7 +237,11 @@ function initPlayersPage() {
       document.getElementById("player-active").checked = true;
     },
 
-    populateForm: (p) => {
+    populateForm: async (p) => {
+      document.getElementById("player-org").value = p.organizationId || "";
+
+      await loadTeamsForPlayer(p.organizationId);
+
       document.getElementById("player-first-name").value = p.firstName || "";
       document.getElementById("player-last-name").value = p.lastName || "";
       document.getElementById("player-birthdate").value = p.birthDate || "";
@@ -198,7 +252,6 @@ function initPlayersPage() {
       document.getElementById("player-position").value = p.position || "";
       document.getElementById("player-jersey").value = p.jerseyNumber || "";
       document.getElementById("player-team").value = p.teamId || "";
-      document.getElementById("player-org").value = p.organizationId || "";
       document.getElementById("player-level").value = p.levelId || "";
       document.getElementById("player-active").checked = p.isActive;
     },
@@ -249,9 +302,6 @@ function openAddPlayer() {
 }
 
 async function openEditPlayer(id) {
-  // Wait until modal exists
-  await AdminPage.waitForModal();
-
   AdminPage.openEdit(id);
 }
 
@@ -275,6 +325,8 @@ function applyPlayerFilters() {
   const grade = document.getElementById("filter-player-grade").value;
   const status = document.getElementById("filter-player-status").value;
 
+  const statusLower = status ? status.toLowerCase() : "";
+
   Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
     const matchesSearch =
       !search || row.textContent.toLowerCase().includes(search);
@@ -282,7 +334,7 @@ function applyPlayerFilters() {
     const matchesTeam = !team || row.dataset.teamId === team;
     const matchesLevel = !level || row.dataset.levelId === level;
     const matchesGrade = !grade || row.dataset.grade === grade;
-    const matchesStatus = !status || row.dataset.status === status;
+    const matchesStatus = !statusLower || row.dataset.status === statusLower;
 
     row.style.display =
       matchesSearch &&
@@ -306,9 +358,16 @@ function wirePlayerFilterEvents() {
     "filter-player-status",
   ].forEach((id) => {
     const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener("input", applyPlayerFilters);
-      el.addEventListener("change", applyPlayerFilters);
+    if (!el) return;
+
+    el.addEventListener("input", applyPlayerFilters);
+    el.addEventListener("change", applyPlayerFilters);
+
+    if (id === "filter-player-org") {
+      el.addEventListener("change", async (e) => {
+        await reloadTeamFilterByOrg(e.target.value);
+        applyPlayerFilters();
+      });
     }
   });
 }

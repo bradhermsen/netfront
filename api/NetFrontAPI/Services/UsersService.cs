@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Dapper;
-using BCrypt.Net;
+using NetFrontAPI.DTOs;
 using NetFrontAPI.Models;
 using NetFrontAPI.Repositories;
 using NetFrontAPI.Infrastructure.Database;
@@ -12,16 +12,32 @@ namespace NetFrontAPI.Services
     public class UsersService : IUsersService
     {
         private readonly IUsersRepository _repo;
+        private readonly ICoachTeamsRepository _coachTeamsRepository;
+        private readonly IOrganizationRepository _orgRepo;
         private readonly ISqlConnectionFactory _connectionFactory;
 
-        public UsersService(IUsersRepository repo, ISqlConnectionFactory connectionFactory)
+        public UsersService(
+            IUsersRepository repo,
+            ICoachTeamsRepository coachTeamsRepository,
+            IOrganizationRepository orgRepo,
+            ISqlConnectionFactory connectionFactory)
         {
             _repo = repo;
+            _coachTeamsRepository = coachTeamsRepository;
+            _orgRepo = orgRepo;
             _connectionFactory = connectionFactory;
         }
 
         // ============================================================
-        // CREATE USER (AuthUsers + Users) - RETURNS CREATED USER
+        // GET ALL USERS (DTO for UI) — pass-through to repository
+        // ============================================================
+        public async Task<IEnumerable<UserListItemDto>> GetAllAsync()
+        {
+            return await _repo.GetAllUsersAsync();
+        }
+
+        // ============================================================
+        // CREATE USER (Unified ID Model)
         // ============================================================
         public async Task<User> CreateUserAsync(
             string email,
@@ -29,43 +45,60 @@ namespace NetFrontAPI.Services
             string role,
             Guid? organizationId,
             string firstName,
-            string lastName)
+            string lastName,
+            List<Guid> teamIds)
         {
-            // Prevent duplicates
             var existing = await _repo.GetAuthUserByEmailAsync(email);
             if (existing != null)
                 throw new InvalidOperationException("User already exists.");
 
-            // Build AuthUser
-            var authUser = new AuthUser
+            using var conn = _connectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+
+            try
             {
-                Id = Guid.NewGuid(),
-                Email = email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-                Role = role,
-                IsActive = true
-            };
+                var userId = Guid.NewGuid();
 
-            // Build User profile
-            var profile = new User
+                var authUser = new AuthUser
+                {
+                    Id = userId,
+                    Email = email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                    Role = role,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var profile = new User
+                {
+                    Id = userId,
+                    OrganizationId = organizationId,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Email = email,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _repo.CreateLinkedUserAsync(authUser, profile, conn, tx);
+
+                if (teamIds != null)
+                {
+                    foreach (var teamId in teamIds)
+                        await _coachTeamsRepository.AssignCoachToTeamAsync(userId, teamId, conn, tx);
+                }
+
+                tx.Commit();
+                return profile;
+            }
+            catch
             {
-                Id = Guid.NewGuid(),
-                OrganizationId = organizationId,
-                FirstName = firstName,
-                LastName = lastName,
-                Email = email
-            };
-
-            // Create both records
-            await _repo.CreateLinkedUserAsync(authUser, profile);
-
-            // ⭐ Return the created user profile
-            return profile;
+                tx.Rollback();
+                throw;
+            }
         }
 
         // ============================================================
-        // CREATE USER WITH PRE-HASHED PASSWORD (OrgOwner)
-        // RETURNS CREATED USER
+        // CREATE USER WITH HASH (OrgOwner)
         // ============================================================
         public async Task<User> CreateUserWithHashAsync(
             string email,
@@ -73,58 +106,80 @@ namespace NetFrontAPI.Services
             string role,
             Guid? organizationId,
             string firstName,
-            string lastName)
+            string lastName,
+            List<Guid> teamIds)
         {
-            // Prevent duplicates
             var existing = await _repo.GetAuthUserByEmailAsync(email);
             if (existing != null)
                 throw new InvalidOperationException("User already exists.");
 
-            // Build AuthUser
-            var authUser = new AuthUser
+            using var conn = _connectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+
+            try
             {
-                Id = Guid.NewGuid(),
-                Email = email,
-                PasswordHash = passwordHash,
-                Role = role,
-                IsActive = true
-            };
+                var userId = Guid.NewGuid();
 
-            // Build User profile
-            var profile = new User
+                var authUser = new AuthUser
+                {
+                    Id = userId,
+                    Email = email,
+                    PasswordHash = passwordHash,
+                    Role = role,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var profile = new User
+                {
+                    Id = userId,
+                    OrganizationId = organizationId,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Email = email,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _repo.CreateLinkedUserAsync(authUser, profile, conn, tx);
+
+                if (teamIds != null)
+                {
+                    foreach (var teamId in teamIds)
+                        await _coachTeamsRepository.AssignCoachToTeamAsync(userId, teamId, conn, tx);
+                }
+
+                tx.Commit();
+                return profile;
+            }
+            catch
             {
-                Id = Guid.NewGuid(),
-                OrganizationId = organizationId,
-                FirstName = firstName,
-                LastName = lastName,
-                Email = email
-            };
-
-            // Create both records
-            await _repo.CreateLinkedUserAsync(authUser, profile);
-
-            // ⭐ Return created profile
-            return profile;
+                tx.Rollback();
+                throw;
+            }
         }
 
         // ============================================================
-        // GET ALL USERS
+        // GET USER BY ID (DTO for Edit Modal)
         // ============================================================
-        public Task<IEnumerable<User>> GetAllAsync()
+        public async Task<UserListItemDto?> GetByIdAsync(Guid id)
         {
-            return _repo.GetAllUsersAsync();
+            return await _repo.GetUserByIdAsync(id);
         }
 
         // ============================================================
-        // GET USER BY ID
+        // GET USER BY EMAIL
         // ============================================================
-        public Task<User?> GetByIdAsync(Guid id)
+        public async Task<UserListItemDto?> GetByEmailAsync(string email)
         {
-            return _repo.GetUserByIdAsync(id);
+            var user = await _repo.GetUserByEmailAsync(email);
+            if (user == null)
+                return null;
+
+            return await GetByIdAsync(user.Id);
         }
 
         // ============================================================
-        // UPDATE USER (AuthUsers + Users)
+        // UPDATE USER (Unified ID Model)
         // ============================================================
         public async Task UpdateUserAsync(
             Guid id,
@@ -134,18 +189,42 @@ namespace NetFrontAPI.Services
             Guid? organizationId,
             string role,
             bool isActive,
-            string? password)
+            string? password,
+            List<Guid> teamIds)
         {
-            await _repo.UpdateLinkedUserAsync(
-                id,
-                email,
-                firstName,
-                lastName,
-                organizationId,
-                role,
-                isActive,
-                password
-            );
+            using var conn = _connectionFactory.CreateConnection();
+            using var tx = conn.BeginTransaction();
+
+            try
+            {
+                await _repo.UpdateLinkedUserAsync(
+                    id,
+                    email,
+                    firstName,
+                    lastName,
+                    organizationId,
+                    role,
+                    isActive,
+                    password,
+                    conn,
+                    tx
+                );
+
+                // Reset team assignments
+                var existingTeams = await _coachTeamsRepository.GetTeamsForCoachAsync(id, conn, tx);
+                foreach (var t in existingTeams)
+                    await _coachTeamsRepository.RemoveAsync(id, t.TeamId, conn, tx);
+
+                foreach (var teamId in teamIds)
+                    await _coachTeamsRepository.AssignCoachToTeamAsync(id, teamId, conn, tx);
+
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
 
         // ============================================================
@@ -153,46 +232,16 @@ namespace NetFrontAPI.Services
         // ============================================================
         public async Task ResetPasswordAsync(Guid id, string newPassword)
         {
-            var email = await _repo.GetEmailByUserIdAsync(id);
-            if (email == null)
-                throw new InvalidOperationException("User not found.");
-
             var hash = BCrypt.Net.BCrypt.HashPassword(newPassword);
-
-            using var conn = _connectionFactory.CreateConnection();
-            using var tx = conn.BeginTransaction();
-
-            await conn.ExecuteAsync(
-                "UPDATE AuthUsers SET PasswordHash = @Hash WHERE Email = @Email",
-                new { Hash = hash, Email = email },
-                tx
-            );
-
-            tx.Commit();
-        }
-
-        // ============================================================
-        // GET USER BY EMAIL
-        // ============================================================
-        public Task<User?> GetByEmailAsync(string email)
-        {
-            return _repo.GetUserByEmailAsync(email);
-        }
-
-        // ============================================================
-        // UPDATE PASSWORD HASH
-        // ============================================================
-        public Task UpdatePasswordHashAsync(Guid id, string passwordHash)
-        {
-            return _repo.UpdatePasswordHashAsync(id, passwordHash);
+            await _repo.UpdatePasswordHashAsync(id, hash);
         }
 
         // ============================================================
         // DELETE USER
         // ============================================================
-        public Task DeleteUserAsync(Guid id)
+        public async Task DeleteUserAsync(Guid id)
         {
-            return _repo.DeleteLinkedUserAsync(id);
+            await _repo.DeleteLinkedUserAsync(id);
         }
     }
 }

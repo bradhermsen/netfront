@@ -66,6 +66,15 @@ var host = new HostBuilder()
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IUsersService, UsersService>();
         services.AddScoped<ICoachTeamsService, CoachTeamsService>();
+        services.AddScoped<ITeamAuthorizationService, TeamAuthorizationService>();
+        services.AddScoped<IAccessCodeService, AccessCodeService>();
+        services.AddScoped<IAccessCodeValidator, AccessCodeValidator>();
+        services.AddScoped<IAuthorizationService>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var jwtKey = config["Jwt:Key"];
+            return new AuthorizationService(jwtKey ?? "your-super-secret-key-at-least-32-characters-long");
+        });
     })
     .Build();
 

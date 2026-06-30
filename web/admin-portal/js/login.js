@@ -27,19 +27,40 @@ btn.addEventListener("click", async () => {
     console.log("Response status:", res.status);
 
     if (!res.ok) {
-      errorDiv.textContent = "Invalid email or password.";
+      // Better error messages based on status code
+      if (res.status === 401) {
+        errorDiv.textContent = "Invalid email or password.";
+      } else if (res.status === 400) {
+        errorDiv.textContent = "Missing email or password.";
+      } else if (res.status === 500) {
+        errorDiv.textContent = "Server error. Please try again later.";
+      } else {
+        errorDiv.textContent = `Error: HTTP ${res.status}`;
+      }
       return;
     }
 
     const data = await res.json();
     console.log("Login success:", data);
 
+    // Validate response contains required token and role
+    if (!data.token || !data.role) {
+      errorDiv.textContent = "Invalid server response. Missing token or role.";
+      console.error("Invalid login response:", data);
+      return;
+    }
+
     localStorage.setItem("nf_token", data.token);
     localStorage.setItem("nf_role", data.role);
+    
+    // Store user ID if provided (needed for Team Manager dashboard)
+    if (data.userId) {
+      localStorage.setItem("nf_user_id", data.userId);
+    }
 
-    window.location.href = "dashboard.html";
+    window.location.href = "./dashboard.html";
   } catch (err) {
     console.error("Login error:", err);
-    errorDiv.textContent = "Unable to connect to server.";
+    errorDiv.textContent = "Unable to connect to server. Please check your connection.";
   }
 });

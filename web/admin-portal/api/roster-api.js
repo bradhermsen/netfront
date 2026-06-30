@@ -7,7 +7,7 @@ window.RosterApi = {
   // GET ALL TEAMS (for AdminPage table)
   // -------------------------------------------------------
   async getAll() {
-    const res = await fetch(`${window.apiBase}/teams`);
+    const res = await authFetch(`/teams`);
     if (!res.ok) return [];
     return await res.json();
   },
@@ -16,7 +16,7 @@ window.RosterApi = {
   // GET ONE ROSTER ENTRY
   // -------------------------------------------------------
   async getById(rosterEntryId) {
-    const res = await fetch(`${window.apiBase}/roster/${rosterEntryId}`);
+    const res = await authFetch(`/roster/${rosterEntryId}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   },
@@ -25,7 +25,7 @@ window.RosterApi = {
   // CREATE ROSTER ENTRY
   // -------------------------------------------------------
   async create(payload) {
-    const res = await fetch(`${window.apiBase}/roster`, {
+    const res = await authFetch(`/roster`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -38,12 +38,10 @@ window.RosterApi = {
   // -------------------------------------------------------
   // UPDATE ROSTER ENTRY
   // -------------------------------------------------------
-  // UPDATE ROSTER ENTRY
-  // -------------------------------------------------------
   async update(rosterEntryId, payload) {
     console.log("RosterApi.update called with ID:", rosterEntryId, "payload:", payload);
     
-    const res = await fetch(`${window.apiBase}/roster/${rosterEntryId}`, {
+    const res = await authFetch(`/roster/${rosterEntryId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -66,7 +64,7 @@ window.RosterApi = {
   // DELETE ROSTER ENTRY
   // -------------------------------------------------------
   async delete(rosterEntryId) {
-    const res = await fetch(`${window.apiBase}/roster/${rosterEntryId}`, {
+    const res = await authFetch(`/roster/${rosterEntryId}`, {
       method: "DELETE",
     });
 
@@ -78,10 +76,10 @@ window.RosterApi = {
   // GET AVAILABLE PLAYERS FOR TEAM (for add modal)
   // -------------------------------------------------------
   async getAvailablePlayersForTeam(teamId) {
-    const url = `${window.apiBase}/teams/${teamId}/available-players`;
+    const url = `/teams/${teamId}/available-players`;
     console.log("Fetching available players from:", url);
     
-    const res = await fetch(url);
+    const res = await authFetch(url);
     console.log("getAvailablePlayersForTeam response status:", res.status);
     
     if (!res.ok) {

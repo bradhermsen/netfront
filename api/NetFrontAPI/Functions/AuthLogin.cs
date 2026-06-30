@@ -69,7 +69,8 @@ namespace NetFrontAPI.Functions
                 await response.WriteAsJsonAsync(new
                 {
                     token,
-                    role = user.Role
+                    role = user.Role,
+                    userId = user.Id
                 });
 
                 return response;

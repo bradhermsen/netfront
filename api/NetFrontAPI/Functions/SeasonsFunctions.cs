@@ -5,26 +5,51 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using NetFrontAPI.DTOs;
 using NetFrontAPI.Services;
+using NetFrontAPI.Infrastructure.Authorization;
 
 namespace NetFrontAPI.Functions
 {
     public class SeasonsFunctions
     {
         private readonly ISeasonsService _service;
+        private readonly IAuthorizationService _authorizationService;
 
-        public SeasonsFunctions(ISeasonsService service)
+        public SeasonsFunctions(ISeasonsService service, IAuthorizationService authorizationService)
         {
             _service = service;
+            _authorizationService = authorizationService;
         }
 
         [Function("GetSeasons")]
         public async Task<HttpResponseData> GetSeasons(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "seasons")] HttpRequestData req)
         {
-            var seasons = await _service.GetAllAsync();
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteAsJsonAsync(seasons);
-            return response;
+            // Validate authorization
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            // SuperAdmin bypass - full access to all seasons
+            if (role == "SuperAdmin")
+            {
+                var seasons = await _service.GetAllAsync();
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteAsJsonAsync(seasons);
+                return response;
+            }
+
+            // Other roles can view seasons
+            if (!_authorizationService.HasAnyRole(role, "OrgAdmin", "TeamManager", "Coach", "Viewer"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view seasons");
+
+            var allSeasons = await _service.GetAllAsync();
+            var result = req.CreateResponse(HttpStatusCode.OK);
+            await result.WriteAsJsonAsync(allSeasons);
+            return result;
         }
 
         [Function("GetSeasonById")]
@@ -32,20 +57,53 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "seasons/{id:guid}")] HttpRequestData req,
             Guid id)
         {
-            var season = await _service.GetByIdAsync(id);
+            // Validate authorization
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
 
-            if (season == null)
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            // SuperAdmin bypass - full access
+            if (role == "SuperAdmin")
+            {
+                var season = await _service.GetByIdAsync(id);
+                if (season == null)
+                    return req.CreateResponse(HttpStatusCode.NotFound);
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteAsJsonAsync(season);
+                return response;
+            }
+
+            // Other roles can view seasons
+            if (!_authorizationService.HasAnyRole(role, "OrgAdmin", "TeamManager", "Coach", "Viewer"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view season details");
+
+            var seasonData = await _service.GetByIdAsync(id);
+            if (seasonData == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
-
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteAsJsonAsync(season);
-            return response;
+            var result = req.CreateResponse(HttpStatusCode.OK);
+            await result.WriteAsJsonAsync(seasonData);
+            return result;
         }
 
         [Function("CreateSeason")]
         public async Task<HttpResponseData> CreateSeason(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "seasons")] HttpRequestData req)
         {
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Token required");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid token");
+
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient role");
+
             var dto = await req.ReadFromJsonAsync<CreateSeasonDto>();
 
             await _service.CreateAsync(dto);
@@ -58,6 +116,17 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "seasons/{id:guid}")] HttpRequestData req,
             Guid id)
         {
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Token required");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid token");
+
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient role");
+
             var dto = await req.ReadFromJsonAsync<UpdateSeasonDto>();
 
             await _service.UpdateAsync(id, dto);
@@ -70,6 +139,17 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "seasons/{id:guid}")] HttpRequestData req,
             Guid id)
         {
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Token required");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid token");
+
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient role");
+
             await _service.DeleteAsync(id);
 
             return req.CreateResponse(HttpStatusCode.NoContent);

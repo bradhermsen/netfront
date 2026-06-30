@@ -150,6 +150,7 @@ namespace NetFrontAPI.Repositories
                     GameTypeId = @GameTypeId,
                     GameRoundId = @GameRoundId,
                     Notes = @Notes,
+                    Status = @Status,
                     UpdatedAt = @UpdatedAt
                 WHERE GameId = @GameId;
             ";
@@ -165,6 +166,7 @@ namespace NetFrontAPI.Repositories
                 dto.GameTypeId,
                 dto.GameRoundId,
                 dto.Notes,
+                dto.Status,
                 UpdatedAt = DateTime.UtcNow
             });
         }

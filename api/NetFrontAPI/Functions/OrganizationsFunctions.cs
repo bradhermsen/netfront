@@ -6,26 +6,51 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using NetFrontAPI.DTOs;
 using NetFrontAPI.Services;
+using NetFrontAPI.Infrastructure.Authorization;
 
 namespace NetFrontAPI.Functions
 {
     public class OrganizationFunctions
     {
         private readonly IOrganizationService _service;
+        private readonly IAuthorizationService _authorizationService;
 
-        public OrganizationFunctions(IOrganizationService service)
+        public OrganizationFunctions(IOrganizationService service, IAuthorizationService authorizationService)
         {
             _service = service;
+            _authorizationService = authorizationService;
         }
 
         [Function("GetOrganizations")]
         public async Task<HttpResponseData> GetOrganizations(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "organizations")] HttpRequestData req)
         {
-            var items = await _service.GetAllAsync();
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteAsJsonAsync(items);
-            return response;
+            // Validate authorization
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            // SuperAdmin bypass - full access to all organizations
+            if (role == "SuperAdmin")
+            {
+                var items = await _service.GetAllAsync();
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteAsJsonAsync(items);
+                return response;
+            }
+
+            // Other roles can view organizations
+            if (!_authorizationService.HasAnyRole(role, "OrgAdmin", "TeamManager", "Coach", "Viewer"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view organizations");
+
+            var allItems = await _service.GetAllAsync();
+            var result = req.CreateResponse(HttpStatusCode.OK);
+            await result.WriteAsJsonAsync(allItems);
+            return result;
         }
 
         [Function("GetOrganizationById")]
@@ -33,22 +58,55 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "organizations/{id:guid}")] HttpRequestData req,
             Guid id)
         {
-            var org = await _service.GetByIdAsync(id);
-            if (org == null)
+            // Validate authorization
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            // SuperAdmin bypass - full access
+            if (role == "SuperAdmin")
             {
-                var notFound = req.CreateResponse(HttpStatusCode.NotFound);
-                return notFound;
+                var org = await _service.GetByIdAsync(id);
+                if (org == null)
+                    return req.CreateResponse(HttpStatusCode.NotFound);
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteAsJsonAsync(org);
+                return response;
             }
 
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteAsJsonAsync(org);
-            return response;
+            // Other roles can view organizations
+            if (!_authorizationService.HasAnyRole(role, "OrgAdmin", "TeamManager", "Coach", "Viewer"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view organization details");
+
+            var orgData = await _service.GetByIdAsync(id);
+            if (orgData == null)
+                return req.CreateResponse(HttpStatusCode.NotFound);
+            var result = req.CreateResponse(HttpStatusCode.OK);
+            await result.WriteAsJsonAsync(orgData);
+            return result;
         }
 
         [Function("CreateOrganization")]
         public async Task<HttpResponseData> CreateOrganization(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "organizations")] HttpRequestData req)
         {
+            // Validate authorization
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            // Only SuperAdmin can create organizations
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Only SuperAdmin can create organizations");
+
             var dto = await req.ReadFromJsonAsync<CreateOrganizationDto>();
             if (dto == null)
             {
@@ -72,6 +130,19 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "put", "patch", Route = "organizations/{id:guid}")] HttpRequestData req,
             Guid id)
         {
+            // Validate authorization
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            // Only SuperAdmin and OrgAdmin can update organizations
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Only SuperAdmin or OrgAdmin can update organizations");
+
             var dto = await req.ReadFromJsonAsync<UpdateOrganizationDto>();
             if (dto == null)
             {
@@ -89,6 +160,19 @@ namespace NetFrontAPI.Functions
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "organizations/{id:guid}")] HttpRequestData req,
             Guid id)
         {
+            // Validate authorization
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
+
+            var (isValid, userId, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            // Only SuperAdmin can delete organizations
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Only SuperAdmin can delete organizations");
+
             await _service.DeleteAsync(id);
             var response = req.CreateResponse(HttpStatusCode.NoContent);
             return response;

@@ -4,6 +4,16 @@ console.log("Teams.js loaded");
 // TEAMS PAGE — MODERNIZED + MATCHED DESIGN
 // =========================================================
 
+// Enforce SuperAdmin/OrgAdmin/TeamManager access
+(function checkPermission() {
+  if (!Auth.canManageTeams()) {
+    showMessage("Access Denied: Team management requires Super Admin, Org Admin, or Team Manager role", "error");
+    setTimeout(() => {
+      window.location.href = "./not-authorized.html";
+    }, 2000);
+  }
+})();
+
 // =========================================================
 // LOAD ALL TEAM DROPDOWNS
 // =========================================================
@@ -20,7 +30,12 @@ async function loadAllTeamDropdowns() {
 // ------------------------------
 async function loadTeamOrganizations() {
   try {
-    const res = await fetch(`${window.apiBase}/organizations`);
+    const res = await authFetch(`/organizations`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     const orgs = await res.json();
 
     const select = document.getElementById("team-org");
@@ -46,6 +61,7 @@ async function loadTeamOrganizations() {
     }
   } catch (err) {
     console.error("Failed to load organizations:", err);
+    showMessage("Failed to load organizations", "error");
   }
 }
 
@@ -54,7 +70,12 @@ async function loadTeamOrganizations() {
 // ------------------------------
 async function loadTeamLevels() {
   try {
-    const res = await fetch(`${window.apiBase}/levels`);
+    const res = await authFetch(`/levels`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     const levels = await res.json();
 
     const select = document.getElementById("team-level");
@@ -80,6 +101,7 @@ async function loadTeamLevels() {
     }
   } catch (err) {
     console.error("Failed to load levels:", err);
+    showMessage("Failed to load levels", "error");
   }
 }
 
@@ -90,7 +112,12 @@ async function loadTeamSeasons() {
   try {
     console.log("loadTeamSeasons() fired");
 
-    const res = await fetch(`${window.apiBase}/seasons`);
+    const res = await authFetch(`/seasons`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     const seasons = await res.json();
 
     const display = document.getElementById("team-season-display");
@@ -300,7 +327,7 @@ function initTeamsPage() {
           <td>${team.headCoachName ?? ""}</td>
           <td>
             <div class="code-stack">
-              <div class="code-badge sk-code">SK-${team.scorekeeperCode ?? ""}</div>
+              <div class="code-badge gm-code">GM-${team.gameManagerCode ?? ""}</div>
               <div class="code-badge sm-code">SM-${team.statManagerCode ?? ""}</div>
             </div>
           </td>
@@ -411,7 +438,7 @@ function initTeamsPage() {
         team.assistantCoach4Email ?? "";
 
       document.getElementById("team-score-code").value =
-        team.scorekeeperCode ?? "";
+        team.gameManagerCode ?? "";
       document.getElementById("team-stat-code").value =
         team.statManagerCode ?? "";
 
@@ -496,7 +523,7 @@ function initTeamsPage() {
           .checked,
 
         notes: document.getElementById("team-notes").value,
-        scorekeeperCode: document.getElementById("team-score-code").value,
+        gameManagerCode: document.getElementById("team-score-code").value,
         statManagerCode: document.getElementById("team-stat-code").value,
         isActive: document.getElementById("team-active").checked,
         isExternal: isExternal,
@@ -756,13 +783,53 @@ function wireTeamFilterEvents() {
 // =========================================================
 // GENERATE ACCESS CODES
 // =========================================================
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
   if (e.target.id === "btnGenerateCodes") {
-    const sk = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const sm = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Check role permission
+    if (!Auth.canGenerateAccessCodes()) {
+      showMessage("Only Team Manager or OrgAdmin can generate access codes", "error");
+      return;
+    }
 
-    document.getElementById("team-score-code").value = sk;
-    document.getElementById("team-stat-code").value = sm;
+    const btn = e.target;
+    btn.disabled = true;
+    btn.textContent = "Generating...";
+
+    try {
+      // Get the team ID from the modal
+      const teamIdInput = document.getElementById("team-id");
+      if (!teamIdInput || !teamIdInput.value) {
+        showMessage("Team ID not found", "error");
+        return;
+      }
+
+      const teamId = teamIdInput.value;
+
+      // Call backend to generate codes
+      const res = await authFetch(`/teams/${teamId}/generate-codes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById("team-score-code").value = data.gameManagerCode || "";
+        document.getElementById("team-stat-code").value = data.statManagerCode || "";
+        showMessage("✓ Access codes generated successfully (GM-XXXXXX and SM-XXXXXX format)", "success");
+      } else if (res.status === 403) {
+        showMessage("You do not have permission to generate access codes for this team", "error");
+      } else if (res.status === 401) {
+        showMessage("Your session has expired. Please log in again.", "error");
+      } else {
+        showMessage("Failed to generate access codes", "error");
+      }
+    } catch (err) {
+      console.error("Error generating codes:", err);
+      showMessage("Error generating codes: " + err.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Generate Access Codes";
+    }
   }
 });
 

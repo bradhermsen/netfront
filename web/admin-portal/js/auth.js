@@ -1,8 +1,23 @@
 // auth.js
 
-// Helper for authenticated API calls
+// =====================================================
+// ROLE CONSTANTS
+// =====================================================
+window.ROLES = {
+  SuperAdmin: "SuperAdmin",
+  OrgAdmin: "OrgAdmin",
+  TeamManager: "TeamManager",
+  Coach: "Coach",
+  Viewer: "Viewer",
+};
+
+// Helper for authenticated API calls with error handling
 window.authFetch = async function (url, options = {}) {
-  const fullUrl = `${window.apiBase}${url}`;
+  if (window.configReady) {
+    await window.configReady;
+  }
+
+  const fullUrl = `${window.apiBase || ""}${url}`;
 
   const headers = options.headers || {};
   headers["Content-Type"] = "application/json";
@@ -12,10 +27,29 @@ window.authFetch = async function (url, options = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  return fetch(fullUrl, {
+  const response = await fetch(fullUrl, {
     ...options,
     headers,
   });
+
+  // Handle 401 Unauthorized - redirect to login
+  if (response.status === 401) {
+    console.warn("401 Unauthorized - redirecting to login");
+    localStorage.removeItem("nf_token");
+    localStorage.removeItem("nf_role");
+    window.location.href = "./login.html";
+    return null;
+  }
+
+  // Handle 403 Forbidden - redirect to not-authorized page
+  if (response.status === 403) {
+    console.warn("403 Forbidden - redirecting to not-authorized");
+    window.location.href = "./not-authorized.html";
+    return null;
+  }
+
+  // Return the raw Response so callers can use .ok, .status, and .json().
+  return response;
 };
 
 // Redirect to login if not authenticated
@@ -34,6 +68,74 @@ window.Auth = {
 
   getRole() {
     return localStorage.getItem("nf_role");
+  },
+
+  // Check if current user has one of the allowed roles
+  hasRole(...allowedRoles) {
+    const userRole = this.getRole();
+    return allowedRoles.includes(userRole);
+  },
+
+  // Check if user can manage teams (SuperAdmin, OrgAdmin, or assigned TeamManager)
+  canManageTeams() {
+    return this.hasRole(
+      window.ROLES.SuperAdmin,
+      window.ROLES.OrgAdmin,
+      window.ROLES.TeamManager,
+    );
+  },
+
+  // Check if user can manage rosters (Coach, TeamManager, SuperAdmin, OrgAdmin)
+  canManageRosters() {
+    return this.hasRole(
+      window.ROLES.Coach,
+      window.ROLES.TeamManager,
+      window.ROLES.SuperAdmin,
+      window.ROLES.OrgAdmin,
+    );
+  },
+
+  // Check if user can manage players (Coach, TeamManager, SuperAdmin, OrgAdmin)
+  canManagePlayers() {
+    return this.hasRole(
+      window.ROLES.Coach,
+      window.ROLES.TeamManager,
+      window.ROLES.SuperAdmin,
+      window.ROLES.OrgAdmin,
+    );
+  },
+
+  // Check if user can manage schedules (TeamManager, SuperAdmin, OrgAdmin)
+  canManageSchedules() {
+    return this.hasRole(
+      window.ROLES.TeamManager,
+      window.ROLES.SuperAdmin,
+      window.ROLES.OrgAdmin,
+    );
+  },
+
+  // Check if user can generate access codes (TeamManager, SuperAdmin, OrgAdmin)
+  canGenerateAccessCodes() {
+    return this.hasRole(
+      window.ROLES.TeamManager,
+      window.ROLES.SuperAdmin,
+      window.ROLES.OrgAdmin,
+    );
+  },
+
+  // Check if user can manage users (SuperAdmin, OrgAdmin)
+  canManageUsers() {
+    return this.hasRole(window.ROLES.SuperAdmin, window.ROLES.OrgAdmin);
+  },
+
+  // Check if user can manage permissions (SuperAdmin only)
+  canManagePermissions() {
+    return this.hasRole(window.ROLES.SuperAdmin);
+  },
+
+  // Check if user is an admin (SuperAdmin or OrgAdmin)
+  isAdmin() {
+    return this.hasRole(window.ROLES.SuperAdmin, window.ROLES.OrgAdmin);
   },
 };
 // GLOBAL logout function

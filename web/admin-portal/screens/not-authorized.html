@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Not Authorized — NetFront</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: #e8e8e8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      text-align: center;
+      background: rgba(30, 30, 30, 0.8);
+      border: 2px solid #FF8C00;
+      border-radius: 12px;
+      padding: 60px 40px;
+      max-width: 500px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      line-height: 1;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0 0 16px 0;
+      color: #FF8C00;
+    }
+
+    .message {
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 0 0 30px 0;
+      color: #b8b8b8;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #0ea5e9;
+      border: 2px solid #0ea5e9;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(14, 165, 233, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🔒</div>
+    <h1>Not Authorized</h1>
+    <p class="message">
+      You do not have permission to access this page. 
+      Please contact your administrator if you believe this is an error.
+    </p>
+    <div class="button-group">
+      <button class="btn-primary" onclick="window.location.href='./dashboard.html'">
+        Return to Dashboard
+      </button>
+      <button class="btn-secondary" onclick="window.logout()">
+        Logout
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Logout function (assumes it's defined globally in auth.js)
+    window.logout = function() {
+      localStorage.removeItem("nf_token");
+      localStorage.removeItem("nf_role");
+      window.location.href = "./login.html";
+    };
+  </script>
+</body>
+</html>

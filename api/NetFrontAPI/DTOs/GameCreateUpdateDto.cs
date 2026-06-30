@@ -16,5 +16,7 @@ namespace NetFrontAPI.DTOs
         public int? GameRoundId { get; set; }
 
         public string? Notes { get; set; }
+
+        public string? Status { get; set; }
     }
 }

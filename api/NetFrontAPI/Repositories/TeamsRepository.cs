@@ -35,8 +35,10 @@ namespace NetFrontAPI.Repositories
                     s.SeasonName,
                     (SELECT COUNT(*) FROM RosterEntries r WHERE r.TeamId = t.Id) AS RosterCount,
                     t.HeadCoachName,
-                    t.ScorekeeperCode,
+                    t.ScorekeeperCode AS GameManagerCode,
+                    NULL AS GameManagerCodeExpiresAt,
                     t.StatManagerCode,
+                    NULL AS StatManagerCodeExpiresAt,
                     t.IsActive,
                     t.IsExternal,
 
@@ -55,7 +57,7 @@ namespace NetFrontAPI.Repositories
                 LEFT JOIN Organizations o ON t.OrganizationId = o.OrganizationId
                 LEFT JOIN Levels l ON t.LevelId = l.Id
                 LEFT JOIN Seasons s ON t.SeasonId = s.SeasonId
-                ORDER BY t.SortOrder, t.Name";
+                ORDER BY t.Name";
 
             return await _db.QueryAsync<TeamsListItemDto>(sql);
         }
@@ -92,8 +94,10 @@ namespace NetFrontAPI.Repositories
                     t.AssistantCoach3HasLogin,
                     t.AssistantCoach4HasLogin,
 
-                    t.ScorekeeperCode,
+                    t.ScorekeeperCode AS GameManagerCode,
+                    NULL AS GameManagerCodeExpiresAt,
                     t.StatManagerCode,
+                    NULL AS StatManagerCodeExpiresAt,
                     t.IsActive,
                     t.IsExternal,
                     t.Notes,
@@ -145,7 +149,9 @@ namespace NetFrontAPI.Repositories
                     AssistantCoach4HasLogin,
 
                     ScorekeeperCode,
+                    GameManagerCodeExpiresAt,
                     StatManagerCode,
+                    StatManagerCodeExpiresAt,
                     IsActive,
                     IsExternal,
                     Notes
@@ -176,8 +182,10 @@ namespace NetFrontAPI.Repositories
                     @AssistantCoach3HasLogin,
                     @AssistantCoach4HasLogin,
 
-                    @ScorekeeperCode,
+                    @GameManagerCode,
+                    @GameManagerCodeExpiresAt,
                     @StatManagerCode,
+                    @StatManagerCodeExpiresAt,
                     @IsActive,
                     @IsExternal,
                     @Notes
@@ -210,8 +218,10 @@ namespace NetFrontAPI.Repositories
                 dto.AssistantCoach3HasLogin,
                 dto.AssistantCoach4HasLogin,
 
-                dto.ScorekeeperCode,
+                dto.GameManagerCode,
+                dto.GameManagerCodeExpiresAt,
                 dto.StatManagerCode,
+                dto.StatManagerCodeExpiresAt,
                 dto.IsActive,
                 dto.IsExternal,
                 dto.Notes
@@ -252,8 +262,10 @@ namespace NetFrontAPI.Repositories
                     AssistantCoach3HasLogin = @AssistantCoach3HasLogin,
                     AssistantCoach4HasLogin = @AssistantCoach4HasLogin,
 
-                    ScorekeeperCode = @ScorekeeperCode,
+                    ScorekeeperCode = @GameManagerCode,
+                    GameManagerCodeExpiresAt = @GameManagerCodeExpiresAt,
                     StatManagerCode = @StatManagerCode,
+                    StatManagerCodeExpiresAt = @StatManagerCodeExpiresAt,
                     IsActive = @IsActive,
                     IsExternal = @IsExternal,
                     Notes = @Notes
@@ -286,8 +298,10 @@ namespace NetFrontAPI.Repositories
                 dto.AssistantCoach3HasLogin,
                 dto.AssistantCoach4HasLogin,
 
-                dto.ScorekeeperCode,
+                dto.GameManagerCode,
+                dto.GameManagerCodeExpiresAt,
                 dto.StatManagerCode,
+                dto.StatManagerCodeExpiresAt,
                 dto.IsActive,
                 dto.IsExternal,
                 dto.Notes

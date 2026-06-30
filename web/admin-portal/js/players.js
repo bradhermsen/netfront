@@ -2,6 +2,16 @@
 // PLAYERS PAGE — MODERN ADMINPAGE VERSION (DUAL ROSTER READY)
 // =========================================================
 
+// Enforce Coach/TeamManager access with team assignment validation
+(function checkPermission() {
+  if (!Auth.canManagePlayers()) {
+    showMessage("Access Denied: Coach or Team Manager role required", "error");
+    setTimeout(() => {
+      window.location.href = "./dashboard.html";
+    }, 2000);
+  }
+})();
+
 // =========================================================
 // LOAD DROPDOWNS
 // =========================================================
@@ -10,31 +20,41 @@ async function loadPlayerDropdowns() {
 }
 
 async function loadPlayerOrganizations() {
-  const res = await fetch(`${window.apiBase}/organizations`);
-  const orgs = await res.json();
+  try {
+    const res = await authFetch(`/organizations`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
 
-  // Modal org dropdown
-  const select = document.getElementById("player-org");
-  if (select) {
-    select.innerHTML = `<option value="">Select Organization</option>`;
-    orgs.forEach((o) => {
-      const opt = document.createElement("option");
-      opt.value = o.organizationId;
-      opt.textContent = o.name;
-      select.appendChild(opt);
-    });
-  }
+    const orgs = await res.json();
 
-  // Filter org dropdown
-  const filter = document.getElementById("filter-player-org");
-  if (filter) {
-    filter.innerHTML = `<option value="">Organization: All</option>`;
-    orgs.forEach((o) => {
-      const opt = document.createElement("option");
-      opt.value = o.organizationId;
-      opt.textContent = o.name;
-      filter.appendChild(opt);
-    });
+    // Modal org dropdown
+    const select = document.getElementById("player-org");
+    if (select) {
+      select.innerHTML = `<option value="">Select Organization</option>`;
+      orgs.forEach((o) => {
+        const opt = document.createElement("option");
+        opt.value = o.organizationId;
+        opt.textContent = o.name;
+        select.appendChild(opt);
+      });
+    }
+
+    // Filter org dropdown
+    const filter = document.getElementById("filter-player-org");
+    if (filter) {
+      filter.innerHTML = `<option value="">Organization: All</option>`;
+      orgs.forEach((o) => {
+        const opt = document.createElement("option");
+        opt.value = o.organizationId;
+        opt.textContent = o.name;
+        filter.appendChild(opt);
+      });
+    }
+  } catch (err) {
+    console.error("Failed to load organizations:", err);
+    showMessage("Failed to load organizations", "error");
   }
 }
 
@@ -50,7 +70,12 @@ async function loadTeamsForPlayer(orgId, selectedTeamIds = []) {
   if (!orgId) return;
 
   try {
-    const res = await fetch(`${window.apiBase}/teams/by-organization/${orgId}`);
+    const res = await authFetch(`/teams/by-organization/${orgId}`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     const teams = await res.json();
 
     teams.forEach((t) => {
@@ -83,13 +108,19 @@ async function loadPlayerTeamsForFilter() {
   filter.innerHTML = `<option value="">Team: All</option>`;
 
   try {
-    const res = await fetch(`${window.apiBase}/teams`);
+    const res = await authFetch(`/teams`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     const teams = await res.json();
 
     teams.forEach((t) => {
       const opt = document.createElement("option");
       opt.value = t.teamId;
-      opt.textContent = t.name;
+      const levelName = t.levelName ? ` (${t.levelName})` : "";
+      opt.textContent = `${t.name}${levelName}`;
       filter.appendChild(opt);
     });
   } catch (err) {
@@ -110,15 +141,25 @@ async function reloadTeamFilterByOrg(orgId) {
     return loadPlayerTeamsForFilter();
   }
 
-  const res = await fetch(`${window.apiBase}/teams/by-organization/${orgId}`);
-  const teams = await res.json();
+  try {
+    const res = await authFetch(`/teams/by-organization/${orgId}`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
 
-  teams.forEach((t) => {
-    const opt = document.createElement("option");
-    opt.value = t.id;
-    opt.textContent = t.name;
-    filter.appendChild(opt);
-  });
+    const teams = await res.json();
+
+    teams.forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      const levelName = t.levelName ? ` (${t.levelName})` : "";
+      opt.textContent = `${t.name}${levelName}`;
+      filter.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Failed to load teams by organization:", err);
+  }
 }
 
 // =========================================================

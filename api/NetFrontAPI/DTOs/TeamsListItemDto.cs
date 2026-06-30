@@ -19,8 +19,11 @@ namespace NetFrontAPI.DTOs
         public int RosterCount { get; set; }
 
         public string? HeadCoachName { get; set; }
-        public string? ScorekeeperCode { get; set; }
+        public string? GameManagerCode { get; set; }
+        public DateTime? GameManagerCodeExpiresAt { get; set; }
+        
         public string? StatManagerCode { get; set; }
+        public DateTime? StatManagerCodeExpiresAt { get; set; }
 
         public bool IsExternal { get; set; }
         public bool IsActive { get; set; }

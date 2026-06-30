@@ -7,7 +7,7 @@ const PlayerApi = {
   // GET ALL (DTO LIST)
   // -------------------------------------------------------
   async getAll() {
-    const res = await fetch(`${window.apiBase}/players/dto`);
+    const res = await authFetch(`/players/dto`);
     if (!res.ok) throw new Error("Failed to load players");
     return await res.json();
   },
@@ -16,7 +16,7 @@ const PlayerApi = {
   // GET BY ID
   // -------------------------------------------------------
   async getById(id) {
-    const res = await fetch(`${window.apiBase}/players/${id}`);
+    const res = await authFetch(`/players/${id}`);
     if (!res.ok) throw new Error("Failed to load player");
     return await res.json();
   },
@@ -25,7 +25,7 @@ const PlayerApi = {
   // CREATE
   // -------------------------------------------------------
   async create(data) {
-    const res = await fetch(`${window.apiBase}/players`, {
+    const res = await authFetch(`/players`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -39,7 +39,7 @@ const PlayerApi = {
   // UPDATE
   // -------------------------------------------------------
   async update(id, data) {
-    const res = await fetch(`${window.apiBase}/players/${id}`, {
+    const res = await authFetch(`/players/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -61,7 +61,7 @@ const PlayerApi = {
   // DELETE
   // -------------------------------------------------------
   async delete(id) {
-    const res = await fetch(`${window.apiBase}/players/${id}`, {
+    const res = await authFetch(`/players/${id}`, {
       method: "DELETE",
     });
 

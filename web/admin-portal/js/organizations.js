@@ -202,7 +202,10 @@ AdminPage.openAdd = openAddOrganization;
 // =========================================================
 async function loadLeagues() {
   try {
-    const res = await fetch(`${window.apiBase}/leagues`);
+    const res = await authFetch(`/leagues`);
+    if (!res || !res.ok) {
+      throw new Error("Failed to load leagues");
+    }
     const leagues = await res.json();
 
     const modalSelect = document.getElementById("org-league");
@@ -237,8 +240,8 @@ async function loadLeagues() {
 async function loadConferences() {
   try {
     // Load all organizations
-    const res = await fetch(`${window.apiBase}/organizations`);
-    if (!res.ok) return;
+    const res = await authFetch(`/organizations`);
+    if (!res || !res.ok) return;
 
     const orgs = await res.json();
 

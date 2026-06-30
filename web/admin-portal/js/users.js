@@ -2,6 +2,16 @@
 // USERS PAGE — MODERN ADMINPAGE VERSION (FIXED FILTERS)
 // =========================================================
 
+// Enforce SuperAdmin/OrgAdmin-only access
+(function checkPermission() {
+  if (!Auth.canManageUsers()) {
+    showMessage("Access Denied: SuperAdmin/OrgAdmin role required", "error");
+    setTimeout(() => {
+      window.location.href = "./dashboard.html";
+    }, 2000);
+  }
+})();
+
 window.UsersPage = {
   init() {
     AdminPage.init({
@@ -68,7 +78,7 @@ window.UsersPage = {
     container.innerHTML = "";
     if (!orgId) return;
 
-    const res = await fetch(`${window.apiBase}/teams/by-organization/${orgId}`);
+    const res = await authFetch(`/teams/by-organization/${orgId}`);
     const teams = await res.json();
 
     teams.forEach((t) => {

@@ -187,7 +187,7 @@ window.PageContentRegistry.teamsModals = () => `
 
           <div class="two-col">
             <div>
-              <label>Scorekeeper Code</label>
+              <label>Game Manager Code</label>
               <input id="team-score-code" type="text" class="nf-input" readonly />
             </div>
 
@@ -347,133 +347,155 @@ window.PageContentRegistry.organizationsModals = () => `
 
       <!-- BODY -->
       <div class="nf-modal-body">
-        <div class="clean-team-grid">
 
+        <!-- ORGANIZATION INFORMATION -->
+        <div class="full-width-section">
           <h3 class="section-header">Organization Information</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="org-name">Organization Name</label>
+            <div>
+              <label>Organization Name</label>
               <input id="org-name" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="org-abbrev">Abbreviation</label>
+            <div>
+              <label>Abbreviation</label>
               <input id="org-abbrev" class="nf-input" />
             </div>
-          </div>
 
-          <div class="two-col">
-            <div class="form-group">
-              <label for="org-street">Street Address</label>
-              <input id="org-street" class="nf-input" />
-            </div>
-
-            <div class="form-group">
-              <label for="org-city">City</label>
-              <input id="org-city" class="nf-input" />
-            </div>
-          </div>
-
-          <div class="two-col">
-            <div class="form-group">
-              <label for="org-state">State</label>
-              <input id="org-state" class="nf-input" />
-            </div>
-
-            <div class="form-group">
-              <label for="org-zip">Zip Code</label>
-              <input id="org-zip" class="nf-input" />
-            </div>
-          </div>
-
-          <div class="two-col">
-            <div class="form-group">
-              <label for="org-country">Country</label>
-              <input id="org-country" class="nf-input" />
-            </div>
-
-            <div class="form-group">
-              <label for="org-district">District / Conference</label>
-              <input id="org-district" class="nf-input" />
-            </div>
-          </div>
-
-          <div class="two-col">
-            <div class="form-group">
-              <label for="org-mascot">Mascot</label>
+            <div>
+              <label>Mascot</label>
               <input id="org-mascot" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="org-league">League</label>
+            <div>
+              <label>League</label>
               <select id="org-league" class="nf-input">
                 <option value="">None</option>
               </select>
             </div>
+
+            <div>
+              <label>District / Conference</label>
+              <input id="org-district" class="nf-input" />
+            </div>
           </div>
+        </div>
+
+        <hr class="section-divider full-width-section" />
+
+        <!-- ADDRESS -->
+        <div class="full-width-section">
+          <h3 class="section-header">Address</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="org-contact-first">Primary Contact First Name</label>
+            <div>
+              <label>Street Address</label>
+              <input id="org-street" class="nf-input" />
+            </div>
+
+            <div>
+              <label>City</label>
+              <input id="org-city" class="nf-input" />
+            </div>
+
+            <div>
+              <label>State</label>
+              <input id="org-state" class="nf-input" />
+            </div>
+
+            <div>
+              <label>Zip Code</label>
+              <input id="org-zip" class="nf-input" />
+            </div>
+
+            <div>
+              <label>Country</label>
+              <input id="org-country" class="nf-input" />
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider full-width-section" />
+
+        <!-- PRIMARY CONTACT -->
+        <div class="full-width-section">
+          <h3 class="section-header">Primary Contact</h3>
+
+          <div class="two-col">
+            <div>
+              <label>First Name</label>
               <input id="org-contact-first" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="org-contact-last">Primary Contact Last Name</label>
+            <div>
+              <label>Last Name</label>
               <input id="org-contact-last" class="nf-input" />
             </div>
-          </div>
 
-          <div class="form-group full-width">
-            <label for="org-contact-email">Primary Contact Email</label>
-            <input id="org-contact-email" class="nf-input" />
+            <div class="full-width">
+              <label>Email</label>
+              <input id="org-contact-email" class="nf-input" />
+            </div>
           </div>
+        </div>
 
+        <hr class="section-divider full-width-section" />
+
+        <!-- BILLING INFORMATION -->
+        <div class="full-width-section">
           <h3 class="section-header">Billing Information</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="billing-street">Billing Street</label>
+            <div>
+              <label>Billing Street</label>
               <input id="billing-street" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="billing-city">Billing City</label>
+            <div>
+              <label>Billing City</label>
               <input id="billing-city" class="nf-input" />
             </div>
-          </div>
 
-          <div class="two-col">
-            <div class="form-group">
-              <label for="billing-state">Billing State</label>
+            <div>
+              <label>Billing State</label>
               <input id="billing-state" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="billing-zip">Billing Zip Code</label>
+            <div>
+              <label>Billing Zip Code</label>
               <input id="billing-zip" class="nf-input" />
             </div>
-          </div>
 
-          <div class="two-col">
-            <div class="form-group">
-              <label for="billing-contact-name">Billing Contact Name</label>
+            <div>
+              <label>Billing Contact Name</label>
               <input id="billing-contact-name" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="billing-contact-email">Billing Contact Email</label>
+            <div>
+              <label>Billing Contact Email</label>
               <input id="billing-contact-email" class="nf-input" />
             </div>
           </div>
-
-          <div class="checkbox-col full-width">
-            <input type="checkbox" id="org-active" />
-            <label for="org-active">Active Organization</label>
-          </div>
-
         </div>
+
+        <hr class="section-divider full-width-section" />
+
+        <!-- SETTINGS -->
+        <div class="full-width-section">
+          <h3 class="section-header">Settings</h3>
+
+          <div class="two-col">
+            <div>
+              <label>Active Organization</label>
+              <label class="switch">
+                <input type="checkbox" id="org-active" />
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div class="nf-modal-footer">
@@ -803,19 +825,19 @@ window.PageContentRegistry.schedules = () => `
         placeholder="🔍  Search games…"
       />
 
-      <!-- Home Team Filter -->
-      <select id="filter-home-team" class="nf-select">
-        <option value="">Home Team: All</option>
+      <!-- Team Filter -->
+      <select id="filter-game-team" class="nf-select">
+        <option value="">Team: All</option>
       </select>
 
-      <!-- Away Team Filter -->
-      <select id="filter-away-team" class="nf-select">
-        <option value="">Away Team: All</option>
+      <!-- Level Filter -->
+      <select id="filter-game-level" class="nf-select">
+        <option value="">Level: All</option>
       </select>
 
-      <!-- Arena Filter -->
-      <select id="filter-arena" class="nf-select">
-        <option value="">Arena: All</option>
+      <!-- Type Filter -->
+      <select id="filter-game-type" class="nf-select">
+        <option value="">Type: All</option>
       </select>
 
       <!-- Status Filter -->
@@ -869,44 +891,52 @@ window.PageContentRegistry.schedulesModals = () => `
 
       <!-- BODY -->
       <div class="nf-modal-body">
-        <div class="clean-team-grid">
 
-          <!-- TEAMS SECTION -->
+        <!-- TEAMS -->
+        <div class="full-width-section">
           <h3 class="section-header">Teams</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="game-home-team">Home Team</label>
+            <div>
+              <label>Home Team</label>
               <select id="game-home-team" class="nf-input"></select>
             </div>
 
-            <div class="form-group">
-              <label for="game-away-team">Away Team</label>
+            <div>
+              <label>Away Team</label>
               <select id="game-away-team" class="nf-input"></select>
             </div>
           </div>
+        </div>
 
-          <!-- DATE & TIME -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- DATE & TIME -->
+        <div class="full-width-section">
           <h3 class="section-header">Date & Time</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="game-date">Date</label>
+            <div>
+              <label>Date</label>
               <input id="game-date" type="date" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="game-time">Time</label>
+            <div>
+              <label>Time</label>
               <input id="game-time" type="time" class="nf-input" />
             </div>
           </div>
+        </div>
 
-          <!-- LOCATION -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- LOCATION -->
+        <div class="full-width-section">
           <h3 class="section-header">Location</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="game-arena-select">Arena (select or type)</label>
+            <div>
+              <label>Arena (select or type)</label>
               <select id="game-arena-select" class="nf-input">
                 <option value="">Select Arena</option>
                 <option value="Four Seasons Centre">Four Seasons Centre</option>
@@ -920,15 +950,13 @@ window.PageContentRegistry.schedulesModals = () => `
               </select>
             </div>
 
-            <div class="form-group">
-              <label for="game-arena-custom">Custom Arena</label>
+            <div>
+              <label>Custom Arena</label>
               <input id="game-arena-custom" type="text" class="nf-input" placeholder="Override arena name" />
             </div>
-          </div>
 
-          <div class="two-col">
-            <div class="form-group">
-              <label for="game-rink-select">Rink (select or type)</label>
+            <div>
+              <label>Rink (select or type)</label>
               <select id="game-rink-select" class="nf-input">
                 <option value="">Select Rink</option>
                 <option value="Rink 1">Rink 1</option>
@@ -940,38 +968,46 @@ window.PageContentRegistry.schedulesModals = () => `
               </select>
             </div>
 
-            <div class="form-group">
-              <label for="game-rink-custom">Custom Rink</label>
+            <div>
+              <label>Custom Rink</label>
               <input id="game-rink-custom" type="text" class="nf-input" placeholder="Override rink name" />
             </div>
           </div>
+        </div>
 
-          <!-- CLASSIFICATION -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- CLASSIFICATION -->
+        <div class="full-width-section">
           <h3 class="section-header">Classification</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="game-type">Game Type</label>
+            <div>
+              <label>Game Type</label>
               <select id="game-type" class="nf-input"></select>
             </div>
 
-            <div class="form-group">
-              <label for="game-round">Game Round</label>
+            <div>
+              <label>Game Round</label>
               <select id="game-round" class="nf-input"></select>
             </div>
           </div>
+        </div>
 
-          <!-- NOTES & STATUS -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- NOTES & STATUS -->
+        <div class="full-width-section">
           <h3 class="section-header">Notes & Status</h3>
 
           <div class="two-col">
-            <div class="form-group full-width">
-              <label for="game-notes">Notes</label>
+            <div class="full-width">
+              <label>Notes</label>
               <textarea id="game-notes" class="nf-input"></textarea>
             </div>
 
-            <div class="form-group">
-              <label for="game-status">Status</label>
+            <div>
+              <label>Status</label>
               <select id="game-status" class="nf-input">
                 <option value="Scheduled">Scheduled</option>
                 <option value="Final">Final</option>
@@ -980,8 +1016,8 @@ window.PageContentRegistry.schedulesModals = () => `
               </select>
             </div>
           </div>
-
         </div>
+
       </div>
 
       <!-- FOOTER -->
@@ -1293,9 +1329,11 @@ window.PageContentRegistry.users = () => `
       <!-- Role Filter -->
       <select id="filter-role" class="nf-select">
         <option value="">All Roles</option>
-        <option value="Admin">Admin</option>
+        <option value="SuperAdmin">SuperAdmin</option>
+        <option value="OrgAdmin">OrgAdmin</option>
+        <option value="TeamManager">TeamManager</option>
         <option value="Coach">Coach</option>
-        <option value="OrgOwner">OrgOwner</option>
+        <option value="Viewer">Viewer</option>
       </select>
 
       <!-- Organization Filter -->
@@ -1399,9 +1437,11 @@ window.PageContentRegistry.users = () => `
             <div>
               <label>Role</label>
               <select id="user-role" class="nf-input">
-                <option value="Admin">Admin</option>
+                <option value="SuperAdmin">SuperAdmin</option>
+                <option value="OrgAdmin">OrgAdmin</option>
+                <option value="TeamManager">TeamManager</option>
                 <option value="Coach">Coach</option>
-                <option value="OrgOwner">OrgOwner</option>
+                <option value="Viewer">Viewer</option>
               </select>
             </div>
 

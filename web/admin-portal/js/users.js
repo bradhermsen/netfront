@@ -1,5 +1,5 @@
 // =========================================================
-// USERS PAGE — MODERN ADMINPAGE VERSION
+// USERS PAGE — MODERN ADMINPAGE VERSION (FIXED FILTERS)
 // =========================================================
 
 window.UsersPage = {
@@ -34,16 +34,28 @@ window.UsersPage = {
   },
 
   // -------------------------------------------------------
-  // LOAD ORGANIZATION DROPDOWN
+  // LOAD ORGANIZATION DROPDOWNS (Modal + Filter Bar)
   // -------------------------------------------------------
   async loadDropdowns() {
     const orgs = await OrgApi.getAll();
-    const select = document.getElementById("user-organization");
 
-    select.innerHTML = `
-      <option value="">None</option>
-      ${orgs.map((o) => `<option value="${o.organizationId}">${o.name}</option>`).join("")}
-    `;
+    // Modal dropdown
+    const select = document.getElementById("user-organization");
+    if (select) {
+      select.innerHTML = `
+        <option value="">None</option>
+        ${orgs.map((o) => `<option value="${o.organizationId}">${o.name}</option>`).join("")}
+      `;
+    }
+
+    // Filter dropdown
+    const filterOrg = document.getElementById("filter-org");
+    if (filterOrg) {
+      filterOrg.innerHTML = `
+        <option value="">All Organizations</option>
+        ${orgs.map((o) => `<option value="${o.organizationId}">${o.name}</option>`).join("")}
+      `;
+    }
   },
 
   // -------------------------------------------------------
@@ -51,8 +63,9 @@ window.UsersPage = {
   // -------------------------------------------------------
   async loadTeamsForOrganization(orgId, selectedTeamIds = []) {
     const container = document.getElementById("user-teams-container");
-    container.innerHTML = "";
+    if (!container) return;
 
+    container.innerHTML = "";
     if (!orgId) return;
 
     const res = await fetch(`${window.apiBase}/teams/by-organization/${orgId}`);
@@ -68,7 +81,7 @@ window.UsersPage = {
             ${selectedTeamIds.includes(t.id) ? "checked" : ""}>
           <span class="slider"></span>
         </label>
-        <span class="label-text">${t.name}</span>
+        <span class="label-text">${t.name} - ${t.levelName}</span>
       `;
 
       container.appendChild(row);
@@ -76,16 +89,51 @@ window.UsersPage = {
   },
 
   // -------------------------------------------------------
-  // RENDER TABLE
+  // FILTER USERS
+  // -------------------------------------------------------
+  filterUsers(allUsers) {
+    const roleEl = document.getElementById("filter-role");
+    const orgEl = document.getElementById("filter-org");
+    const statusEl = document.getElementById("filter-status");
+    const searchEl = document.getElementById("user-search-bar");
+
+    const role = roleEl?.value || "";
+    const org = orgEl?.value || "";
+    const status = statusEl?.value || "";
+    const search = (searchEl?.value || "").toLowerCase();
+
+    return allUsers.filter((u) => {
+      const matchesRole = !role || u.role === role;
+      const matchesOrg = !org || u.organizationId === org;
+      const matchesStatus =
+        !status || (status === "Active" ? u.isActive : !u.isActive);
+      const matchesSearch =
+        !search ||
+        `${u.firstName} ${u.lastName}`.toLowerCase().includes(search) ||
+        u.email.toLowerCase().includes(search);
+
+      return matchesRole && matchesOrg && matchesStatus && matchesSearch;
+    });
+  },
+
+  // -------------------------------------------------------
+  // RENDER TABLE (with filters)
   // -------------------------------------------------------
   renderTable(users) {
+    const filtered = this.filterUsers(users);
     const body = document.getElementById("userTableBody");
+    if (!body) return;
+
     body.innerHTML = "";
 
-    users.forEach((u) => {
+    filtered.forEach((u) => {
       const row = document.createElement("tr");
 
-      const teamList = u.teams?.map((t) => t.teamName).join(", ") || "None";
+      const teamList = u.teams?.length
+        ? u.teams
+            .map((t) => `${t.teamName} - ${t.levelName || ""}`)
+            .join("<br>")
+        : "None";
 
       row.innerHTML = `
         <td>${u.firstName} ${u.lastName}</td>
@@ -117,16 +165,22 @@ window.UsersPage = {
       "user-email",
       "user-password",
       "user-organization",
-    ].forEach((id) => (document.getElementById(id).value = ""));
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
 
-    document.getElementById("user-role").value = "Coach";
-    document.getElementById("user-active").checked = true;
+    const roleEl = document.getElementById("user-role");
+    const activeEl = document.getElementById("user-active");
+    const teamsContainer = document.getElementById("user-teams-container");
 
-    document.getElementById("user-teams-container").innerHTML = "";
+    if (roleEl) roleEl.value = "Coach";
+    if (activeEl) activeEl.checked = true;
+    if (teamsContainer) teamsContainer.innerHTML = "";
   },
 
   // -------------------------------------------------------
-  // POPULATE FORM
+  // POPULATE FORM (Edit User)
   // -------------------------------------------------------
   async populateForm(u) {
     document.getElementById("user-first").value = u.firstName;
@@ -134,7 +188,8 @@ window.UsersPage = {
     document.getElementById("user-email").value = u.email;
     document.getElementById("user-password").value = "";
 
-    document.getElementById("user-organization").value = u.organizationId || "";
+    const orgSelect = document.getElementById("user-organization");
+    if (orgSelect) orgSelect.value = u.organizationId || "";
 
     const selectedTeamIds = u.teams?.map((t) => t.teamId) || [];
     await this.loadTeamsForOrganization(u.organizationId, selectedTeamIds);
@@ -173,17 +228,21 @@ async function openAddUser() {
   await UsersPage.loadDropdowns();
 
   const orgSelect = document.getElementById("user-organization");
-  orgSelect.onchange = (e) =>
-    UsersPage.loadTeamsForOrganization(e.target.value);
+  if (orgSelect) {
+    orgSelect.onchange = (e) =>
+      UsersPage.loadTeamsForOrganization(e.target.value);
+  }
 }
 
 async function openEditUser(id) {
-  AdminPage.openEdit(id);
   await UsersPage.loadDropdowns();
+  AdminPage.openEdit(id);
 
   const orgSelect = document.getElementById("user-organization");
-  orgSelect.onchange = (e) =>
-    UsersPage.loadTeamsForOrganization(e.target.value);
+  if (orgSelect) {
+    orgSelect.onchange = (e) =>
+      UsersPage.loadTeamsForOrganization(e.target.value);
+  }
 }
 
 function openDeleteUser(id) {
@@ -204,9 +263,27 @@ function generatePassword(length = 12) {
 document.addEventListener("DOMContentLoaded", () => {
   UsersPage.init();
 
-  document.addEventListener("nf-page-ready", () => {
-    document.getElementById("btnGeneratePassword").onclick = () => {
-      document.getElementById("user-password").value = generatePassword();
-    };
+  document.addEventListener("nf-page-ready", async () => {
+    // Load dropdowns AFTER page content exists
+    await UsersPage.loadDropdowns();
+
+    // Wire filters AFTER they exist
+    const filterRole = document.getElementById("filter-role");
+    const filterOrg = document.getElementById("filter-org");
+    const filterStatus = document.getElementById("filter-status");
+    const searchBar = document.getElementById("user-search-bar");
+
+    if (filterRole) filterRole.onchange = () => AdminPage.refreshUsers();
+    if (filterOrg) filterOrg.onchange = () => AdminPage.refreshUsers();
+    if (filterStatus) filterStatus.onchange = () => AdminPage.refreshUsers();
+    if (searchBar) searchBar.oninput = () => AdminPage.refreshUsers();
+
+    // Password generator
+    const btnGen = document.getElementById("btnGeneratePassword");
+    if (btnGen) {
+      btnGen.onclick = () => {
+        document.getElementById("user-password").value = generatePassword();
+      };
+    }
   });
 });

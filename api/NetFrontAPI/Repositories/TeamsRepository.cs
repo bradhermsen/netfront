@@ -304,11 +304,20 @@ namespace NetFrontAPI.Repositories
         }
 
         // =========================================================
-        // NEW: FILTER TEAMS BY ORGANIZATION
+        // GET TEAMS BY ORGANIZATION (FIXED)
         // =========================================================
         public async Task<IEnumerable<Team>> GetTeamsByOrganizationAsync(Guid organizationId)
         {
-            var sql = @"SELECT * FROM Teams WHERE OrganizationId = @OrganizationId ORDER BY Name";
+            var sql = @"
+                SELECT 
+                    t.*,
+                    l.Name AS LevelName
+                FROM Teams t
+                LEFT JOIN Levels l ON l.Id = t.LevelId
+                WHERE t.OrganizationId = @OrganizationId
+                ORDER BY t.Name;
+            ";
+
             return await _db.QueryAsync<Team>(sql, new { OrganizationId = organizationId });
         }
     }

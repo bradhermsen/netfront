@@ -8,7 +8,7 @@ namespace NetFrontAPI.DTOs
         public int? JerseyNumber { get; set; }
         public string? Position { get; set; }
         public string? Shoots { get; set; }
-        public string? Status { get; set; }
+        public string? GamedayStatus { get; set; }
         public int? LineNumber { get; set; }
         public int? Grade { get; set; }
         public string? Notes { get; set; }

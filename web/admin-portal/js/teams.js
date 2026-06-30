@@ -118,57 +118,48 @@ async function loadTeamSeasons() {
 }
 
 // =========================================================
-/* ABBREVIATION GENERATION */
+// LIVE ABBREVIATION GENERATION (ORG-TEAM-LEVEL-SEASON)
 // =========================================================
 function generateTeamAbbreviation(
+  orgName,
   teamName,
   levelName,
+  seasonName,
   existingAbbreviations = [],
 ) {
+  // Generate as soon as teamName + levelName exist
   if (!teamName || !levelName) return "";
 
-  const highSchoolLevels = [
-    "Varsity Boys",
-    "Varsity Girls",
-    "JV Boys",
-    "JV Girls",
-  ];
+  // Helper: first letter of each word
+  const prefixFromWords = (str) =>
+    str
+      .trim()
+      .split(/\s+/)
+      .map((w) => w[0].toLowerCase())
+      .join("");
 
-  const removeWords = [
-    "High School",
-    "Senior",
-    "School",
-    "HS",
-    "North",
-    "South",
-    "East",
-    "West",
-  ];
+  // ORG prefix (fallback: "unk")
+  const orgPrefix = orgName ? prefixFromWords(orgName) : "unk";
 
-  let cleaned = teamName;
-  removeWords.forEach((w) => {
-    cleaned = cleaned.replace(new RegExp(w, "gi"), "");
-  });
+  // TEAM prefix
+  const teamPrefix = prefixFromWords(teamName);
 
-  cleaned = cleaned.trim();
+  // LEVEL prefix
+  let levelPrefix = "";
+  if (levelName.toLowerCase() === "varsity") levelPrefix = "v";
+  else if (levelName.toLowerCase() === "jv") levelPrefix = "jv";
+  else levelPrefix = "unk";
 
-  const consonants = cleaned
-    .replace(/[^A-Za-z]/g, "")
-    .replace(/[AEIOU]/gi, "")
-    .toUpperCase();
+  // SEASON prefix (fallback: "0000")
+  let seasonPrefix = "0000";
+  if (seasonName && seasonName.includes("-")) {
+    const parts = seasonName.split("-");
+    seasonPrefix = parts[0].slice(-2) + parts[1].slice(-2);
+  }
 
-  const teamPrefix = consonants.substring(0, 3);
+  const base = `${orgPrefix}-${teamPrefix}-${levelPrefix}-${seasonPrefix}`;
 
-  const typePrefix = highSchoolLevels.includes(levelName) ? "HS" : "YO";
-
-  const levelParts = levelName.split(" ");
-  const levelPrefix = levelParts
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-
-  const base = `${teamPrefix}-${typePrefix}-${levelPrefix}`;
-
+  // Collision handling
   let finalAbbr = base;
   let counter = 2;
 
@@ -180,42 +171,57 @@ function generateTeamAbbreviation(
   return finalAbbr;
 }
 
+// =========================================================
+// AUTO-UPDATE ABBREVIATION (LIVE)
+// =========================================================
 function updateTeamAbbreviation() {
   const nameEl = document.getElementById("team-name");
   const levelSelect = document.getElementById("team-level");
+  const seasonSelect = document.getElementById("team-season-display"); // FIXED
+  const orgSelect = document.getElementById("team-org"); // FIXED
   const abbrEl = document.getElementById("team-abbreviation");
 
   if (!nameEl || !levelSelect || !abbrEl) return;
 
   const currentAbbr = abbrEl.value?.trim();
-
-  // Don’t overwrite existing abbreviation when editing unless it’s empty
   if (AdminPage?.editingId && currentAbbr) return;
 
-  const name = nameEl.value;
+  const teamName = nameEl.value;
   const levelName =
     levelSelect.options[levelSelect.selectedIndex]?.textContent || "";
+  const seasonName = seasonSelect?.textContent || ""; // FIXED (season is a display div)
+  const orgName =
+    orgSelect?.options[orgSelect.selectedIndex]?.textContent || "";
 
-  if (!name || !levelName) {
-    return;
-  }
+  if (!teamName || !levelName) return;
 
   const existing =
     (window.loadedTeams || []).map((t) => t.abbreviation).filter((a) => !!a) ||
     [];
 
-  const abbr = generateTeamAbbreviation(name, levelName, existing);
+  const abbr = generateTeamAbbreviation(
+    orgName,
+    teamName,
+    levelName,
+    seasonName,
+    existing,
+  );
   abbrEl.value = abbr;
 }
 
 function wireTeamAbbreviation() {
   const nameEl = document.getElementById("team-name");
   const levelSelect = document.getElementById("team-level");
+  const seasonSelect = document.getElementById("team-season-display"); // FIXED
+  const orgSelect = document.getElementById("team-org"); // FIXED
 
   if (!nameEl || !levelSelect) return;
 
   nameEl.addEventListener("input", updateTeamAbbreviation);
   levelSelect.addEventListener("change", updateTeamAbbreviation);
+  if (seasonSelect)
+    seasonSelect.addEventListener("DOMSubtreeModified", updateTeamAbbreviation); // season is a display div
+  if (orgSelect) orgSelect.addEventListener("change", updateTeamAbbreviation);
 }
 
 // =========================================================

@@ -20,7 +20,7 @@ namespace NetFrontAPI.DTOs
 
         // Roster-specific
         public int? JerseyNumber { get; set; }
-        public string? Status { get; set; }
+        public string? GamedayStatus { get; set; }
         public int? LineNumber { get; set; }
         public string? Notes { get; set; }
 

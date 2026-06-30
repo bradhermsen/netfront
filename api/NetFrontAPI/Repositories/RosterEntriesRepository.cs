@@ -35,7 +35,7 @@ namespace NetFrontAPI.Repositories
                     r.JerseyNumber,
                     r.Position,
                     r.Shoots,
-                    r.Status,
+                    r.gamedayStatus AS GamedayStatus,
                     r.LineNumber,
                     r.Grade,
                     r.Notes,
@@ -47,13 +47,14 @@ namespace NetFrontAPI.Repositories
                     r.UpdatedAt,
 
                     -- Player
-                    p.PlayerId AS PlayerId,
+                    p.PlayerId,
                     p.FirstName,
                     p.LastName,
                     p.FullName,
-                    p.Position AS Position,
-                    p.Shoots AS Shoots,
-                    p.Grade AS Grade
+                    p.Position,
+                    p.Shoots,
+                    p.Grade,
+                    p.JerseyNumber
                 FROM RosterEntries r
                 INNER JOIN Players p ON p.PlayerId = r.PlayerId
                 WHERE r.TeamId = @TeamId
@@ -98,7 +99,7 @@ namespace NetFrontAPI.Repositories
                     r.JerseyNumber,
                     r.Position,
                     r.Shoots,
-                    r.Status,
+                    r.gamedayStatus AS GamedayStatus,
                     r.LineNumber,
                     r.Grade,
                     r.Notes,
@@ -110,13 +111,14 @@ namespace NetFrontAPI.Repositories
                     r.UpdatedAt,
 
                     -- Player
-                    p.PlayerId AS PlayerId,
+                    p.PlayerId,
                     p.FirstName,
                     p.LastName,
                     p.FullName,
-                    p.Position AS PlayerPosition,
-                    p.Shoots AS PlayerShoots,
-                    p.Grade AS Grade
+                    p.Position,
+                    p.Shoots,
+                    p.Grade,
+                    p.JerseyNumber
                 FROM RosterEntries r
                 INNER JOIN Players p ON p.PlayerId = r.PlayerId
                 WHERE r.Id = @Id;
@@ -152,12 +154,12 @@ namespace NetFrontAPI.Repositories
 
             var sql = @"
                 INSERT INTO RosterEntries (
-                    Id, TeamId, PlayerId, JerseyNumber, Position, Shoots, Status,
+                    Id, TeamId, PlayerId, JerseyNumber, Position, Shoots, gamedayStatus,
                     LineNumber, Grade, Notes, IsCaptain, IsAssistantCaptain,
                     IsGoalie, IsActive, CreatedAt, UpdatedAt
                 )
                 VALUES (
-                    @Id, @TeamId, @PlayerId, @JerseyNumber, @Position, @Shoots, @Status,
+                    @Id, @TeamId, @PlayerId, @JerseyNumber, @Position, @Shoots, @GamedayStatus,
                     @LineNumber, @Grade, @Notes, @IsCaptain, @IsAssistantCaptain,
                     @IsGoalie, @IsActive, @CreatedAt, @UpdatedAt
                 );
@@ -173,7 +175,7 @@ namespace NetFrontAPI.Repositories
                 dto.JerseyNumber,
                 dto.Position,
                 dto.Shoots,
-                dto.Status,
+                GamedayStatus = dto.GamedayStatus,
                 dto.LineNumber,
                 dto.Grade,
                 dto.Notes,
@@ -199,7 +201,7 @@ namespace NetFrontAPI.Repositories
                     JerseyNumber = @JerseyNumber,
                     Position = @Position,
                     Shoots = @Shoots,
-                    Status = @Status,
+                    gamedayStatus = @GamedayStatus,
                     LineNumber = @LineNumber,
                     Grade = @Grade,
                     Notes = @Notes,
@@ -219,7 +221,7 @@ namespace NetFrontAPI.Repositories
                 dto.JerseyNumber,
                 dto.Position,
                 dto.Shoots,
-                dto.Status,
+                GamedayStatus = dto.GamedayStatus,
                 dto.LineNumber,
                 dto.Grade,
                 dto.Notes,
@@ -241,6 +243,44 @@ namespace NetFrontAPI.Repositories
             using var conn = Connection;
 
             await conn.ExecuteAsync(sql, new { Id = id });
+        }
+
+        // =========================================================
+        // GET AVAILABLE PLAYERS FOR TEAM
+        // Returns: active players assigned to team but NOT on roster
+        // =========================================================
+        public async Task<IEnumerable<Player>> GetAvailablePlayersAsync(Guid teamId)
+        {
+            var sql = @"
+                SELECT DISTINCT
+                    p.PlayerId,
+                    p.FirstName,
+                    p.LastName,
+                    p.FullName,
+                    p.BirthDate,
+                    p.Grade,
+                    p.HeightInches,
+                    p.WeightLbs,
+                    p.Shoots,
+                    p.Position,
+                    p.JerseyNumber,
+                    p.IsActive,
+                    p.CreatedAt,
+                    p.UpdatedAt
+                FROM Players p
+                INNER JOIN PlayerTeams pt ON pt.PlayerId = p.PlayerId
+                WHERE pt.TeamId = @TeamId
+                  AND p.IsActive = 1
+                  AND p.PlayerId NOT IN (
+                      SELECT PlayerId FROM RosterEntries WHERE TeamId = @TeamId
+                  )
+                ORDER BY p.LastName ASC, p.FirstName ASC;
+            ";
+
+            using var conn = Connection;
+
+            var players = await conn.QueryAsync<Player>(sql, new { TeamId = teamId });
+            return players;
         }
     }
 }

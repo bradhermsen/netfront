@@ -1,22 +1,19 @@
 // =========================================================
-// PLAYERS PAGE — MODERN ADMINPAGE VERSION (FIXED)
+// PLAYERS PAGE — MODERN ADMINPAGE VERSION (DUAL ROSTER READY)
 // =========================================================
 
 // =========================================================
 // LOAD DROPDOWNS
 // =========================================================
 async function loadPlayerDropdowns() {
-  await Promise.all([
-    loadPlayerOrganizations(),
-    loadPlayerLevels(),
-    loadPlayerTeamsForFilter(), // correct for filter
-  ]);
+  await Promise.all([loadPlayerOrganizations(), loadPlayerTeamsForFilter()]);
 }
 
 async function loadPlayerOrganizations() {
   const res = await fetch(`${window.apiBase}/organizations`);
   const orgs = await res.json();
 
+  // Modal org dropdown
   const select = document.getElementById("player-org");
   if (select) {
     select.innerHTML = `<option value="">Select Organization</option>`;
@@ -28,6 +25,7 @@ async function loadPlayerOrganizations() {
     });
   }
 
+  // Filter org dropdown
   const filter = document.getElementById("filter-player-org");
   if (filter) {
     filter.innerHTML = `<option value="">Organization: All</option>`;
@@ -40,41 +38,14 @@ async function loadPlayerOrganizations() {
   }
 }
 
-async function loadPlayerLevels() {
-  const res = await fetch(`${window.apiBase}/levels`);
-  const levels = await res.json();
-
-  const select = document.getElementById("player-level");
-  if (select) {
-    select.innerHTML = `<option value="">Select Level</option>`;
-    levels.forEach((l) => {
-      const opt = document.createElement("option");
-      opt.value = l.levelId;
-      opt.textContent = l.levelName;
-      select.appendChild(opt);
-    });
-  }
-
-  const filter = document.getElementById("filter-player-level");
-  if (filter) {
-    filter.innerHTML = `<option value="">Level: All</option>`;
-    levels.forEach((l) => {
-      const opt = document.createElement("option");
-      opt.value = l.levelId;
-      opt.textContent = l.levelName;
-      filter.appendChild(opt);
-    });
-  }
-}
-
 // =========================================================
-// LOAD TEAMS FOR PLAYER MODAL (FILTERED BY ORG)
+// LOAD TEAMS FOR PLAYER MODAL (TOGGLES)
 // =========================================================
-async function loadTeamsForPlayer(orgId) {
-  const teamSelect = document.getElementById("player-team");
-  if (!teamSelect) return;
+async function loadTeamsForPlayer(orgId, selectedTeamIds = []) {
+  const container = document.getElementById("player-teams-container");
+  if (!container) return;
 
-  teamSelect.innerHTML = `<option value="">Select Team</option>`;
+  container.innerHTML = "";
 
   if (!orgId) return;
 
@@ -83,10 +54,19 @@ async function loadTeamsForPlayer(orgId) {
     const teams = await res.json();
 
     teams.forEach((t) => {
-      const opt = document.createElement("option");
-      opt.value = t.id; // FIXED: Teams API uses id
-      opt.textContent = `${t.name}`;
-      teamSelect.appendChild(opt);
+      const row = document.createElement("div");
+      row.className = "team-toggle-row";
+
+      row.innerHTML = `
+        <label class="switch">
+          <input type="checkbox" class="player-team-toggle" value="${t.id}"
+            ${selectedTeamIds.includes(t.id) ? "checked" : ""}>
+          <span class="slider"></span>
+        </label>
+        <span class="label-text">${t.name} - ${t.levelName}</span>
+      `;
+
+      container.appendChild(row);
     });
   } catch (err) {
     console.error("Failed to load teams:", err);
@@ -108,7 +88,7 @@ async function loadPlayerTeamsForFilter() {
 
     teams.forEach((t) => {
       const opt = document.createElement("option");
-      opt.value = t.teamId; // CORRECT: /teams returns teamId
+      opt.value = t.teamId;
       opt.textContent = t.name;
       filter.appendChild(opt);
     });
@@ -135,7 +115,7 @@ async function reloadTeamFilterByOrg(orgId) {
 
   teams.forEach((t) => {
     const opt = document.createElement("option");
-    opt.value = t.id; // FIXED
+    opt.value = t.id;
     opt.textContent = t.name;
     filter.appendChild(opt);
   });
@@ -178,6 +158,9 @@ function initPlayersPage() {
       }
     },
 
+    // =========================================================
+    // RENDER TABLE (supports multiple teams)
+    // =========================================================
     renderTable: (players) => {
       const body = document.getElementById("players-table-body");
       body.innerHTML = "";
@@ -186,16 +169,20 @@ function initPlayersPage() {
         const row = document.createElement("tr");
 
         row.dataset.orgId = p.organizationId || "";
-        row.dataset.teamId = p.teamId || "";
-        row.dataset.levelId = p.levelId || "";
         row.dataset.grade = p.grade || "";
         row.dataset.status = (p.status || "").toLowerCase();
+
+        const teamNames = p.teams?.length
+          ? p.teams.map((t) => `${t.teamName} - ${t.levelName}`).join("<br>")
+          : "None";
+
+        const teamIds = p.teams?.map((t) => t.teamId).join(",") || "";
+        row.dataset.teamIds = teamIds;
 
         row.innerHTML = `
           <td>${p.firstName} ${p.lastName}</td>
           <td>${p.organizationName || "External Team"}</td>
-          <td>${p.teamName || ""}</td>
-          <td>${p.levelName || ""}</td>
+          <td>${teamNames}</td>
           <td>${p.grade || ""}</td>
           <td>${p.status || ""}</td>
           <td class="actions-col">
@@ -204,10 +191,8 @@ function initPlayersPage() {
           </td>
         `;
 
-        const [btnEdit, btnDelete] = row.querySelectorAll("button");
-
-        btnEdit.addEventListener("click", () => openEditPlayer(p.id));
-        btnDelete.addEventListener("click", () => openDeletePlayer(p.id));
+        row.querySelector(".edit").onclick = () => openEditPlayer(p.id);
+        row.querySelector(".delete").onclick = () => openDeletePlayer(p.id);
 
         body.appendChild(row);
       });
@@ -215,6 +200,9 @@ function initPlayersPage() {
       applyPlayerFilters();
     },
 
+    // =========================================================
+    // CLEAR FORM
+    // =========================================================
     clearForm: () => {
       [
         "player-first-name",
@@ -226,21 +214,26 @@ function initPlayersPage() {
         "player-shoots",
         "player-position",
         "player-jersey",
-        "player-team",
         "player-org",
-        "player-level",
       ].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.value = "";
       });
 
       document.getElementById("player-active").checked = true;
+
+      const container = document.getElementById("player-teams-container");
+      if (container) container.innerHTML = "";
     },
 
+    // =========================================================
+    // POPULATE FORM (multi-team)
+    // =========================================================
     populateForm: async (p) => {
       document.getElementById("player-org").value = p.organizationId || "";
 
-      await loadTeamsForPlayer(p.organizationId);
+      const selectedTeamIds = p.teams?.map((t) => t.teamId) || [];
+      await loadTeamsForPlayer(p.organizationId, selectedTeamIds);
 
       document.getElementById("player-first-name").value = p.firstName || "";
       document.getElementById("player-last-name").value = p.lastName || "";
@@ -251,46 +244,52 @@ function initPlayersPage() {
       document.getElementById("player-shoots").value = p.shoots || "";
       document.getElementById("player-position").value = p.position || "";
       document.getElementById("player-jersey").value = p.jerseyNumber || "";
-      document.getElementById("player-team").value = p.teamId || "";
-      document.getElementById("player-level").value = p.levelId || "";
       document.getElementById("player-active").checked = p.isActive;
     },
 
-    collectFormData: () => ({
-      firstName: document.getElementById("player-first-name").value,
-      lastName: document.getElementById("player-last-name").value,
+    // =========================================================
+    // COLLECT FORM DATA (multi-team)
+    // =========================================================
+    collectFormData: () => {
+      const selectedTeams = [
+        ...document.querySelectorAll(".player-team-toggle:checked"),
+      ].map((t) => t.value);
 
-      birthDate: document.getElementById("player-birthdate").value
-        ? new Date(
-            document.getElementById("player-birthdate").value,
-          ).toISOString()
-        : null,
+      return {
+        firstName: document.getElementById("player-first-name").value,
+        lastName: document.getElementById("player-last-name").value,
 
-      grade: document.getElementById("player-grade").value
-        ? parseInt(document.getElementById("player-grade").value)
-        : null,
+        birthDate: document.getElementById("player-birthdate").value
+          ? new Date(
+              document.getElementById("player-birthdate").value,
+            ).toISOString()
+          : null,
 
-      heightInches: document.getElementById("player-height").value
-        ? parseInt(document.getElementById("player-height").value)
-        : null,
+        grade: document.getElementById("player-grade").value
+          ? parseInt(document.getElementById("player-grade").value)
+          : null,
 
-      weightLbs: document.getElementById("player-weight").value
-        ? parseInt(document.getElementById("player-weight").value)
-        : null,
+        heightInches: document.getElementById("player-height").value
+          ? parseInt(document.getElementById("player-height").value)
+          : null,
 
-      shoots: document.getElementById("player-shoots").value,
-      position: document.getElementById("player-position").value,
+        weightLbs: document.getElementById("player-weight").value
+          ? parseInt(document.getElementById("player-weight").value)
+          : null,
 
-      jerseyNumber: document.getElementById("player-jersey").value
-        ? parseInt(document.getElementById("player-jersey").value)
-        : null,
+        shoots: document.getElementById("player-shoots").value,
+        position: document.getElementById("player-position").value,
 
-      teamId: document.getElementById("player-team").value || null,
-      organizationId: document.getElementById("player-org").value || null,
-      levelId: document.getElementById("player-level").value || null,
+        jerseyNumber: document.getElementById("player-jersey").value
+          ? parseInt(document.getElementById("player-jersey").value)
+          : null,
 
-      isActive: document.getElementById("player-active").checked,
-    }),
+        teamIds: selectedTeams,
+        organizationId: document.getElementById("player-org").value || null,
+
+        isActive: document.getElementById("player-active").checked,
+      };
+    },
   });
 }
 
@@ -310,7 +309,7 @@ function openDeletePlayer(id) {
 }
 
 // =========================================================
-// FILTERS
+// FILTERS (multi-team aware)
 // =========================================================
 function applyPlayerFilters() {
   const tbody = document.getElementById("players-table-body");
@@ -321,26 +320,30 @@ function applyPlayerFilters() {
     .value.toLowerCase();
   const org = document.getElementById("filter-player-org").value;
   const team = document.getElementById("filter-player-team").value;
-  const level = document.getElementById("filter-player-level").value;
   const grade = document.getElementById("filter-player-grade").value;
-  const status = document.getElementById("filter-player-status").value;
-
-  const statusLower = status ? status.toLowerCase() : "";
+  const status = document
+    .getElementById("filter-player-status")
+    .value.toLowerCase();
 
   Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
+    const teamIds = row.dataset.teamIds?.split(",") || [];
+    const levelIds = row.dataset.levelIds?.split(",") || [];
+
     const matchesSearch =
       !search || row.textContent.toLowerCase().includes(search);
+
     const matchesOrg = !org || row.dataset.orgId === org;
-    const matchesTeam = !team || row.dataset.teamId === team;
-    const matchesLevel = !level || row.dataset.levelId === level;
+
+    const matchesTeam = !team || teamIds.includes(team);
+
     const matchesGrade = !grade || row.dataset.grade === grade;
-    const matchesStatus = !statusLower || row.dataset.status === statusLower;
+
+    const matchesStatus = !status || row.dataset.status === status;
 
     row.style.display =
       matchesSearch &&
       matchesOrg &&
       matchesTeam &&
-      matchesLevel &&
       matchesGrade &&
       matchesStatus
         ? ""
@@ -353,7 +356,6 @@ function wirePlayerFilterEvents() {
     "players-search-bar",
     "filter-player-org",
     "filter-player-team",
-    "filter-player-level",
     "filter-player-grade",
     "filter-player-status",
   ].forEach((id) => {

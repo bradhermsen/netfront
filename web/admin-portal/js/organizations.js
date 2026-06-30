@@ -160,7 +160,7 @@ AdminPage.init({
 
     document.getElementById("org-active").checked = org.isActive;
   },
-
+  
   // -------------------------------------------------------
   // COLLECT FORM DATA
   // -------------------------------------------------------

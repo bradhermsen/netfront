@@ -45,7 +45,11 @@ const PlayerApi = {
       body: JSON.stringify(data),
     });
 
-    if (!res.ok) throw new Error("Failed to update player");
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("Server error response:", errorText);
+      throw new Error(`Failed to update player: ${errorText}`);
+    }
 
     // Some APIs return 204 No Content on update
     if (res.status === 204) return true;

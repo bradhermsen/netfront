@@ -268,3 +268,193 @@ input:checked + .slider:before {
     opacity: 1;
   }
 }
+/* =========================================================
+   ROSTERS PAGE — MODAL OVERLAY
+========================================================= */
+#rosterManagerOverlay,
+#rosterModalOverlay,
+#rosterDeleteModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+#rosterManagerOverlay.active,
+#rosterModalOverlay.active,
+#rosterDeleteModalOverlay.active {
+  display: flex;
+  opacity: 1;
+}
+
+/* =========================================================
+   ROSTERS PAGE — MODAL PANEL
+========================================================= */
+#rosterManagerModal,
+#rosterModal,
+#rosterDeleteModal {
+  background-color: var(--nf-bg);
+  color: var(--nf-text);
+  border: 1px solid var(--nf-border);
+  border-radius: 10px;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInRosterModal 0.25s ease;
+  position: relative;
+  z-index: 10000;
+}
+
+/* Sizes */
+#rosterManagerModal {
+  width: 900px;
+  max-width: 95vw;
+}
+
+#rosterModal {
+  width: 600px;
+  max-width: 90vw;
+}
+
+#rosterDeleteModal {
+  width: 420px;
+  max-width: 90vw;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+#rosterManagerModal .nf-modal-header,
+#rosterModal .nf-modal-header,
+#rosterDeleteModal .nf-modal-header {
+  border-bottom: 1px solid var(--nf-accent);
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#rosterManagerModal .nf-modal-header h2,
+#rosterModal .nf-modal-header h2,
+#rosterDeleteModal .nf-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--nf-accent);
+}
+
+/* Close button — FIXED CLICKABILITY */
+.modal-close,
+.rm-close {
+  background: none;
+  border: none;
+  color: var(--nf-text);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 8px;
+  position: relative;
+  z-index: 10001;
+  pointer-events: auto;
+}
+
+.modal-close:hover,
+.rm-close:hover {
+  color: var(--nf-accent);
+}
+
+/* =========================================================
+   BODY — ROSTER MANAGER (FULL WIDTH)
+========================================================= */
+#rosterManagerModal .nf-modal-body {
+  padding: 22px;
+  max-height: 70vh;
+  overflow-y: auto;
+  display: block; /* FIX: full width */
+  width: 100%; /* FIX: full width */
+}
+
+/* =========================================================
+   BODY — ADD/EDIT + DELETE MODALS
+========================================================= */
+#rosterModal .nf-modal-body,
+#rosterDeleteModal .nf-modal-body {
+  padding: 22px;
+  max-height: 70vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 24px;
+}
+
+#rosterModal .full-width,
+#rosterDeleteModal .full-width {
+  grid-column: 1 / -1;
+}
+
+/* =========================================================
+   FORM FIELDS
+========================================================= */
+#rosterManagerModal .nf-input,
+#rosterModal .nf-input,
+#rosterDeleteModal .nf-input,
+#rosterManagerModal select,
+#rosterModal select {
+  background-color: #1a1f2e;
+  color: var(--nf-text);
+  border: 1px solid var(--nf-border-light);
+  border-radius: 6px;
+  padding: 8px 10px;
+  width: 100%;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+#rosterManagerModal .nf-input:focus,
+#rosterModal .nf-input:focus,
+#rosterManagerModal select:focus,
+#rosterModal select:focus {
+  border-color: var(--nf-accent);
+  box-shadow: 0 0 4px var(--nf-accent);
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+#rosterManagerModal .nf-modal-footer,
+#rosterModal .nf-modal-footer,
+#rosterDeleteModal .nf-modal-footer {
+  border-top: 1px solid var(--nf-border);
+  padding: 16px 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+@keyframes fadeInRosterModal {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* Fix Add/Edit modal blocking overlay activation */
+#rosterModalOverlay,
+#rosterModalOverlay.active,
+#rosterModal,
+#rosterModal .clean-team-grid {
+  pointer-events: auto;
+}

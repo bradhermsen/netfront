@@ -91,6 +91,33 @@ namespace NetFrontAPI.Services
         }
 
         // =========================================================
+        // GET AVAILABLE PLAYERS FOR TEAM (for add modal)
+        // =========================================================
+        public async Task<IEnumerable<PlayerDto>> GetAvailablePlayersAsync(Guid teamId)
+        {
+            var players = await _repo.GetAvailablePlayersAsync(teamId);
+            var list = new List<PlayerDto>();
+
+            foreach (var p in players)
+            {
+                list.Add(new PlayerDto
+                {
+                    PlayerId = p.PlayerId,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName,
+                    FullName = p.FullName,
+                    Grade = p.Grade,
+                    Shoots = p.Shoots,
+                    Position = p.Position,
+                    JerseyNumber = p.JerseyNumber,
+                    IsActive = p.IsActive
+                });
+            }
+
+            return list;
+        }
+
+        // =========================================================
         // INTERNAL MAPPING
         // =========================================================
         private RosterEntryDto MapToDto(RosterEntry r)
@@ -115,9 +142,9 @@ namespace NetFrontAPI.Services
                 // Grade: roster overrides player grade
                 Grade = r.Grade ?? p?.Grade,
 
-                // Roster-specific
-                JerseyNumber = r.JerseyNumber,
-                Status = r.Status,
+                // Roster-specific (fall back to player data if not set on roster)
+                JerseyNumber = r.JerseyNumber ?? p?.JerseyNumber,
+                GamedayStatus = r.GamedayStatus ?? "Active", // Default to "Active" if not set
                 LineNumber = r.LineNumber,
                 Notes = r.Notes,
 

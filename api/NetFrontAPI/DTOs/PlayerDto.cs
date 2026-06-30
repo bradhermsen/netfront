@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace NetFrontAPI.DTOs
 {
@@ -8,12 +9,6 @@ namespace NetFrontAPI.DTOs
 
         public Guid? OrganizationId { get; set; }
         public string? OrganizationName { get; set; }
-
-        public Guid? TeamId { get; set; }
-        public string? TeamName { get; set; }
-
-        public Guid? LevelId { get; set; }
-        public string? LevelName { get; set; }
 
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
@@ -31,7 +26,9 @@ namespace NetFrontAPI.DTOs
         public int? JerseyNumber { get; set; }
 
         public bool IsActive { get; set; }
-
         public string Status => IsActive ? "Active" : "Inactive";
+
+        // Multi-team support
+        public List<PlayerTeamDto> Teams { get; set; } = new();
     }
 }

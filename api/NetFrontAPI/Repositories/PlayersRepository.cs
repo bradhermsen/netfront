@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using NetFrontAPI.Models;
@@ -22,7 +23,7 @@ namespace NetFrontAPI.Repositories
         private IDbConnection Connection => new SqlConnection(_connectionString);
 
         // =========================================================
-        // GET PLAYER BY ID (FULL DTO WITH JOINS)
+        // GET PLAYER BY ID (FULL DTO WITH MULTI-TEAM SUPPORT)
         // =========================================================
         public async Task<PlayerDto?> GetByIdAsync(Guid id)
         {
@@ -40,25 +41,47 @@ namespace NetFrontAPI.Repositories
                     p.Position,
                     p.JerseyNumber,
                     p.IsActive,
-
-                    p.TeamId,
-                    t.Name AS TeamName,
-
                     p.OrganizationId,
                     o.Name AS OrganizationName,
 
-                    p.LevelId,
+                    pt.TeamId,
+                    t.Name AS TeamName,
+                    t.LevelId,
                     l.Name AS LevelName
 
                 FROM Players p
-                LEFT JOIN Teams t ON p.TeamId = t.Id
                 LEFT JOIN Organizations o ON p.OrganizationId = o.OrganizationId
-                LEFT JOIN Levels l ON p.LevelId = l.Id
+                LEFT JOIN PlayerTeams pt ON p.PlayerId = pt.PlayerId
+                LEFT JOIN Teams t ON pt.TeamId = t.Id
+                LEFT JOIN Levels l ON t.LevelId = l.Id
                 WHERE p.PlayerId = @Id;
             ";
 
             using var conn = Connection;
-            return await conn.QueryFirstOrDefaultAsync<PlayerDto>(sql, new { Id = id });
+
+            var lookup = new Dictionary<Guid, PlayerDto>();
+
+            await conn.QueryAsync<PlayerDto, PlayerTeamDto, PlayerDto>(
+                sql,
+                (player, team) =>
+                {
+                    if (!lookup.TryGetValue(player.PlayerId, out var dto))
+                    {
+                        dto = player;
+                        dto.Teams = new List<PlayerTeamDto>();
+                        lookup.Add(dto.PlayerId, dto);
+                    }
+
+                    if (team != null && team.TeamId != Guid.Empty)
+                        dto.Teams.Add(team);
+
+                    return dto;
+                },
+                new { Id = id },
+                splitOn: "TeamId"
+            );
+
+            return lookup.Values.FirstOrDefault();
         }
 
         // =========================================================
@@ -80,9 +103,7 @@ namespace NetFrontAPI.Repositories
                     Position,
                     CreatedAt,
                     UpdatedAt,
-                    TeamId,
                     OrganizationId,
-                    LevelId,
                     JerseyNumber,
                     IsActive
                 FROM Players
@@ -94,7 +115,7 @@ namespace NetFrontAPI.Repositories
         }
 
         // =========================================================
-        // GET ALL PLAYERS (DTO WITH TEAM + ORG + LEVEL NAMES + STATUS)
+        // GET ALL PLAYERS (DTO WITH MULTI-TEAM SUPPORT)
         // =========================================================
         public async Task<IEnumerable<PlayerListItemDto>> GetAllDtosAsync()
         {
@@ -108,33 +129,52 @@ namespace NetFrontAPI.Repositories
                     p.JerseyNumber,
                     p.Position,
                     p.Shoots,
-
-                    p.TeamId,
                     p.OrganizationId,
-                    p.LevelId,
-
-                    t.Name AS TeamName,
                     o.Name AS OrganizationName,
-                    l.Name AS LevelName,
 
-                    CASE 
-                        WHEN p.IsActive = 1 THEN 'Active'
-                        ELSE 'Inactive'
-                    END AS Status
+                    CASE WHEN p.IsActive = 1 THEN 'Active' ELSE 'Inactive' END AS Status,
+
+                    pt.TeamId,
+                    t.Name AS TeamName,
+                    t.LevelId,
+                    l.Name AS LevelName
 
                 FROM Players p
-                LEFT JOIN Teams t ON p.TeamId = t.Id
                 LEFT JOIN Organizations o ON p.OrganizationId = o.OrganizationId
-                LEFT JOIN Levels l ON p.LevelId = l.Id
+                LEFT JOIN PlayerTeams pt ON p.PlayerId = pt.PlayerId
+                LEFT JOIN Teams t ON pt.TeamId = t.Id
+                LEFT JOIN Levels l ON t.LevelId = l.Id
                 ORDER BY p.LastName, p.FirstName;
             ";
 
             using var conn = Connection;
-            return await conn.QueryAsync<PlayerListItemDto>(sql);
+
+            var lookup = new Dictionary<Guid, PlayerListItemDto>();
+
+            await conn.QueryAsync<PlayerListItemDto, PlayerTeamDto, PlayerListItemDto>(
+                sql,
+                (player, team) =>
+                {
+                    if (!lookup.TryGetValue(player.Id, out var dto))
+                    {
+                        dto = player;
+                        dto.Teams = new List<PlayerTeamDto>();
+                        lookup.Add(dto.Id, dto);
+                    }
+
+                    if (team != null && team.TeamId != Guid.Empty)
+                        dto.Teams.Add(team);
+
+                    return dto;
+                },
+                splitOn: "TeamId"
+            );
+
+            return lookup.Values;
         }
 
         // =========================================================
-        // CREATE PLAYER
+        // CREATE PLAYER (multi-team)
         // =========================================================
         public async Task<Guid> CreateAsync(CreatePlayerDto dto)
         {
@@ -153,9 +193,7 @@ namespace NetFrontAPI.Repositories
                     Position,
                     CreatedAt,
                     UpdatedAt,
-                    TeamId,
                     OrganizationId,
-                    LevelId,
                     JerseyNumber,
                     IsActive
                 )
@@ -171,9 +209,7 @@ namespace NetFrontAPI.Repositories
                     @Position,
                     @CreatedAt,
                     @UpdatedAt,
-                    @TeamId,
                     @OrganizationId,
-                    @LevelId,
                     @JerseyNumber,
                     @IsActive
                 );
@@ -194,22 +230,32 @@ namespace NetFrontAPI.Repositories
                 dto.Position,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                dto.TeamId,
                 dto.OrganizationId,
-                dto.LevelId,
                 dto.JerseyNumber,
                 dto.IsActive
             });
+
+            // Insert multi-team associations
+            if (dto.TeamIds != null)
+            {
+                foreach (var teamId in dto.TeamIds)
+                {
+                    await conn.ExecuteAsync(
+                        "INSERT INTO PlayerTeams (PlayerId, TeamId) VALUES (@PlayerId, @TeamId)",
+                        new { PlayerId = id, TeamId = teamId }
+                    );
+                }
+            }
 
             return id;
         }
 
         // =========================================================
-        // UPDATE PLAYER
+        // UPDATE PLAYER (multi-team)
         // =========================================================
         public async Task UpdateAsync(Guid id, UpdatePlayerDto dto)
         {
-            const string sql = @"
+            const string sqlUpdatePlayer = @"
                 UPDATE Players
                 SET
                     FirstName = @FirstName,
@@ -221,36 +267,88 @@ namespace NetFrontAPI.Repositories
                     Shoots = @Shoots,
                     Position = @Position,
                     UpdatedAt = @UpdatedAt,
-                    TeamId = @TeamId,
                     OrganizationId = @OrganizationId,
-                    LevelId = @LevelId,
                     JerseyNumber = @JerseyNumber,
                     IsActive = @IsActive
                 WHERE PlayerId = @Id;
             ";
 
-            using var conn = Connection;
-            var affected = await conn.ExecuteAsync(sql, new
+            using (var conn = Connection)
             {
-                Id = id,
-                dto.FirstName,
-                dto.LastName,
-                dto.BirthDate,
-                dto.Grade,
-                dto.HeightInches,
-                dto.WeightLbs,
-                dto.Shoots,
-                dto.Position,
-                UpdatedAt = DateTime.UtcNow,
-                dto.TeamId,
-                dto.OrganizationId,
-                dto.LevelId,
-                dto.JerseyNumber,
-                dto.IsActive
-            });
+                // Update player fields
+                var affected = await conn.ExecuteAsync(sqlUpdatePlayer, new
+                {
+                    Id = id,
+                    dto.FirstName,
+                    dto.LastName,
+                    dto.BirthDate,
+                    dto.Grade,
+                    dto.HeightInches,
+                    dto.WeightLbs,
+                    dto.Shoots,
+                    dto.Position,
+                    UpdatedAt = DateTime.UtcNow,
+                    dto.OrganizationId,
+                    dto.JerseyNumber,
+                    dto.IsActive
+                });
 
-            if (affected == 0)
-                throw new Exception($"Player with ID {id} not found.");
+                if (affected == 0)
+                    throw new Exception($"Player with ID {id} not found.");
+
+                // Update team assignments
+                if (dto.TeamIds != null && dto.TeamIds.Count > 0)
+                {
+                    // Test: Only delete RosterEntries, don't touch PlayerTeams
+                    Console.WriteLine($"[DEBUG] Step 1: Deleting RosterEntries for player {id}");
+                    try
+                    {
+                        await conn.ExecuteAsync(
+                            "DELETE FROM RosterEntries WHERE PlayerId = @PlayerId",
+                            new { PlayerId = id }
+                        );
+                        Console.WriteLine($"[DEBUG] Step 1: SUCCESS - RosterEntries deleted");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[DEBUG] Step 1: FAILED - {ex.Message}");
+                        throw;
+                    }
+                    
+                    Console.WriteLine($"[DEBUG] Step 2: Deleting PlayerTeams for player {id}");
+                    try
+                    {
+                        await conn.ExecuteAsync(
+                            "DELETE FROM PlayerTeams WHERE PlayerId = @PlayerId",
+                            new { PlayerId = id }
+                        );
+                        Console.WriteLine($"[DEBUG] Step 2: SUCCESS - PlayerTeams deleted");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[DEBUG] Step 2: FAILED - {ex.Message}");
+                        throw;
+                    }
+
+                    Console.WriteLine($"[DEBUG] Step 3: Inserting PlayerTeams");
+                    foreach (var teamId in dto.TeamIds)
+                    {
+                        try
+                        {
+                            await conn.ExecuteAsync(
+                                "INSERT INTO PlayerTeams (PlayerId, TeamId) VALUES (@PlayerId, @TeamId)",
+                                new { PlayerId = id, TeamId = teamId }
+                            );
+                            Console.WriteLine($"[DEBUG] Step 3: SUCCESS - Inserted PlayerId={id}, TeamId={teamId}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[DEBUG] Step 3: FAILED - {ex.Message}");
+                            throw;
+                        }
+                    }
+                }
+            }
         }
 
         // =========================================================
@@ -258,9 +356,10 @@ namespace NetFrontAPI.Repositories
         // =========================================================
         public async Task DeleteAsync(Guid id)
         {
-            const string sql = "DELETE FROM Players WHERE PlayerId = @Id;";
             using var conn = Connection;
-            await conn.ExecuteAsync(sql, new { Id = id });
+
+            await conn.ExecuteAsync("DELETE FROM PlayerTeams WHERE PlayerId = @Id", new { Id = id });
+            await conn.ExecuteAsync("DELETE FROM Players WHERE PlayerId = @Id", new { Id = id });
         }
     }
 }

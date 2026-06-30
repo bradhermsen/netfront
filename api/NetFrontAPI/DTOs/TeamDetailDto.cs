@@ -5,6 +5,7 @@ public class TeamDetailDto
     public Guid TeamId { get; set; }
     public Guid OrganizationId { get; set; }
     public Guid LevelId { get; set; }
+    public string LevelName { get; set; }
     public Guid SeasonId { get; set; }
 
     public string? Name { get; set; }

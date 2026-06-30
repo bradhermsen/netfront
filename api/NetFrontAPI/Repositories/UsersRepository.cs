@@ -24,7 +24,6 @@ namespace NetFrontAPI.Repositories
             _coachTeamsRepository = coachTeamsRepository;
         }
 
-
         // ============================================================
         // CREATE (standalone)
         // ============================================================
@@ -76,9 +75,8 @@ namespace NetFrontAPI.Repositories
             tx.Commit();
         }
 
-
         // ============================================================
-        // UPDATE (transactional) — Unified ID Model
+        // UPDATE (transactional)
         // ============================================================
         public async Task UpdateLinkedUserAsync(
             Guid id,
@@ -92,14 +90,12 @@ namespace NetFrontAPI.Repositories
             IDbConnection conn,
             IDbTransaction tx)
         {
-            // Get original email (needed for AuthUsers update)
             const string sqlGetEmail = @"SELECT Email FROM Users WHERE Id = @Id;";
             var originalEmail = await conn.ExecuteScalarAsync<string>(sqlGetEmail, new { Id = id }, tx);
 
             if (originalEmail == null)
                 throw new InvalidOperationException("User not found.");
 
-            // Update Users table
             const string sqlUser = @"
                 UPDATE Users
                 SET FirstName = @FirstName,
@@ -117,7 +113,6 @@ namespace NetFrontAPI.Repositories
                 Email = email
             }, tx);
 
-            // Update AuthUsers using ORIGINAL email
             const string sqlAuth = @"
                 UPDATE AuthUsers
                 SET Email = @NewEmail,
@@ -133,7 +128,6 @@ namespace NetFrontAPI.Repositories
                 IsActive = isActive
             }, tx);
 
-            // Update password if provided
             if (!string.IsNullOrWhiteSpace(password))
             {
                 const string sqlPass = @"
@@ -149,7 +143,9 @@ namespace NetFrontAPI.Repositories
             }
         }
 
-
+        // ============================================================
+        // GET ALL USERS (DTO)
+        // ============================================================
         public async Task<IEnumerable<UserListItemDto>> GetAllUsersAsync()
         {
             using var conn = _db.CreateConnection();
@@ -170,22 +166,22 @@ namespace NetFrontAPI.Repositories
 
                     t.Id AS TeamId,
                     t.Name AS TeamName,
-                    t.Abbreviation
+                    t.Abbreviation,
+                    t.LevelId,
+                    l.Name AS LevelName
 
                 FROM Users u
                 LEFT JOIN AuthUsers au ON au.Id = u.Id
                 LEFT JOIN Organizations o ON o.OrganizationId = u.OrganizationId
                 LEFT JOIN CoachTeams ct ON ct.UserId = u.Id
                 LEFT JOIN Teams t ON t.Id = ct.TeamId
+                LEFT JOIN Levels l ON l.Id = t.LevelId
 
                 ORDER BY u.LastName, u.FirstName;
             ";
 
             var lookup = new Dictionary<Guid, UserListItemDto>();
 
-            // ===============================
-            // DAPPER MULTI-MAPPING
-            // ===============================
             await conn.QueryAsync<UserListItemDto, TeamSummaryDto, UserListItemDto>(
                 sql,
                 (user, team) =>
@@ -198,37 +194,32 @@ namespace NetFrontAPI.Repositories
                     }
 
                     if (team != null && team.TeamId != Guid.Empty)
-                    {
                         dto.Teams.Add(team);
-                    }
 
                     return dto;
                 },
                 splitOn: "TeamId"
             );
 
-            // ===============================
-            // APPLY BUSINESS RULES
-            // ===============================
             var users = lookup.Values.ToList();
 
             foreach (var user in users)
             {
-                // Admin → no teams
                 if (user.Role == "Admin")
                 {
                     user.Teams = new List<TeamSummaryDto>();
                     continue;
                 }
 
-                // OrgOwner → all teams in their organization
                 if (user.Role == "OrgOwner" && user.OrganizationId != null)
                 {
                     var orgTeams = await conn.QueryAsync<TeamSummaryDto>(
                         @"SELECT 
                             Id AS TeamId,
                             Name AS TeamName,
-                            Abbreviation
+                            Abbreviation,
+                            LevelId,
+                            (SELECT Name FROM Levels WHERE Id = LevelId) AS LevelName
                         FROM Teams
                         WHERE OrganizationId = @OrgId;",
                         new { OrgId = user.OrganizationId }
@@ -237,71 +228,75 @@ namespace NetFrontAPI.Repositories
                     user.Teams = orgTeams.ToList();
                     continue;
                 }
-
-                // Coach → keep SQL‑mapped teams (already correct)
             }
 
             return users;
         }
 
-
-
-
         // ============================================================
-        // GET USER BY ID — Unified ID Model + Teams + Auth Info
+        // GET USER BY ID (DTO)
         // ============================================================
         public async Task<UserListItemDto?> GetUserByIdAsync(Guid id)
         {
             using var conn = _db.CreateConnection();
 
-            // 1. Load profile row
-            var user = await conn.QueryFirstOrDefaultAsync<User>(
-                "SELECT * FROM Users WHERE Id = @Id;",
-                new { Id = id }
+            var sql = @"
+                SELECT
+                    u.Id,
+                    u.OrganizationId,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.CreatedAt,
+
+                    au.Role,
+                    au.IsActive,
+
+                    o.Name AS OrganizationName,
+
+                    t.Id AS TeamId,
+                    t.Name AS TeamName,
+                    t.Abbreviation,
+                    t.LevelId,
+                    l.Name AS LevelName
+
+                FROM Users u
+                LEFT JOIN AuthUsers au ON au.Id = u.Id
+                LEFT JOIN Organizations o ON o.OrganizationId = u.OrganizationId
+                LEFT JOIN CoachTeams ct ON ct.UserId = u.Id
+                LEFT JOIN Teams t ON t.Id = ct.TeamId
+                LEFT JOIN Levels l ON l.Id = t.LevelId
+                WHERE u.Id = @Id;
+            ";
+
+            var lookup = new Dictionary<Guid, UserListItemDto>();
+
+            await conn.QueryAsync<UserListItemDto, TeamSummaryDto, UserListItemDto>(
+                sql,
+                (user, team) =>
+                {
+                    if (!lookup.TryGetValue(user.Id, out var dto))
+                    {
+                        dto = user;
+                        dto.Teams = new List<TeamSummaryDto>();
+                        lookup.Add(dto.Id, dto);
+                    }
+
+                    if (team != null && team.TeamId != Guid.Empty)
+                        dto.Teams.Add(team);
+
+                    return dto;
+                },
+                new { Id = id },
+                splitOn: "TeamId"
             );
 
-            if (user == null)
-                return null;
-
-            // 2. Load auth row (same ID now)
-            var auth = await conn.QueryFirstOrDefaultAsync<AuthUser>(
-                "SELECT * FROM AuthUsers WHERE Id = @Id;",
-                new { Id = id }
-            );
-
-            // 3. Load organization name
-            var orgName = await conn.ExecuteScalarAsync<string?>(
-                "SELECT Name FROM Organizations WHERE OrganizationId = @OrgId;",
-                new { OrgId = user.OrganizationId }
-            );
-
-            // 4. Load teams
-            var teams = await _coachTeamsRepository.GetTeamsForCoachAsync(id);
-
-            var teamDtos = teams.Select(t => new TeamSummaryDto
-            {
-                TeamId = t.TeamId,
-                TeamName = t.TeamName,
-                Abbreviation = t.Abbreviation
-            }).ToList();
-
-            // 5. Build DTO for UI
-            return new UserListItemDto
-            {
-                Id = user.Id,
-                OrganizationId = user.OrganizationId,
-                OrganizationName = orgName,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                CreatedAt = user.CreatedAt,
-                Role = auth?.Role ?? "None",
-                IsActive = auth?.IsActive ?? false,
-                Teams = teamDtos
-            };
+            return lookup.Values.FirstOrDefault();
         }
 
-
+        // ============================================================
+        // GET USER BY EMAIL
+        // ============================================================
         public async Task<User?> GetUserByEmailAsync(string email)
         {
             using var conn = _db.CreateConnection();
@@ -339,27 +334,26 @@ namespace NetFrontAPI.Repositories
         }
 
         // ============================================================
-        // DELETE (Unified ID Model)
+        // DELETE USER (Unified ID Model)
         // ============================================================
         public async Task DeleteLinkedUserAsync(Guid id)
         {
             using var conn = _db.CreateConnection();
             using var tx = conn.BeginTransaction();
 
-            // Remove team assignments first (FK safety)
-            const string sqlTeams = @"DELETE FROM CoachTeams WHERE UserId = @Id;";
-            await conn.ExecuteAsync(sqlTeams, new { Id = id }, tx);
+            await conn.ExecuteAsync(
+                @"DELETE FROM CoachTeams WHERE UserId = @Id;",
+                new { Id = id }, tx);
 
-            // Delete profile
-            const string sqlUser = @"DELETE FROM Users WHERE Id = @Id;";
-            await conn.ExecuteAsync(sqlUser, new { Id = id }, tx);
+            await conn.ExecuteAsync(
+                @"DELETE FROM Users WHERE Id = @Id;",
+                new { Id = id }, tx);
 
-            // Delete auth row
-            const string sqlAuth = @"DELETE FROM AuthUsers WHERE Id = @Id;";
-            await conn.ExecuteAsync(sqlAuth, new { Id = id }, tx);
+            await conn.ExecuteAsync(
+                @"DELETE FROM AuthUsers WHERE Id = @Id;",
+                new { Id = id }, tx);
 
             tx.Commit();
         }
-
     }
 }

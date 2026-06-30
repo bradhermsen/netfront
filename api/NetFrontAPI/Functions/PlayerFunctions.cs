@@ -93,9 +93,17 @@ namespace NetFrontAPI.Functions
                 return bad;
             }
 
-            await _service.UpdateAsync(id, dto);
-
-            return req.CreateResponse(HttpStatusCode.NoContent);
+            try
+            {
+                await _service.UpdateAsync(id, dto);
+                return req.CreateResponse(HttpStatusCode.NoContent);
+            }
+            catch (Exception ex)
+            {
+                var error = req.CreateResponse(HttpStatusCode.InternalServerError);
+                await error.WriteAsJsonAsync(new { error = ex.Message, innerError = ex.InnerException?.Message });
+                return error;
+            }
         }
 
         // =========================================================

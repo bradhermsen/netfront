@@ -11,6 +11,10 @@ namespace NetFrontAPI.Functions
     public class RosterEntryFunctions
     {
         private readonly IRosterEntriesService _service;
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public RosterEntryFunctions(IRosterEntriesService service)
         {
@@ -77,7 +81,7 @@ namespace NetFrontAPI.Functions
 
             try
             {
-                var dto = await JsonSerializer.DeserializeAsync<CreateRosterEntryDto>(req.Body);
+                var dto = await JsonSerializer.DeserializeAsync<CreateRosterEntryDto>(req.Body, JsonOptions);
 
                 if (dto == null)
                 {
@@ -111,7 +115,7 @@ namespace NetFrontAPI.Functions
 
             try
             {
-                var dto = await JsonSerializer.DeserializeAsync<UpdateRosterEntryDto>(req.Body);
+                var dto = await JsonSerializer.DeserializeAsync<UpdateRosterEntryDto>(req.Body, JsonOptions);
 
                 if (dto == null)
                 {
@@ -147,6 +151,31 @@ namespace NetFrontAPI.Functions
             {
                 await _service.DeleteAsync(id);
                 await response.WriteAsJsonAsync(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = System.Net.HttpStatusCode.BadRequest;
+                await response.WriteAsJsonAsync(new { error = ex.Message });
+            }
+
+            return response;
+        }
+
+        // =========================================================
+        // GET: /api/teams/{teamId}/available-players
+        // =========================================================
+        [Function("GetAvailablePlayersForTeam")]
+        public async Task<HttpResponseData> GetAvailablePlayersForTeam(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "teams/{teamId}/available-players")]
+            HttpRequestData req,
+            Guid teamId)
+        {
+            var response = req.CreateResponse();
+
+            try
+            {
+                var players = await _service.GetAvailablePlayersAsync(teamId);
+                await response.WriteAsJsonAsync(players);
             }
             catch (Exception ex)
             {

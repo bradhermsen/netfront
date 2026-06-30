@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace NetFrontAPI.DTOs
 {
@@ -15,14 +16,12 @@ namespace NetFrontAPI.DTOs
         public string? Position { get; set; }
         public string? Shoots { get; set; }
 
-        public Guid? TeamId { get; set; }
         public Guid? OrganizationId { get; set; }
-        public Guid? LevelId { get; set; }
-
-        public string? TeamName { get; set; }
         public string? OrganizationName { get; set; }
-        public string? LevelName { get; set; }
 
         public string Status { get; set; } = "Inactive";
+
+        // Multi-team support
+        public List<PlayerTeamDto> Teams { get; set; } = new();
     }
 }

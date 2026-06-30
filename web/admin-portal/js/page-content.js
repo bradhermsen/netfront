@@ -78,23 +78,24 @@ window.PageContentRegistry.teams = () => `
 `;
 
 //=================================================================
-// TEAMS MODALS (NEW SYSTEM, OVERLAY-BASED)
+// TEAMS MODALS (MATCH USERS MODAL STYLING)
 //=================================================================
 window.PageContentRegistry.teamsModals = () => `
   <!-- TEAM MODAL -->
   <div id="teamModalOverlay" class="nf-modal-overlay hidden">
-    <div id="teamModal" class="nf-modal large">
+    <div id="teamModal" class="nf-modal medium">
+
+      <!-- HEADER -->
       <div class="nf-modal-header">
         <h2 id="teamModalTitle">Add Team</h2>
         <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
       </div>
 
+      <!-- BODY -->
       <div class="nf-modal-body">
-        <div class="clean-team-grid">
 
-          <!-- =============================== -->
-          <!-- TEAM INFORMATION -->
-          <!-- =============================== -->
+        <!-- TEAM INFORMATION -->
+        <div class="full-width-section">
           <h3 class="section-header">Team Information</h3>
 
           <div class="two-col">
@@ -128,14 +129,17 @@ window.PageContentRegistry.teamsModals = () => `
               <textarea id="team-notes" class="nf-input" rows="2"></textarea>
             </div>
           </div>
+        </div>
 
-          <!-- =============================== -->
-          <!-- COACHING STAFF -->
-          <!-- =============================== -->
+        <!-- SEPARATOR -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- COACHING STAFF -->
+        <div class="full-width-section">
           <h3 class="section-header">Coaching Staff</h3>
 
           <!-- HEAD COACH -->
-          <div class="three-col">
+          <div class="two-col">
             <div>
               <label>Head Coach Name</label>
               <input id="team-head-coach" type="text" class="nf-input" />
@@ -145,15 +149,13 @@ window.PageContentRegistry.teamsModals = () => `
               <label>Head Coach Email</label>
               <input id="team-head-coach-email" type="email" class="nf-input" />
             </div>
-
-            <div class="checkbox-col"></div>
           </div>
 
           <!-- ASSISTANT COACHES -->
           ${[1, 2, 3, 4]
             .map(
               (i) => `
-            <div class="three-col">
+            <div class="two-col">
               <div>
                 <label>Assistant Coach ${i} Name</label>
                 <input id="team-asst${i}" type="text" class="nf-input" />
@@ -164,7 +166,7 @@ window.PageContentRegistry.teamsModals = () => `
                 <input id="team-asst${i}-email" type="email" class="nf-input" />
               </div>
 
-              <div class="checkbox-col">
+              <div class="full-width">
                 <label class="checkbox-inline">
                   <input type="checkbox" id="team-asst${i}-has-login" disabled />
                   Create Login
@@ -174,10 +176,13 @@ window.PageContentRegistry.teamsModals = () => `
           `,
             )
             .join("")}
+        </div>
 
-          <!-- =============================== -->
-          <!-- ACCESS CODES -->
-          <!-- =============================== -->
+        <!-- SEPARATOR -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- ACCESS CODES -->
+        <div class="full-width-section">
           <h3 class="section-header">Access Codes</h3>
 
           <div class="two-col">
@@ -197,31 +202,37 @@ window.PageContentRegistry.teamsModals = () => `
               </button>
             </div>
           </div>
+        </div>
 
-          <!-- =============================== -->
-          <!-- SETTINGS -->
-          <!-- =============================== -->
+        <!-- SEPARATOR -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- SETTINGS -->
+        <div class="full-width-section">
           <h3 class="section-header">Settings</h3>
 
-          <div class="toggle-row">
-            <label>Active</label>
-            <label class="switch">
-              <input type="checkbox" id="team-active" />
-              <span class="slider round"></span>
-            </label>
-          </div>
+          <div class="two-col">
+            <div>
+              <label>Active</label>
+              <label class="switch">
+                <input type="checkbox" id="team-active" />
+                <span class="slider round"></span>
+              </label>
+            </div>
 
-          <div class="toggle-row">
-            <label>External Team</label>
-            <label class="switch">
-              <input type="checkbox" id="team-external" />
-              <span class="slider round"></span>
-            </label>
+            <div>
+              <label>External Team</label>
+              <label class="switch">
+                <input type="checkbox" id="team-external" />
+                <span class="slider round"></span>
+              </label>
+            </div>
           </div>
-
         </div>
+
       </div>
 
+      <!-- FOOTER -->
       <div class="nf-modal-footer">
         <button id="btnCancelTeam" class="nf-btn nf-btn-secondary">Cancel</button>
         <button id="btnSaveTeam" class="nf-btn nf-btn-primary">Save</button>
@@ -516,17 +527,22 @@ window.PageContentRegistry.rosters = () => `
         id="rosters-search-bar"
         class="nf-search"
         type="text"
-        placeholder="🔍  Search rosters…
+        placeholder="🔍  Search rosters…"
       />
+
+      <!-- Organization Filter -->
+      <select id="filter-organization" class="nf-select">
+        <option value="">Organization: All</option>
+      </select>
 
       <!-- Team Filter -->
       <select id="filter-team" class="nf-select">
         <option value="">Team: All</option>
       </select>
 
-      <!-- Organization Filter -->
-      <select id="filter-organization" class="nf-select">
-        <option value="">Organization: All</option>
+      <!-- Level Filter -->
+      <select id="filter-level" class="nf-select">
+        <option value="">Level: All</option>
       </select>
 
       <!-- Status Filter -->
@@ -539,6 +555,7 @@ window.PageContentRegistry.rosters = () => `
     </div>
   </div>
 
+
   <!-- ROSTERS TABLE -->
   <div class="nf-card mt-4">
     <div class="table-wrapper">
@@ -546,6 +563,7 @@ window.PageContentRegistry.rosters = () => `
         <thead>
           <tr>
             <th>Team Name</th>
+            <th>Level</th>
             <th>Organization</th>
             <th>Roster Count</th>
             <th>Status</th>
@@ -565,26 +583,31 @@ window.PageContentRegistry.rostersModals = () => `
   <!-- ============================= -->
   <!-- ROSTER MANAGER (LARGE MODAL) -->
   <!-- ============================= -->
-  <div id="rosterManagerOverlay" class="nf-modal-overlay hidden">
+  <div id="rosterManagerOverlay" class="nf-modal-overlay">
     <div id="rosterManagerModal" class="nf-modal large">
 
       <div class="nf-modal-header">
         <h2 id="rosterManagerTitle">Manage Roster</h2>
-        <button class="modal-close rm-close">X</button>
+        <button class="modal-close rm-close">×</button>
       </div>
 
-      <div class="nf-modal-body">
-        <div class="clean-team-grid">
+      <!-- FULL-WIDTH BODY -->
+      <div class="nf-modal-body" style="display:block; width:100%;">
+
+        <div class="clean-team-grid" style="width:100%;">
 
           <!-- SECTION HEADER -->
           <h3 class="section-header">
-            Roster — <span id="rm-current-team" class="accent-text"></span>
+            Roster <span id="rm-current-team" class="accent-text"></span>
           </h3>
 
           <!-- ACTION BAR -->
-          <div class="table-actions-row" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div class="table-actions-row"
+              style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; width:100%;">
 
-            <input id="rm-search" class="nf-input" placeholder="Search players…" style="flex:1; min-width:180px;" />
+            <input id="rm-search" class="nf-input"
+                  placeholder="Search players…"
+                  style="flex:1; min-width:180px;" />
 
             <select id="rm-filter-position" class="nf-input" style="flex:0 0 160px;">
               <option value="">Position: All</option>
@@ -611,7 +634,7 @@ window.PageContentRegistry.rostersModals = () => `
           </div>
 
           <!-- ROSTER TABLE -->
-          <div class="table-wrapper full-width">
+          <div class="table-wrapper full-width" style="width:100%;">
             <table class="data-table" id="rm-roster-table">
               <thead>
                 <tr>
@@ -638,74 +661,115 @@ window.PageContentRegistry.rostersModals = () => `
     </div>
   </div>
 
+
+  <!-- ============================= -->
   <!-- ADD / EDIT ROSTER ENTRY MODAL -->
-  <div id="rosterModalOverlay" class="nf-modal-overlay hidden">
-    <div id="rosterModal" class="nf-modal medium">
+  <!-- ============================= -->
+  <div id="rosterModalOverlay" class="nf-modal-overlay">
+    <div id="rosterModal" class="nf-modal small">
 
       <div class="nf-modal-header">
-        <h2 id="rosterModalTitle">Roster Entry</h2>
-        <button class="modal-close">×</button>
+        <h2 id="rosterModalTitle">Edit Roster Entry</h2>
+        <button class="modal-close rm-close">×</button>
       </div>
 
-      <div class="nf-modal-body">
-        <div class="clean-team-grid">
+      <div class="nf-modal-body" style="display:block;">
 
-          <!-- ORG + TEAM -->
-          <div class="two-col">
-            <div class="form-group">
-              <label for="roster-org">Organization</label>
-              <select id="roster-org" class="nf-input"></select>
-            </div>
-
-            <div class="form-group">
-              <label for="roster-team">Team</label>
-              <select id="roster-team" class="nf-input"></select>
-            </div>
+        <!-- PLAYER NAME (read-only) -->
+        <div class="form-group full-width">
+          <label>Player</label>
+          <div id="editPlayerName" class="nf-input" style="background:#1a1f2e; padding:8px 10px;">
           </div>
-
-          <!-- PLAYER -->
-          <div class="form-group full-width">
-            <label for="rosterPlayerId">Player</label>
-            <select id="rosterPlayerId" class="nf-input"></select>
-          </div>
-
-          <!-- STATUS -->
-          <div class="form-group full-width">
-            <label for="rosterStatus">Status</label>
-            <select id="rosterStatus" class="nf-input">
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-
         </div>
+
+        <!-- POSITION -->
+        <div class="form-group">
+          <label for="editPosition">Position</label>
+          <select id="editPosition" class="nf-input">
+            <option value="F">Forward</option>
+            <option value="D">Defense</option>
+            <option value="G">Goalie</option>
+          </select>
+        </div>
+
+        <!-- JERSEY NUMBER -->
+        <div class="form-group">
+          <label for="editJersey">Jersey #</label>
+          <input id="editJersey" type="number" class="nf-input" min="0" max="99">
+        </div>
+
+        <!-- GAME DAY STATUS -->
+        <div class="form-group">
+          <label>Game Day Status</label>
+          <label class="switch">
+            <input id="editStatus" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
       </div>
 
       <div class="nf-modal-footer">
-        <button id="rosterCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button class="nf-btn nf-btn-secondary rm-close">Cancel</button>
         <button id="rosterSave" class="nf-btn nf-btn-primary">Save</button>
       </div>
 
     </div>
   </div>
 
+
+  <!-- ============================= -->
   <!-- DELETE ROSTER ENTRY MODAL -->
-  <div id="rosterDeleteModalOverlay" class="nf-modal-overlay hidden">
+  <!-- ============================= -->
+  <div id="rosterDeleteModalOverlay" class="nf-modal-overlay">
     <div id="rosterDeleteModal" class="nf-modal small">
+
       <div class="nf-modal-header">
         <h2>Delete Roster Entry</h2>
+        <button class="modal-close rm-close">×</button>
       </div>
 
-      <div class="nf-modal-body full">
+      <div class="nf-modal-body" style="display:block;">
         Are you sure you want to delete this roster entry?
       </div>
 
       <div class="nf-modal-footer">
-        <button id="rosterDeleteCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="rosterDeleteCancel" class="nf-btn nf-btn-secondary rm-close">Cancel</button>
         <button id="rosterDeleteConfirm" class="nf-btn nf-btn-danger">Delete</button>
       </div>
+
     </div>
   </div>
+
+  <!-- ============================= -->
+  <!-- ADD PLAYER TO ROSTER MODAL -->
+  <!-- ============================= -->
+  <div id="addPlayerModalOverlay" class="nf-modal-overlay">
+    <div id="addPlayerModal" class="nf-modal medium">
+
+      <div class="nf-modal-header">
+        <h2>Add Players to Roster</h2>
+        <button class="modal-close rm-close">×</button>
+      </div>
+
+      <div class="nf-modal-body" style="display:block;">
+
+        <!-- PLAYERS LIST WITH CHECKBOXES -->
+        <div id="addPlayersList" style="max-height: 400px; overflow-y: auto; border: 1px solid #333; border-radius: 4px; padding: 10px;">
+          <!-- Will be populated dynamically -->
+          <p style="color: #999; text-align: center;">Loading players...</p>
+        </div>
+
+      </div>
+
+      <div class="nf-modal-footer">
+        <button class="nf-btn nf-btn-secondary rm-close">Cancel</button>
+        <button id="addPlayersSave" class="nf-btn nf-btn-primary">Add Selected Players</button>
+      </div>
+
+    </div>
+  </div>
+
 `;
 
 //=================================================================
@@ -794,7 +858,7 @@ window.PageContentRegistry.schedules = () => `
 //=================================================================
 window.PageContentRegistry.schedulesModals = () => `
   <!-- ADD / EDIT GAME MODAL -->
-  <div id="gameModalOverlay" class="nf-modal-overlay hidden">
+  <div id="gameModalOverlay" class="nf-modal-overlay">
     <div id="gameModal" class="nf-modal large">
 
       <!-- HEADER -->
@@ -1014,7 +1078,6 @@ window.PageContentRegistry.players = () => `
             <th>Name</th>
             <th>Organization</th>
             <th>Team</th>
-            <th>Level</th>
             <th>Grade</th>
             <th>Status</th>
             <th class="actions-col">Actions</th>
@@ -1027,66 +1090,61 @@ window.PageContentRegistry.players = () => `
 `;
 
 //=================================================================
-// PLAYERS MODALS (MODERNIZED TO MATCH USERS + TEAMS)
+// PLAYERS MODALS (MATCH USERS + TEAMS STYLING + DUAL ROSTER)
 //=================================================================
 window.PageContentRegistry.playersModals = () => `
-<div id="playersModalsRoot">
-
   <!-- ADD / EDIT PLAYER MODAL -->
-  <div id="playerModalOverlay" class="nf-modal-overlay hidden" data-page="players">
+  <div id="playerModalOverlay" class="nf-modal-overlay hidden">
     <div id="playerModal" class="nf-modal medium">
 
       <!-- HEADER -->
       <div class="nf-modal-header">
-        <h2 id="playerModalTitle">Add Player</h2>
+        <h2 id="playerModalTitle"></h2>
         <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
       </div>
 
       <!-- BODY -->
       <div class="nf-modal-body">
-        <div class="clean-team-grid">
 
+        <!-- ============================
+            PLAYER INFORMATION
+        ============================= -->
+        <div class="full-width-section">
           <h3 class="section-header">Player Information</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="player-first-name">First Name</label>
+            <div>
+              <label>First Name</label>
               <input id="player-first-name" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="player-last-name">Last Name</label>
+            <div>
+              <label>Last Name</label>
               <input id="player-last-name" class="nf-input" />
             </div>
-          </div>
 
-          <div class="two-col">
-            <div class="form-group">
-              <label for="player-birthdate">Birthdate</label>
+            <div>
+              <label>Birthdate</label>
               <input id="player-birthdate" type="date" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="player-grade">Grade</label>
+            <div>
+              <label>Grade</label>
               <input id="player-grade" type="number" class="nf-input" />
             </div>
-          </div>
 
-          <div class="two-col">
-            <div class="form-group">
-              <label for="player-height">Height (inches)</label>
+            <div>
+              <label>Height (inches)</label>
               <input id="player-height" type="number" class="nf-input" />
             </div>
 
-            <div class="form-group">
-              <label for="player-weight">Weight (lbs)</label>
+            <div>
+              <label>Weight (lbs)</label>
               <input id="player-weight" type="number" class="nf-input" />
             </div>
-          </div>
 
-          <div class="two-col">
-            <div class="form-group">
-              <label for="player-shoots">Shoots</label>
+            <div>
+              <label>Shoots</label>
               <select id="player-shoots" class="nf-input">
                 <option value="">Select</option>
                 <option value="L">Left</option>
@@ -1094,8 +1152,8 @@ window.PageContentRegistry.playersModals = () => `
               </select>
             </div>
 
-            <div class="form-group">
-              <label for="player-position">Position</label>
+            <div>
+              <label>Position</label>
               <select id="player-position" class="nf-input">
                 <option value="">Select</option>
                 <option value="F">Forward</option>
@@ -1103,38 +1161,58 @@ window.PageContentRegistry.playersModals = () => `
                 <option value="G">Goalie</option>
               </select>
             </div>
-          </div>
 
-          <div class="form-group full-width">
-            <label for="player-jersey">Jersey #</label>
-            <input id="player-jersey" type="number" class="nf-input" />
+            <div class="full-width">
+              <label>Jersey #</label>
+              <input id="player-jersey" type="number" class="nf-input" />
+            </div>
           </div>
+        </div>
+
+        <!-- SEPARATOR -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- ============================
+            ORGANIZATION & TEAM ASSIGNMENTS
+        ============================= -->
+        <div class="full-width-section">
+          <h3 class="section-header">Organization & Team Assignments</h3>
 
           <div class="two-col">
-            <div class="form-group">
-              <label for="player-org">Organization</label>
+            <div>
+              <label>Organization</label>
               <select id="player-org" class="nf-input"></select>
             </div>
+          </div>
 
-            <div class="form-group">
-              <label for="player-team">Team</label>
-              <select id="player-team" class="nf-input"></select>
+          <div id="player-teams-container" class="teams-toggle-list">
+            <!-- JS injects team toggles here -->
+          </div>
+        </div>
+
+        <!-- SEPARATOR -->
+        <hr class="section-divider full-width-section" />
+
+        <!-- ============================
+            STATUS
+        ============================= -->
+        <div class="full-width-section">
+          <h3 class="section-header">Status</h3>
+
+          <div class="two-col">
+            <div>
+              <label>Active Player</label>
+              <label class="switch">
+                <input type="checkbox" id="player-active" />
+                <span class="slider"></span>
+              </label>
             </div>
           </div>
-
-          <div class="form-group full-width">
-            <label for="player-level">Level</label>
-            <select id="player-level" class="nf-input"></select>
-          </div>
-
-          <div class="checkbox-col full-width">
-            <input type="checkbox" id="player-active" />
-            <label for="player-active">Active Player</label>
-          </div>
-
         </div>
+
       </div>
 
+      <!-- FOOTER -->
       <div class="nf-modal-footer">
         <button id="playerCancel" class="nf-btn nf-btn-secondary">Cancel</button>
         <button id="playerSave" class="nf-btn nf-btn-primary">Save</button>
@@ -1144,7 +1222,7 @@ window.PageContentRegistry.playersModals = () => `
   </div>
 
   <!-- DELETE PLAYER MODAL -->
-  <div id="playerDeleteModalOverlay" class="nf-modal-overlay hidden" data-page="players">
+  <div id="playerDeleteModalOverlay" class="nf-modal-overlay hidden">
     <div id="playerDeleteModal" class="nf-modal small">
 
       <div class="nf-modal-header">
@@ -1152,7 +1230,7 @@ window.PageContentRegistry.playersModals = () => `
       </div>
 
       <div class="nf-modal-body full">
-        Are you sure you want to delete this player?
+        <p>Are you sure you want to delete this player?</p>
       </div>
 
       <div class="nf-modal-footer">
@@ -1162,8 +1240,6 @@ window.PageContentRegistry.playersModals = () => `
 
     </div>
   </div>
-
-</div>
 `;
 
 //=================================================================
@@ -1184,7 +1260,7 @@ window.PageContentRegistry.dashboard = () => `
 `;
 
 //=================================================================
-// USERS PAGE CONTENT 
+// USERS PAGE CONTENT
 //=================================================================
 window.PageContentRegistry.users = () => `
   <div class="page-header-block">
@@ -1202,17 +1278,42 @@ window.PageContentRegistry.users = () => `
     </div>
   </div>
 
-  <!-- USERS FILTER BAR COMPONENT (Search Only) -->
+  <!-- USERS FILTER BAR COMPONENT -->
   <div class="nf-card">
     <div class="nf-filter-bar" id="user-filter-bar-component">
+
+      <!-- Search -->
       <input
         id="user-search-bar"
         class="nf-search"
         type="text"
         placeholder="🔍  Search users…"
       />
+
+      <!-- Role Filter -->
+      <select id="filter-role" class="nf-select">
+        <option value="">All Roles</option>
+        <option value="Admin">Admin</option>
+        <option value="Coach">Coach</option>
+        <option value="OrgOwner">OrgOwner</option>
+      </select>
+
+      <!-- Organization Filter -->
+      <select id="filter-org" class="nf-select">
+        <option value="">All Organizations</option>
+        <!-- JS populates org list -->
+      </select>
+
+      <!-- Status Filter -->
+      <select id="filter-status" class="nf-select">
+        <option value="">All Status</option>
+        <option value="Active">Active</option>
+        <option value="Inactive">Inactive</option>
+      </select>
+
     </div>
   </div>
+
 
   <div class="nf-card mt-4">
     <div class="table-wrapper">

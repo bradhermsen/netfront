@@ -228,21 +228,26 @@ window.AdminPage = {
   // SAVE
   // -------------------------------------------------------
   async save() {
-    // Custom save handler (Teams uses this)
-    if (this.config.saveHandler) {
-      return await this.config.saveHandler();
+    try {
+      // Custom save handler (Teams uses this)
+      if (this.config.saveHandler) {
+        return await this.config.saveHandler();
+      }
+
+      const payload = this.config.collectFormData();
+      console.log("🔥 Payload being sent to API:", payload);
+
+      if (this.editingId) {
+        await this.config.api.update(this.editingId, payload);
+      } else {
+        await this.config.api.create(payload);
+      }
+
+      this.closeModal();
+      this.loadData();
+    } catch (err) {
+      console.error("❌ Save failed:", err);
+      alert(`Error saving: ${err.message}`);
     }
-
-    const payload = this.config.collectFormData();
-    console.log("🔥 Payload being sent to API:", payload);
-
-    if (this.editingId) {
-      await this.config.api.update(this.editingId, payload);
-    } else {
-      await this.config.api.create(payload);
-    }
-
-    this.closeModal();
-    this.loadData();
   },
 };

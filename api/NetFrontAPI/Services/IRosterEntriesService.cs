@@ -12,5 +12,6 @@ namespace NetFrontAPI.Services
         Task<Guid> CreateAsync(CreateRosterEntryDto dto);
         Task UpdateAsync(Guid id, UpdateRosterEntryDto dto);
         Task DeleteAsync(Guid id);
+        Task<IEnumerable<PlayerDto>> GetAvailablePlayersAsync(Guid teamId);
     }
 }

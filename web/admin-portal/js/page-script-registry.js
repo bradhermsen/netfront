@@ -7,6 +7,10 @@ window.PageScriptRegistry = {
 
   rosters: ["../api/roster-api.js", "../js/rosters.js"],
 
+  stats: ["../api/stats-api.js", "../js/stats.js"],
+
+  settings: ["../api/email-settings-api.js", "../js/settings.js"],
+
   levels: ["../js/levels.js"],
 };
 

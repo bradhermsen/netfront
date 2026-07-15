@@ -18,7 +18,12 @@ btn.addEventListener("click", async () => {
   }
 
   try {
-    const res = await fetch("http://localhost:7071/api/auth/login", {
+    if (window.configReady) {
+      await window.configReady;
+    }
+
+    const apiBase = (window.apiBase || "").replace(/\/$/, "");
+    const res = await fetch(`${apiBase}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),

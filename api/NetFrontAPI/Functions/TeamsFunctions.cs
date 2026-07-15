@@ -1,6 +1,9 @@
 using System;
 using System.Net;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using NetFrontAPI.DTOs;
@@ -11,6 +14,17 @@ namespace NetFrontAPI.Functions
 {
     public class TeamsFunctions
     {
+        private static readonly Dictionary<string, string> AllowedTeamTypes =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["boys"] = "Boys",
+                ["girls"] = "Girls",
+                ["co-ed"] = "Co-Ed",
+                ["coed"] = "Co-Ed",
+                ["men"] = "Men",
+                ["women"] = "Women"
+            };
+
         private readonly ITeamsService _service;
         private readonly IAccessCodeService _accessCodeService;
         private readonly IAccessCodeValidator _accessCodeValidator;
@@ -111,8 +125,47 @@ namespace NetFrontAPI.Functions
             if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Only SuperAdmin or OrgAdmin can create teams");
 
-            var dto = await req.ReadFromJsonAsync<TeamCreateUpdateDto>();
-            var teamId = await _service.CreateAsync(dto);
+            TeamCreateUpdateDto? dto;
+            try
+            {
+                dto = await req.ReadFromJsonAsync<TeamCreateUpdateDto>();
+            }
+            catch (Exception ex) when (ex is JsonException || ex is InvalidOperationException || ex is FormatException || ex is AggregateException)
+            {
+                var badPayload = req.CreateResponse();
+                await badPayload.WriteAsJsonAsync(new { error = "Invalid team payload format." }, HttpStatusCode.BadRequest);
+                return badPayload;
+            }
+
+            if (dto == null)
+            {
+                var badPayload = req.CreateResponse();
+                await badPayload.WriteAsJsonAsync(new { error = "Invalid team payload." }, HttpStatusCode.BadRequest);
+                return badPayload;
+            }
+
+            var normalizedTeamType = NormalizeTeamType(dto.TeamType);
+            if (normalizedTeamType == null)
+            {
+                var bad = req.CreateResponse();
+                await bad.WriteAsJsonAsync(new { error = "Team type is required and must be one of: Boys, Girls, Co-Ed, Men, Women." }, HttpStatusCode.BadRequest);
+                return bad;
+            }
+
+            dto.TeamType = normalizedTeamType;
+            dto.TeamMascot = string.IsNullOrWhiteSpace(dto.TeamMascot) ? null : dto.TeamMascot.Trim();
+
+            Guid teamId;
+            try
+            {
+                teamId = await _service.CreateAsync(dto);
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                var bad = req.CreateResponse();
+                await bad.WriteAsJsonAsync(new { error = ex.Message }, HttpStatusCode.BadRequest);
+                return bad;
+            }
 
             var response = req.CreateResponse(HttpStatusCode.Created);
             await response.WriteAsJsonAsync(new { teamId });
@@ -146,8 +199,38 @@ namespace NetFrontAPI.Functions
             }
 
             var dto = await req.ReadFromJsonAsync<TeamCreateUpdateDto>();
-            await _service.UpdateAsync(id, dto);
+            if (dto == null)
+            {
+                var badPayload = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badPayload.WriteAsJsonAsync(new { error = "Invalid team payload." });
+                return badPayload;
+            }
+
+            try
+            {
+                await _service.UpdateAsync(id, dto);
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteAsJsonAsync(new { error = ex.Message });
+                return bad;
+            }
+
             return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+
+        private static string? NormalizeTeamType(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var key = value.Trim().ToLowerInvariant();
+            return AllowedTeamTypes.TryGetValue(key, out var normalized)
+                ? normalized
+                : null;
         }
 
         [Function("DeleteTeam")]
@@ -256,6 +339,8 @@ namespace NetFrontAPI.Functions
                     Name = team.Name,
                     Gender = team.Gender,
                     Abbreviation = team.Abbreviation,
+                    TeamType = team.TeamType,
+                    TeamMascot = team.TeamMascot,
 
                     HeadCoachName = team.HeadCoachName,
                     AssistantCoach1Name = team.AssistantCoach1Name,

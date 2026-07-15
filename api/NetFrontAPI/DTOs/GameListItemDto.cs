@@ -20,6 +20,13 @@ namespace NetFrontAPI.DTOs
         public string GameTypeName { get; set; }
         public string? GameRoundName { get; set; }
 
+        public string? Referee1 { get; set; }
+        public string? Referee2 { get; set; }
+        public string? Linesman1 { get; set; }
+        public string? Linesman2 { get; set; }
+
+        public int PeriodLengthMinutes { get; set; }
+
         public string Status { get; set; }
     }
 }

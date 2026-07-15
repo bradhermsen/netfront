@@ -18,6 +18,7 @@ let allPlayers = [];
 let rosterCache = {}; // teamId → roster array
 
 let rmSort = { field: null, direction: "asc" };
+let teamsSort = { field: null, direction: "asc" };
 let rmSearch = "";
 let rmFilters = { position: "", shoots: "", status: "" };
 
@@ -27,6 +28,7 @@ let globalFilters = {
   teamId: "",
   levelId: "",
   status: "",
+  showExternal: false,
 };
 
 // =========================================================
@@ -133,8 +135,9 @@ async function initRostersPage() {
 
   populateRosterFilterDropdowns();
   attachGlobalFilterEvents();
+  attachTeamsTableSortEvents();
 
-  renderTeamsTable(allTeams);
+  applyMainRosterFilters();
 
   console.log("ROSTERS: Page initialized.");
 }
@@ -244,6 +247,65 @@ function attachGlobalFilterEvents() {
       applyMainRosterFilters();
     };
   }
+
+  const showExternalToggle = document.getElementById("rosters-show-external");
+  if (showExternalToggle) {
+    showExternalToggle.checked = false;
+    showExternalToggle.onchange = (e) => {
+      globalFilters.showExternal = !!e.target.checked;
+      applyMainRosterFilters();
+    };
+  }
+}
+
+function attachTeamsTableSortEvents() {
+  document.querySelectorAll("#teamsRosterTable .sortable").forEach((header) => {
+    header.onclick = () => {
+      const field = header.dataset.field;
+      if (!field) return;
+
+      teamsSort.direction =
+        teamsSort.field === field && teamsSort.direction === "asc" ? "desc" : "asc";
+      teamsSort.field = field;
+
+      applyMainRosterFilters();
+    };
+  });
+}
+
+function isExternalTeam(team) {
+  if (!team) return false;
+
+  if (team.isExternal === true || team.external === true) {
+    return true;
+  }
+
+  const organizationName = (team.organizationName ?? "").toString().trim().toLowerCase();
+  return organizationName === "external team" || organizationName === "external";
+}
+
+function sortTeamsForTable(teams) {
+  if (!teamsSort.field) return teams;
+
+  const direction = teamsSort.direction === "asc" ? 1 : -1;
+
+  return teams.slice().sort((a, b) => {
+    if (teamsSort.field === "rosterCount") {
+      const countA = Number(a.rosterCount ?? 0);
+      const countB = Number(b.rosterCount ?? 0);
+      return (countA - countB) * direction;
+    }
+
+    if (teamsSort.field === "status") {
+      const statusA = (a.isActive ? "Active" : "Inactive").toLowerCase();
+      const statusB = (b.isActive ? "Active" : "Inactive").toLowerCase();
+      return statusA.localeCompare(statusB) * direction;
+    }
+
+    const textA = (a[teamsSort.field] ?? "").toString().toLowerCase();
+    const textB = (b[teamsSort.field] ?? "").toString().toLowerCase();
+    return textA.localeCompare(textB) * direction;
+  });
 }
 
 // =========================================================
@@ -251,6 +313,10 @@ function attachGlobalFilterEvents() {
 // =========================================================
 function applyMainRosterFilters() {
   let filtered = [...allTeams];
+
+  if (!globalFilters.showExternal) {
+    filtered = filtered.filter((t) => !isExternalTeam(t));
+  }
 
   // SEARCH
   if (globalFilters.search) {
@@ -291,7 +357,7 @@ function applyMainRosterFilters() {
     });
   }
 
-  renderTeamsTable(filtered);
+  renderTeamsTable(sortTeamsForTable(filtered));
 }
 
 // =========================================================
@@ -350,6 +416,7 @@ function renderTeamsTable(teams) {
 
     row.innerHTML = `
       <td>${team.name}</td>
+      <td>${team.teamType || ""}</td>
       <td>${team.levelName}</td>
       <td>${team.organizationName}</td>
       <td>${team.rosterCount ?? 0}</td>
@@ -381,10 +448,17 @@ async function openRosterManager(teamId) {
   const team = allTeams.find((t) => t.teamId === teamId);
   console.log("✓ Found team:", team.name, team.levelName);
 
-  document.getElementById("rosterManagerTitle").textContent =
-    `Manage Roster — ${team.name} ${team.levelName}`;
+  const rosterHeadingParts = [team?.name, team?.teamType, team?.levelName]
+    .map((value) => (value || "").toString().trim())
+    .filter((value) => value.length > 0);
+  const rosterHeading = rosterHeadingParts.join(" ");
 
-  document.getElementById("rm-current-team").textContent = team.name;
+  document.getElementById("rosterManagerTitle").textContent =
+    `Manager Roster - ${rosterHeading}`;
+
+  document.getElementById("rm-current-team").textContent = rosterHeading;
+  const totalsEl = document.getElementById("rm-team-totals");
+  if (totalsEl) totalsEl.textContent = "";
 
   // Render cached roster immediately
   console.log("Rendering from cache. Cache has entries:", rosterCache[teamId]?.length || 0);
@@ -446,6 +520,16 @@ function renderRosterManagerTable(list) {
   
   if (!Array.isArray(list)) list = [];
 
+  // --- TEAM TOTALS (based on full roster, not filtered view) ---
+  const totalsEl = document.getElementById("rm-team-totals");
+  if (totalsEl) {
+    const normalizePos = (value) => (value ?? "").toString().trim().toUpperCase();
+    const forwards = list.filter((r) => normalizePos(r.position) === "F").length;
+    const defense = list.filter((r) => normalizePos(r.position) === "D").length;
+    const goalies = list.filter((r) => normalizePos(r.position) === "G").length;
+    totalsEl.textContent = `Total Players: ${list.length}   Total Forwards: ${forwards}   Total Defensemen: ${defense}   Total Goalies: ${goalies}`;
+  }
+
   // --- SEARCH FILTER ---
   let filtered = list.filter((r) => {
     const s = rmSearch.toLowerCase();
@@ -480,11 +564,32 @@ function renderRosterManagerTable(list) {
   // --- SORTING ---
   if (rmSort.field) {
     filtered = filtered.slice().sort((a, b) => {
-      const A = (a[rmSort.field] ?? "").toString().toLowerCase();
-      const B = (b[rmSort.field] ?? "").toString().toLowerCase();
-      return rmSort.direction === "asc"
-        ? A.localeCompare(B)
-        : B.localeCompare(A);
+      const direction = rmSort.direction === "asc" ? 1 : -1;
+
+      // Sort jersey number numerically so 2 comes before 10.
+      if (rmSort.field === "jerseyNumber") {
+        const numA = Number.parseInt(a.jerseyNumber, 10);
+        const numB = Number.parseInt(b.jerseyNumber, 10);
+        const hasA = Number.isFinite(numA);
+        const hasB = Number.isFinite(numB);
+
+        if (!hasA && !hasB) return 0;
+        if (!hasA) return 1;
+        if (!hasB) return -1;
+        return (numA - numB) * direction;
+      }
+
+      let A = a[rmSort.field];
+      let B = b[rmSort.field];
+
+      if (rmSort.field === "fullName") {
+        A = a.fullName || `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
+        B = b.fullName || `${b.firstName ?? ""} ${b.lastName ?? ""}`.trim();
+      }
+
+      const textA = (A ?? "").toString().toLowerCase();
+      const textB = (B ?? "").toString().toLowerCase();
+      return textA.localeCompare(textB) * direction;
     });
   }
 
@@ -899,6 +1004,582 @@ async function saveSelectedPlayers() {
 }
 
 // =========================================================
+// REFRESH JERSEY NUMBERS FROM PLAYERS DB
+// =========================================================
+async function refreshRosterJerseyNumbers() {
+  const refreshBtn = document.getElementById("rm-refresh-jerseys");
+  const originalText = refreshBtn?.textContent || "Refresh Jersey Numbers";
+
+  try {
+    const teamId = window.currentRosterTeamId;
+    if (!teamId) {
+      showMessage("No team selected.", "warning", 2500);
+      return;
+    }
+
+    if (refreshBtn) {
+      refreshBtn.textContent = "Refreshing...";
+      refreshBtn.disabled = true;
+    }
+
+    if (!allPlayers || allPlayers.length === 0) {
+      await loadPlayersList();
+    }
+
+    const roster = rosterCache[teamId] || [];
+    if (!roster.length) {
+      showMessage("No roster entries found for this team.", "warning", 2500);
+      return;
+    }
+
+    const normalizeGuid = (value) =>
+      value == null ? "" : String(value).trim().toLowerCase();
+
+    const defaultJerseyByPlayerId = new Map();
+    (allPlayers || []).forEach((p) => {
+      const key = normalizeGuid(p.playerId ?? p.id ?? p.PlayerId ?? p.Id);
+      if (!key) return;
+      defaultJerseyByPlayerId.set(key, p.jerseyNumber ?? null);
+    });
+
+    const entriesToRefresh = roster.filter((entry) => {
+      const playerKey = normalizeGuid(entry.playerId ?? entry.PlayerId);
+      const defaultJersey = defaultJerseyByPlayerId.get(playerKey);
+      return defaultJersey !== undefined && (entry.jerseyNumber ?? null) !== defaultJersey;
+    });
+
+    if (!entriesToRefresh.length) {
+      showMessage("Jersey numbers are already up to date.", "info", 2500);
+      return;
+    }
+
+    let updatedCount = 0;
+    let failedCount = 0;
+
+    for (const entry of entriesToRefresh) {
+      try {
+        const detail = await RosterApi.getById(entry.rosterEntryId);
+        const playerKey = normalizeGuid(entry.playerId ?? entry.PlayerId);
+        const defaultJersey = defaultJerseyByPlayerId.get(playerKey) ?? null;
+
+        const payload = {
+          jerseyNumber: defaultJersey,
+          position: detail.position ?? null,
+          shoots: detail.shoots ?? null,
+          gamedayStatus:
+            detail.gamedayStatus ?? (detail.isActive ? "Active" : "Inactive"),
+          lineNumber: detail.lineNumber ?? null,
+          grade: detail.grade ?? null,
+          notes: detail.notes ?? null,
+          isCaptain: !!detail.isCaptain,
+          isAssistantCaptain: !!detail.isAssistantCaptain,
+          isGoalie: !!detail.isGoalie,
+          isActive: detail.isActive !== false,
+        };
+
+        await RosterApi.update(entry.rosterEntryId, payload);
+        updatedCount++;
+      } catch (err) {
+        console.error("Failed to refresh jersey number for entry:", entry, err);
+        failedCount++;
+      }
+    }
+
+    await fetchRosterFresh(teamId);
+
+    if (failedCount === 0) {
+      showMessage(`Updated ${updatedCount} jersey number${updatedCount !== 1 ? "s" : ""}.`, "success", 3000);
+    } else {
+      showMessage(`Updated ${updatedCount}. Failed ${failedCount}.`, "warning", 3500);
+    }
+  } catch (error) {
+    console.error("Refresh jersey numbers failed:", error);
+    showMessage("Failed to refresh jersey numbers.", "error", 3500);
+  } finally {
+    if (refreshBtn) {
+      refreshBtn.textContent = originalText;
+      refreshBtn.disabled = false;
+    }
+  }
+}
+
+function splitCsvLine(line) {
+  const values = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (ch === "," && !inQuotes) {
+      values.push(current);
+      current = "";
+      continue;
+    }
+
+    current += ch;
+  }
+
+  values.push(current);
+  return values;
+}
+
+function normalizeCsvHeader(value) {
+  return (value ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, "");
+}
+
+function parseCsvText(text) {
+  const lines = (text ?? "")
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (!lines.length) return [];
+
+  const headers = splitCsvLine(lines[0]).map(normalizeCsvHeader);
+  const rows = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = splitCsvLine(lines[i]);
+    const row = {};
+
+    headers.forEach((header, index) => {
+      row[header] = (values[index] ?? "").toString().trim();
+    });
+
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function normalizeRosterPosition(value) {
+  const v = (value ?? "").toString().trim().toUpperCase();
+  if (v === "F" || v === "FORWARD") return "F";
+  if (v === "D" || v === "DEFENSE" || v === "DEFENCEMAN" || v === "DEFENSEMAN") return "D";
+  if (v === "G" || v === "GOALIE" || v === "GOALTENDER") return "G";
+  return null;
+}
+
+function splitFullName(value) {
+  const clean = (value ?? "").toString().trim().replace(/\s+/g, " ");
+  if (!clean) return { firstName: "", lastName: "" };
+
+  const parts = clean.split(" ");
+  return {
+    firstName: parts[0] || "",
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
+function normalizeNameKey(value) {
+  return (value ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function normalizeGuidKey(value) {
+  return (value ?? "").toString().trim().toLowerCase();
+}
+
+async function fetchTeamRosterNow(teamId) {
+  const res = await authFetch(`/teams/${teamId}/roster`);
+  if (!res.ok) {
+    throw new Error(`Failed to refresh roster (HTTP ${res.status})`);
+  }
+  const payload = await res.json();
+  return Array.isArray(payload) ? payload : payload?.data || payload?.entries || [];
+}
+
+async function createPlayerForRosterUpload(teamId, teamOrganizationId, row) {
+  const { firstName, lastName } = splitFullName(row.fullname);
+  if (!firstName) {
+    throw new Error("fullName is required.");
+  }
+
+  const parsedJersey = Number.parseInt(row.jerseynumber, 10);
+  const parsedGrade = Number.parseInt(row.grade, 10);
+  const position = normalizeRosterPosition(row.position) || null;
+
+  const createPayload = {
+    firstName,
+    lastName,
+    position,
+    jerseyNumber: Number.isFinite(parsedJersey) ? parsedJersey : null,
+    grade: Number.isFinite(parsedGrade) ? parsedGrade : null,
+    organizationId: teamOrganizationId || null,
+    teamIds: [teamId],
+    isActive: true,
+  };
+
+  const res = await authFetch(`/players`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(createPayload),
+  });
+
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const errBody = await res.json();
+      detail = errBody?.error || JSON.stringify(errBody);
+    } catch {
+      try {
+        detail = await res.text();
+      } catch {
+        // keep default detail
+      }
+    }
+
+    if (res.status === 403) {
+      detail = "Permission denied creating players. Requires OrgAdmin or SuperAdmin.";
+    }
+
+    throw new Error(detail);
+  }
+
+  const createResult = await res.json().catch(() => ({}));
+  const playerId =
+    createResult?.id ||
+    createResult?.playerId ||
+    createResult?.player?.id ||
+    "";
+
+  if (!playerId) {
+    throw new Error("Player created but response did not include an id.");
+  }
+
+  return {
+    playerId,
+    position,
+    jerseyNumber: Number.isFinite(parsedJersey) ? parsedJersey : null,
+    grade: Number.isFinite(parsedGrade) ? parsedGrade : null,
+  };
+}
+
+function downloadRosterSampleCsv() {
+  const sample = [
+    "fullName,position,jerseyNumber,grade",
+    "Alex Smith,F,12,10",
+    "Jordan Lee,D,4,11",
+    "Casey Brown,G,30,12",
+  ].join("\n");
+
+  const blob = new Blob([sample], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "roster-upload-sample.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function showRosterImportSummaryModal(summary) {
+  const overlayId = "rosterImportSummaryOverlay";
+  const existing = document.getElementById(overlayId);
+  if (existing) {
+    existing.remove();
+  }
+
+  const addedItems = (summary.added || [])
+    .map((item) => `<li>Line ${item.line}: ${item.name}</li>`)
+    .join("");
+
+  const skippedItems = (summary.skipped || [])
+    .map((item) => `<li>Line ${item.line}: ${item.name} (${item.reason})</li>`)
+    .join("");
+
+  const failedItems = (summary.failed || [])
+    .map((item) => `<li>Line ${item.line}: ${item.name} (${item.reason})</li>`)
+    .join("");
+
+  const overlay = document.createElement("div");
+  overlay.id = overlayId;
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:12000;";
+
+  overlay.innerHTML = `
+    <div style="width:min(860px,95vw);max-height:88vh;overflow:auto;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#e2e8f0;box-shadow:0 12px 36px rgba(0,0,0,.45);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #334155;">
+        <h3 style="margin:0;font-size:18px;color:#f8fafc;">Roster Upload Summary</h3>
+        <button id="rosterImportSummaryCloseX" style="background:none;border:none;color:#cbd5e1;font-size:22px;cursor:pointer;line-height:1;">×</button>
+      </div>
+
+      <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
+        <div style="background:#052e16;border:1px solid #14532d;border-radius:8px;padding:10px;">
+          <div style="font-size:12px;color:#86efac;">Added</div>
+          <div style="font-size:22px;font-weight:700;color:#dcfce7;">${summary.added.length}</div>
+        </div>
+        <div style="background:#3f2f00;border:1px solid #a16207;border-radius:8px;padding:10px;">
+          <div style="font-size:12px;color:#fcd34d;">Skipped</div>
+          <div style="font-size:22px;font-weight:700;color:#fef3c7;">${summary.skipped.length}</div>
+        </div>
+        <div style="background:#450a0a;border:1px solid #991b1b;border-radius:8px;padding:10px;">
+          <div style="font-size:12px;color:#fca5a5;">Failed</div>
+          <div style="font-size:22px;font-weight:700;color:#fee2e2;">${summary.failed.length}</div>
+        </div>
+      </div>
+
+      <div style="padding:0 16px 16px;display:grid;grid-template-columns:1fr;gap:12px;">
+        <div>
+          <div style="font-weight:600;margin-bottom:6px;color:#86efac;">Added Players</div>
+          <ul style="margin:0;padding-left:18px;max-height:160px;overflow:auto;">${addedItems || "<li>None</li>"}</ul>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:6px;color:#fcd34d;">Skipped Rows</div>
+          <ul style="margin:0;padding-left:18px;max-height:160px;overflow:auto;">${skippedItems || "<li>None</li>"}</ul>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:6px;color:#fca5a5;">Failed Rows</div>
+          <ul style="margin:0;padding-left:18px;max-height:200px;overflow:auto;">${failedItems || "<li>None</li>"}</ul>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;padding:12px 16px;border-top:1px solid #334155;">
+        <button id="rosterImportSummaryClose" class="nf-btn nf-btn-primary">Close</button>
+      </div>
+    </div>
+  `;
+
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      close();
+    }
+  });
+
+  document.body.appendChild(overlay);
+  const closeBtn = document.getElementById("rosterImportSummaryClose");
+  const closeX = document.getElementById("rosterImportSummaryCloseX");
+  if (closeBtn) closeBtn.onclick = close;
+  if (closeX) closeX.onclick = close;
+}
+
+async function importRosterFromCsvFile(file) {
+  const uploadBtn = document.getElementById("rm-upload-roster");
+  const inputEl = document.getElementById("rm-upload-input");
+  const originalBtnText = uploadBtn?.textContent || "Upload Roster CSV";
+
+  try {
+    const teamId = window.currentRosterTeamId;
+    if (!teamId) {
+      showMessage("No team selected.", "warning", 2500);
+      return;
+    }
+
+    if (!file) {
+      showMessage("Please select a CSV file.", "warning", 2500);
+      return;
+    }
+
+    if (uploadBtn) {
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = "Uploading...";
+    }
+
+    const csvText = await file.text();
+    const rows = parseCsvText(csvText);
+
+    if (!rows.length) {
+      showMessage("CSV file is empty.", "warning", 3000);
+      return;
+    }
+
+    const requiredHeaders = ["fullname", "position", "jerseynumber", "grade"];
+    const providedHeaders = Object.keys(rows[0] || {});
+    const missingHeaders = requiredHeaders.filter((h) => !providedHeaders.includes(h));
+    if (missingHeaders.length) {
+      showMessage(
+        `Missing required CSV columns: ${missingHeaders.join(", ")}. Expected: fullName, position, jerseyNumber, grade.`,
+        "warning",
+        5000,
+      );
+      return;
+    }
+
+    const selectedTeam = allTeams.find((t) => t.teamId === teamId) || null;
+    const teamOrganizationId = selectedTeam?.organizationId || null;
+
+    // Build lookup sets once so upload can dedupe before creating records.
+    const existingRoster = rosterCache[teamId] || [];
+    const existingRosterNames = new Set(
+      existingRoster
+        .map((entry) =>
+          normalizeNameKey(
+            entry.fullName || `${entry.firstName ?? ""} ${entry.lastName ?? ""}`.trim(),
+          ),
+        )
+        .filter(Boolean),
+    );
+    const existingRosterPlayerIds = new Set(
+      existingRoster
+        .map((entry) => normalizeGuidKey(entry.playerId ?? entry.PlayerId))
+        .filter(Boolean),
+    );
+
+    const availablePlayers = await RosterApi.getAvailablePlayersForTeam(teamId);
+    const availablePlayersByName = new Map();
+    (availablePlayers || []).forEach((player) => {
+      const key = normalizeNameKey(
+        player.fullName || `${player.firstName ?? ""} ${player.lastName ?? ""}`.trim(),
+      );
+      if (key && !availablePlayersByName.has(key)) {
+        availablePlayersByName.set(key, player);
+      }
+    });
+
+    const csvSeenNames = new Set();
+
+    const summary = {
+      added: [],
+      skipped: [],
+      failed: [],
+    };
+
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      const lineNumber = index + 2;
+
+      const fullName = (row.fullname || "").toString().trim();
+      const fullNameKey = normalizeNameKey(fullName);
+      if (!fullName) {
+        summary.failed.push({ line: lineNumber, name: "(blank)", reason: "fullName is required" });
+        continue;
+      }
+
+      if (existingRosterNames.has(fullNameKey)) {
+        summary.skipped.push({ line: lineNumber, name: fullName, reason: "already on roster" });
+        continue;
+      }
+
+      if (csvSeenNames.has(fullNameKey)) {
+        summary.skipped.push({ line: lineNumber, name: fullName, reason: "duplicate row in CSV" });
+        continue;
+      }
+
+      try {
+        let playerId = "";
+        let resolvedPosition = normalizeRosterPosition(row.position) || null;
+        const parsedJersey = Number.parseInt(row.jerseynumber, 10);
+        const resolvedJersey = Number.isFinite(parsedJersey) ? parsedJersey : null;
+        const parsedGrade = Number.parseInt(row.grade, 10);
+        const resolvedGrade = Number.isFinite(parsedGrade) ? parsedGrade : null;
+
+        const existingAvailablePlayer = availablePlayersByName.get(fullNameKey);
+        if (existingAvailablePlayer?.playerId) {
+          playerId = existingAvailablePlayer.playerId;
+          resolvedPosition =
+            resolvedPosition || normalizeRosterPosition(existingAvailablePlayer.position) || null;
+        } else {
+          const createdPlayer = await createPlayerForRosterUpload(
+            teamId,
+            teamOrganizationId,
+            row,
+          );
+          playerId = createdPlayer.playerId;
+          resolvedPosition = createdPlayer.position;
+        }
+
+        const payload = {
+          teamId,
+          playerId,
+          position: resolvedPosition,
+          jerseyNumber: resolvedJersey,
+          grade: resolvedGrade,
+          gamedayStatus: "Active",
+          isActive: true,
+        };
+
+        const playerIdKey = normalizeGuidKey(playerId);
+        if (existingRosterPlayerIds.has(playerIdKey)) {
+          summary.skipped.push({ line: lineNumber, name: fullName, reason: "player already on roster" });
+          existingRosterNames.add(fullNameKey);
+          csvSeenNames.add(fullNameKey);
+          continue;
+        }
+
+        // Defensive re-check: player creation with team assignment can materialize roster rows server-side.
+        const latestRoster = await fetchTeamRosterNow(teamId);
+        const alreadyOnRoster = latestRoster.some(
+          (entry) => normalizeGuidKey(entry.playerId ?? entry.PlayerId) === playerIdKey,
+        );
+
+        if (alreadyOnRoster) {
+          existingRosterPlayerIds.add(playerIdKey);
+          summary.skipped.push({ line: lineNumber, name: fullName, reason: "player was already materialized on roster" });
+          existingRosterNames.add(fullNameKey);
+          csvSeenNames.add(fullNameKey);
+          continue;
+        }
+
+        await RosterApi.create(payload);
+        existingRosterPlayerIds.add(playerIdKey);
+        existingRosterNames.add(fullNameKey);
+        csvSeenNames.add(fullNameKey);
+        summary.added.push({ line: lineNumber, name: fullName });
+      } catch (error) {
+        summary.failed.push({
+          line: lineNumber,
+          name: fullName,
+          reason: error?.message || "failed to create player/roster entry",
+        });
+      }
+    }
+
+    await fetchRosterFresh(teamId);
+
+    const addedCount = summary.added.length;
+    const skippedCount = summary.skipped.length;
+    const failedCount = summary.failed.length;
+    showMessage(
+      `Import finished. Added ${addedCount}, skipped ${skippedCount}, failed ${failedCount}.`,
+      failedCount > 0 ? "warning" : "success",
+      3500,
+    );
+    showRosterImportSummaryModal(summary);
+  } catch (error) {
+    console.error("Roster CSV upload failed:", error);
+    showMessage("Roster CSV upload failed. Please verify the file format.", "error", 4500);
+  } finally {
+    if (uploadBtn) {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = originalBtnText;
+    }
+    if (inputEl) {
+      inputEl.value = "";
+    }
+  }
+}
+
+function openRosterCsvPicker() {
+  const inputEl = document.getElementById("rm-upload-input");
+  if (!inputEl) {
+    showMessage("Upload input is not available.", "error", 3000);
+    return;
+  }
+
+  inputEl.click();
+}
+
+// =========================================================
 // EDIT PLAYER — OPEN
 // =========================================================
 async function roster_openEdit(entryId) {
@@ -1115,6 +1796,29 @@ function initRosterModalButtons() {
   const addBtn = document.getElementById("rm-add-player");
   if (addBtn) {
     addBtn.onclick = () => openAddRoster();
+  }
+
+  const refreshJerseysBtn = document.getElementById("rm-refresh-jerseys");
+  if (refreshJerseysBtn) {
+    refreshJerseysBtn.onclick = () => refreshRosterJerseyNumbers();
+  }
+
+  const uploadBtn = document.getElementById("rm-upload-roster");
+  if (uploadBtn) {
+    uploadBtn.onclick = () => openRosterCsvPicker();
+  }
+
+  const downloadSampleBtn = document.getElementById("rm-download-sample");
+  if (downloadSampleBtn) {
+    downloadSampleBtn.onclick = () => downloadRosterSampleCsv();
+  }
+
+  const uploadInput = document.getElementById("rm-upload-input");
+  if (uploadInput) {
+    uploadInput.onchange = async (e) => {
+      const file = e.target?.files?.[0] || null;
+      await importRosterFromCsvFile(file);
+    };
   }
 
   // Add Players modal — Save button (multiple players)

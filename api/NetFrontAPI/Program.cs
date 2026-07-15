@@ -69,6 +69,8 @@ var host = new HostBuilder()
         services.AddScoped<ITeamAuthorizationService, TeamAuthorizationService>();
         services.AddScoped<IAccessCodeService, AccessCodeService>();
         services.AddScoped<IAccessCodeValidator, AccessCodeValidator>();
+        services.AddScoped<IEmailService, SmtpEmailService>();
+        services.AddScoped<IGameSummaryReportService, GameSummaryReportService>();
         services.AddScoped<IAuthorizationService>(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>();

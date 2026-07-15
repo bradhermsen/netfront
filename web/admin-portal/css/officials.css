@@ -1,0 +1,40 @@
+/* Officials page styles */
+
+.official-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.official-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--nf-text);
+}
+
+.official-sub {
+  font-size: 0.8rem;
+  color: var(--nf-text-muted);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.status-badge.active {
+  background-color: #0f5132;
+  color: #d1e7dd;
+}
+
+.status-badge.inactive {
+  background-color: #455a64;
+  color: #cfd8dc;
+}

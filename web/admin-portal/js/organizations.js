@@ -29,10 +29,10 @@ AdminPage.init({
   api: OrgApi,
 
   // -------------------------------------------------------
-  // DROPDOWNS (LEAGUES + CONFERENCES)
+  // DROPDOWNS
   // -------------------------------------------------------
   loadDropdowns: async () => {
-    await Promise.all([loadLeagues(), loadConferences()]);
+    await loadLeagues();
     wireOrgFilterEvents();
   },
 
@@ -47,7 +47,6 @@ AdminPage.init({
       const row = document.createElement("tr");
 
       row.dataset.leagueId = org.leagueId || "";
-      row.dataset.conference = org.districtConference || "";
       row.dataset.status = org.isActive ? "active" : "inactive";
 
       const orgDisplay = `
@@ -62,7 +61,6 @@ AdminPage.init({
       row.innerHTML = `
         <td>${orgDisplay}</td>
         <td>${org.leagueName ?? ""}</td>
-        <td>${org.districtConference ?? ""}</td>
         <td>${org.teamCount ?? 0}</td>
         <td>
           <span class="status-badge ${org.isActive ? "active" : "inactive"}">
@@ -107,7 +105,6 @@ AdminPage.init({
       "org-state",
       "org-zip",
       "org-country",
-      "org-district",
       "org-mascot",
       "org-contact-first",
       "org-contact-last",
@@ -136,8 +133,6 @@ AdminPage.init({
     document.getElementById("org-state").value = org.state ?? "";
     document.getElementById("org-zip").value = org.zipCode ?? "";
     document.getElementById("org-country").value = org.country ?? "";
-    document.getElementById("org-district").value =
-      org.districtConference ?? "";
     document.getElementById("org-mascot").value = org.mascot ?? "";
     document.getElementById("org-league").value = org.leagueId ?? "";
 
@@ -173,7 +168,6 @@ AdminPage.init({
     state: document.getElementById("org-state").value,
     zipCode: document.getElementById("org-zip").value,
     country: document.getElementById("org-country").value,
-    districtConference: document.getElementById("org-district").value,
     mascot: document.getElementById("org-mascot").value,
     leagueId: document.getElementById("org-league").value,
 
@@ -235,42 +229,6 @@ async function loadLeagues() {
 }
 
 // =========================================================
-// CONFERENCES
-// =========================================================
-async function loadConferences() {
-  try {
-    // Load all organizations
-    const res = await authFetch(`/organizations`);
-    if (!res || !res.ok) return;
-
-    const orgs = await res.json();
-
-    // Extract unique conference names
-    const conferences = [
-      ...new Set(
-        orgs
-          .map((o) => o.districtConference)
-          .filter((c) => c && c.trim() !== ""),
-      ),
-    ];
-
-    // Populate filter dropdown
-    const filterSelect = document.getElementById("filter-conference");
-    if (filterSelect) {
-      filterSelect.innerHTML = `<option value="">Conference: All</option>`;
-      conferences.forEach((c) => {
-        const opt = document.createElement("option");
-        opt.value = c;
-        opt.textContent = c;
-        filterSelect.appendChild(opt);
-      });
-    }
-  } catch (err) {
-    console.error("Failed to load conferences:", err);
-  }
-}
-
-// =========================================================
 // FILTER + SEARCH
 // =========================================================
 function applyOrgFiltersAndSearch() {
@@ -282,23 +240,20 @@ function applyOrgFiltersAndSearch() {
   ).toLowerCase();
 
   const leagueFilter = document.getElementById("filter-league")?.value || "";
-  const confFilter = document.getElementById("filter-conference")?.value || "";
   const statusFilter = document.getElementById("filter-status")?.value || "";
 
   Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
     const rowText = row.textContent.toLowerCase();
 
     const rowLeague = row.dataset.leagueId || "";
-    const rowConf = row.dataset.conference || "";
     const rowStatus = row.dataset.status || "";
 
     const matchesSearch = !searchTerm || rowText.includes(searchTerm);
     const matchesLeague = !leagueFilter || rowLeague === leagueFilter;
-    const matchesConf = !confFilter || rowConf === confFilter;
     const matchesStatus = !statusFilter || rowStatus === statusFilter;
 
     row.style.display =
-      matchesSearch && matchesLeague && matchesConf && matchesStatus
+      matchesSearch && matchesLeague && matchesStatus
         ? ""
         : "none";
   });
@@ -307,12 +262,10 @@ function applyOrgFiltersAndSearch() {
 function wireOrgFilterEvents() {
   const search = document.getElementById("org-search-bar");
   const league = document.getElementById("filter-league");
-  const conf = document.getElementById("filter-conference");
   const status = document.getElementById("filter-status");
 
   if (search) search.addEventListener("input", applyOrgFiltersAndSearch);
   if (league) league.addEventListener("change", applyOrgFiltersAndSearch);
-  if (conf) conf.addEventListener("change", applyOrgFiltersAndSearch);
   if (status) status.addEventListener("change", applyOrgFiltersAndSearch);
 }
 

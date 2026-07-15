@@ -124,11 +124,6 @@ document.addEventListener("nf-page-ready", () => {
           <option value="">League: All</option>
         </select>
 
-        <!-- Conference Filter -->
-        <select id="filter-conference" class="nf-select">
-          <option value="">Conference: All</option>
-        </select>
-
         <!-- Status Filter -->
         <select id="filter-status" class="nf-select">
           <option value="">Status: All</option>

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
@@ -16,19 +17,22 @@ namespace NetFrontAPI.Functions
         private readonly ITeamAuthorizationService _teamAuthorizationService;
         private readonly ICoachTeamsService _coachTeamsService;
         private readonly IAccessCodeValidator _accessCodeValidator;
+        private readonly IGameSummaryReportService _gameSummaryReportService;
 
         public GamesFunctions(
             IGameService service,
             IAuthorizationService authorizationService,
             ITeamAuthorizationService teamAuthorizationService,
             ICoachTeamsService coachTeamsService,
-            IAccessCodeValidator accessCodeValidator)
+            IAccessCodeValidator accessCodeValidator,
+            IGameSummaryReportService gameSummaryReportService)
         {
             _service = service;
             _authorizationService = authorizationService;
             _teamAuthorizationService = teamAuthorizationService;
             _coachTeamsService = coachTeamsService;
             _accessCodeValidator = accessCodeValidator;
+            _gameSummaryReportService = gameSummaryReportService;
         }
 
         [Function("GetGames")]
@@ -159,6 +163,37 @@ namespace NetFrontAPI.Functions
 
             await _service.DeleteAsync(id);
             return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+
+        [Function("DownloadGameSummaryPdf")]
+        public async Task<HttpResponseData> DownloadGameSummaryPdf(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "games/{id:guid}/summary-pdf")] HttpRequestData req,
+            Guid id)
+        {
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
+
+            var (isValid, _, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "TeamManager", "Coach", "Viewer"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to download game summary");
+
+            var report = await _gameSummaryReportService.BuildReportAsync(id);
+            if (report == null)
+            {
+                return req.CreateResponse(HttpStatusCode.NotFound);
+            }
+
+            var pdfBytes = _gameSummaryReportService.BuildPdf(report);
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Content-Type", "application/pdf");
+            response.Headers.Add("Content-Disposition", $"attachment; filename=NetFront-GameSummary-{report.GameDateTime:yyyyMMdd-HHmm}-{report.GameId}.pdf");
+            await response.Body.WriteAsync(pdfBytes, 0, pdfBytes.Length);
+            await response.Body.FlushAsync();
+            return response;
         }
     }
 }

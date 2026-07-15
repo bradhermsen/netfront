@@ -1,151 +1,151 @@
-const modal = document.getElementById("settings-modal");
-const modalTitle = document.getElementById("modal-title");
-const formContainer = document.getElementById("settings-form");
+console.log("settings.js loaded");
 
-let currentSection = null;
+(function checkPermission() {
+  if (!Auth.hasRole(window.ROLES.SuperAdmin, window.ROLES.OrgAdmin)) {
+    window.location.href = "./not-authorized.html";
+  }
+})();
 
-// Load settings
-async function loadSettings() {
-    const res = await fetch("http://localhost:7071/api/settings");
-    const s = await res.json();
-
-    document.getElementById("brand-name").textContent = s.brandName;
-    document.getElementById("brand-logo").textContent = s.brandLogo;
-    document.getElementById("brand-color").textContent = s.brandColor;
-
-    document.getElementById("current-season").textContent = s.currentSeason;
-    document.getElementById("default-season").textContent = s.defaultSeason;
-
-    document.getElementById("toggle-live").textContent = s.enableLive ? "Enabled" : "Disabled";
-    document.getElementById("toggle-tournament").textContent = s.enableTournament ? "Enabled" : "Disabled";
-
-    document.getElementById("email-support").textContent = s.supportEmail;
-    document.getElementById("email-reply").textContent = s.replyEmail;
-
-    document.getElementById("maintenance-status").textContent = s.maintenanceMode ? "ON" : "OFF";
+function notifySettings(message, type = "info") {
+  if (typeof window.showMessage === "function") {
+    window.showMessage(message, type);
+    return;
+  }
+  console.log(`[${type}] ${message}`);
 }
 
-// Build modal form dynamically
-function buildForm(section) {
-    formContainer.innerHTML = "";
-    currentSection = section;
+async function initSettingsPage() {
+  if (!document.getElementById("smtp-host")) return;
 
-    if (section === "branding") {
-        modalTitle.textContent = "Edit Branding";
-
-        formContainer.innerHTML = `
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Platform Name</label>
-                    <input id="brand-name-input" class="form-field">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Primary Color</label>
-                    <input id="brand-color-input" class="form-field">
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group" style="flex:1;">
-                    <label class="form-label">Logo URL</label>
-                    <input id="brand-logo-input" class="form-field">
-                </div>
-            </div>
-        `;
-    }
-
-    if (section === "season") {
-        modalTitle.textContent = "Edit Season Settings";
-
-        formContainer.innerHTML = `
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Current Season</label>
-                    <input id="current-season-input" class="form-field">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Default Season</label>
-                    <input id="default-season-input" class="form-field">
-                </div>
-            </div>
-        `;
-    }
-
-    if (section === "features") {
-        modalTitle.textContent = "Edit Feature Toggles";
-
-        formContainer.innerHTML = `
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Enable Live Game View</label>
-                    <select id="toggle-live-input" class="form-field">
-                        <option value="true">Enabled</option>
-                        <option value="false">Disabled</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Enable Tournament Mode</label>
-                    <select id="toggle-tournament-input" class="form-field">
-                        <option value="true">Enabled</option>
-                        <option value="false">Disabled</option>
-                    </select>
-                </div>
-            </div>
-        `;
-    }
-
-    if (section === "email") {
-        modalTitle.textContent = "Edit System Email";
-
-        formContainer.innerHTML = `
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Support Email</label>
-                    <input id="email-support-input" class="form-field">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Reply-To Email</label>
-                    <input id="email-reply-input" class="form-field">
-                </div>
-            </div>
-        `;
-    }
-
-    if (section === "maintenance") {
-        modalTitle.textContent = "Edit Maintenance Mode";
-
-        formContainer.innerHTML = `
-            <div class="form-row">
-                <div class="form-group" style="flex:1;">
-                    <label class="form-label">Maintenance Mode</label>
-                    <select id="maintenance-input" class="form-field">
-                        <option value="true">ON</option>
-                        <option value="false">OFF</option>
-                    </select>
-                </div>
-            </div>
-        `;
-    }
-
-    modal.classList.remove("hidden");
+  wireSettingsEvents();
+  await loadEmailSettings();
 }
 
-// Save settings
-async function saveSettings() {
-    const payload = {};
+function wireSettingsEvents() {
+  const saveBtn = document.getElementById("settings-save");
+  const testBtn = document.getElementById("settings-test-send");
 
-    if (currentSection === "branding") {
-        payload.brandName = document.getElementById("brand-name-input").value;
-        payload.brandColor = document.getElementById("brand-color-input").value;
-        payload.brandLogo = document.getElementById("brand-logo-input").value;
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      await saveEmailSettings();
+    };
+  }
+
+  if (testBtn) {
+    testBtn.onclick = async () => {
+      await sendTestEmail();
+    };
+  }
+}
+
+function getInputValue(id) {
+  return document.getElementById(id)?.value?.trim() || "";
+}
+
+function setInputValue(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = value ?? "";
+}
+
+function setCheckboxValue(id, checked) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.checked = Boolean(checked);
+}
+
+function getCheckboxValue(id) {
+  return Boolean(document.getElementById(id)?.checked);
+}
+
+async function loadEmailSettings() {
+  try {
+    const settings = await EmailSettingsApi.getSettings();
+
+    setInputValue("smtp-host", settings.smtpHost || "");
+    setInputValue("smtp-port", String(settings.smtpPort || 1025));
+    setInputValue("smtp-username", settings.username || "");
+    setInputValue("smtp-password", "");
+    setInputValue("smtp-from-address", settings.fromAddress || "");
+    setInputValue("smtp-from-name", settings.fromName || "");
+
+    setCheckboxValue("smtp-enabled", settings.enabled);
+    setCheckboxValue("smtp-use-ssl", settings.useSsl);
+
+    const passwordStatus = document.getElementById("smtp-password-status");
+    if (passwordStatus) {
+      passwordStatus.textContent = settings.hasPassword
+        ? "Password is saved"
+        : "No password saved";
     }
+  } catch (error) {
+    console.error("Failed to load email settings", error);
+    notifySettings("Failed to load email settings", "error");
+  }
+}
 
-    if (currentSection === "season") {
-        payload.currentSeason = document.getElementById("current-season-input").value;
-        payload.defaultSeason = document.getElementById("default-season-input").value;
-    }
+async function saveEmailSettings() {
+  const smtpHost = getInputValue("smtp-host");
+  const smtpPort = Number(getInputValue("smtp-port") || "0");
+  const fromAddress = getInputValue("smtp-from-address");
+  const fromName = getInputValue("smtp-from-name");
 
-    if (currentSection === "features") {
-        payload
+  if (!smtpHost) {
+    notifySettings("SMTP host is required", "error");
+    return;
+  }
+
+  if (!Number.isFinite(smtpPort) || smtpPort <= 0) {
+    notifySettings("SMTP port must be a positive number", "error");
+    return;
+  }
+
+  if (!fromAddress) {
+    notifySettings("From address is required", "error");
+    return;
+  }
+
+  const payload = {
+    enabled: getCheckboxValue("smtp-enabled"),
+    smtpHost,
+    smtpPort,
+    useSsl: getCheckboxValue("smtp-use-ssl"),
+    username: getInputValue("smtp-username") || null,
+    password: getInputValue("smtp-password") || null,
+    fromAddress,
+    fromName: fromName || "NetFront",
+  };
+
+  try {
+    await EmailSettingsApi.saveSettings(payload);
+    notifySettings("Email settings saved", "success");
+    await loadEmailSettings();
+  } catch (error) {
+    console.error("Failed to save email settings", error);
+    notifySettings("Failed to save email settings", "error");
+  }
+}
+
+async function sendTestEmail() {
+  const to = getInputValue("email-test-to");
+  if (!to) {
+    notifySettings("Enter a recipient email for test send", "error");
+    return;
+  }
+
+  const subject = getInputValue("email-test-subject") || "NetFront Email Test";
+  const body =
+    getInputValue("email-test-body") ||
+    "This is a test email from NetFront Admin Settings.";
+
+  try {
+    await EmailSettingsApi.sendTestEmail({ to, subject, body });
+    notifySettings("Test email sent", "success");
+  } catch (error) {
+    console.error("Failed to send test email", error);
+    notifySettings("Failed to send test email", "error");
+  }
+}
+
+document.addEventListener("layoutLoaded", initSettingsPage);
+if (window.__layoutAlreadyLoaded) initSettingsPage();

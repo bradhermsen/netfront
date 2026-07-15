@@ -2,6 +2,105 @@
 // PLAYERS PAGE — MODERN ADMINPAGE VERSION (DUAL ROSTER READY)
 // =========================================================
 
+let playerSort = { field: null, direction: "asc" };
+let lastRenderedPlayers = [];
+
+const allowedTeamTypes = new Map([
+  ["boys", "Boys"],
+  ["girls", "Girls"],
+  ["co-ed", "Co-Ed"],
+  ["coed", "Co-Ed"],
+  ["men", "Men"],
+  ["women", "Women"],
+]);
+
+function getNameSortKey(player) {
+  const lastName = (player.lastName || "").trim().toLowerCase();
+  const firstName = (player.firstName || "").trim().toLowerCase();
+  return `${lastName}|${firstName}`;
+}
+
+function normalizeTeamTypeValue(value) {
+  const key = (value || "").toString().trim().toLowerCase();
+  return allowedTeamTypes.get(key) || "";
+}
+
+function formatTeamWithTypeLevel(teamName, teamType, levelName, gender) {
+  const normalizedType = normalizeTeamTypeValue(teamType) || normalizeTeamTypeValue(gender);
+
+  return [teamName, normalizedType, levelName]
+    .map((value) => (value || "").toString().trim())
+    .filter((value) => value.length > 0)
+    .join(" ");
+}
+
+function sortPlayers(players) {
+  if (!playerSort.field) return [...players];
+
+  const direction = playerSort.direction === "asc" ? 1 : -1;
+
+  return [...players].sort((a, b) => {
+    if (playerSort.field === "name") {
+      return getNameSortKey(a).localeCompare(getNameSortKey(b)) * direction;
+    }
+
+    if (playerSort.field === "jerseyNumber" || playerSort.field === "grade") {
+      const aVal = Number.isFinite(a[playerSort.field]) ? a[playerSort.field] : null;
+      const bVal = Number.isFinite(b[playerSort.field]) ? b[playerSort.field] : null;
+
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+
+      return (aVal - bVal) * direction;
+    }
+
+    const aStr = (a[playerSort.field] || "").toString().toLowerCase();
+    const bStr = (b[playerSort.field] || "").toString().toLowerCase();
+    return aStr.localeCompare(bStr) * direction;
+  });
+}
+
+function updatePlayerSortHeaderIndicators() {
+  document.querySelectorAll(".data-table thead th.sortable").forEach((th) => {
+    if (!th.dataset.baseText) th.dataset.baseText = th.textContent.trim();
+
+    const field = th.dataset.field;
+    const isActive = field === playerSort.field;
+    const arrow = isActive ? (playerSort.direction === "asc" ? " ▲" : " ▼") : "";
+
+    th.textContent = `${th.dataset.baseText}${arrow}`;
+  });
+}
+
+function wirePlayerSortHeaders() {
+  document.querySelectorAll(".data-table thead th.sortable").forEach((th) => {
+    th.style.cursor = "pointer";
+
+    if (th.dataset.sortWired === "true") return;
+
+    th.addEventListener("click", () => {
+      const field = th.dataset.field;
+      if (!field) return;
+
+      if (playerSort.field === field) {
+        playerSort.direction = playerSort.direction === "asc" ? "desc" : "asc";
+      } else {
+        playerSort.field = field;
+        playerSort.direction = "asc";
+      }
+
+      if (lastRenderedPlayers.length > 0) {
+        AdminPage.config.renderTable(lastRenderedPlayers);
+      }
+    });
+
+    th.dataset.sortWired = "true";
+  });
+
+  updatePlayerSortHeaderIndicators();
+}
+
 // Enforce Coach/TeamManager access with team assignment validation
 (function checkPermission() {
   if (!Auth.canManagePlayers()) {
@@ -82,13 +181,19 @@ async function loadTeamsForPlayer(orgId, selectedTeamIds = []) {
       const row = document.createElement("div");
       row.className = "team-toggle-row";
 
+      const teamTypeLabel = (t.teamType || "").toString().trim();
+      const levelLabel = (t.levelName || "").toString().trim();
+      const labelParts = [t.name, teamTypeLabel, levelLabel].filter(
+        (value) => (value || "").toString().trim().length > 0,
+      );
+
       row.innerHTML = `
         <label class="switch">
           <input type="checkbox" class="player-team-toggle" value="${t.id}"
             ${selectedTeamIds.includes(t.id) ? "checked" : ""}>
           <span class="slider"></span>
         </label>
-        <span class="label-text">${t.name} - ${t.levelName}</span>
+        <span class="label-text">${labelParts.join(" ")}</span>
       `;
 
       container.appendChild(row);
@@ -119,8 +224,7 @@ async function loadPlayerTeamsForFilter() {
     teams.forEach((t) => {
       const opt = document.createElement("option");
       opt.value = t.teamId;
-      const levelName = t.levelName ? ` (${t.levelName})` : "";
-      opt.textContent = `${t.name}${levelName}`;
+      opt.textContent = formatTeamWithTypeLevel(t.name, t.teamType, t.levelName, t.gender);
       filter.appendChild(opt);
     });
   } catch (err) {
@@ -153,8 +257,7 @@ async function reloadTeamFilterByOrg(orgId) {
     teams.forEach((t) => {
       const opt = document.createElement("option");
       opt.value = t.id;
-      const levelName = t.levelName ? ` (${t.levelName})` : "";
-      opt.textContent = `${t.name}${levelName}`;
+      opt.textContent = formatTeamWithTypeLevel(t.name, t.teamType, t.levelName, t.gender);
       filter.appendChild(opt);
     });
   } catch (err) {
@@ -167,6 +270,8 @@ async function reloadTeamFilterByOrg(orgId) {
 // =========================================================
 function initPlayersPage() {
   if (!document.getElementById("players-table-body")) return;
+
+  wirePlayerSortHeaders();
 
   AdminPage.init({
     tableBodyId: "players-table-body",
@@ -203,10 +308,13 @@ function initPlayersPage() {
     // RENDER TABLE (supports multiple teams)
     // =========================================================
     renderTable: (players) => {
+      lastRenderedPlayers = Array.isArray(players) ? players : [];
       const body = document.getElementById("players-table-body");
       body.innerHTML = "";
 
-      players.forEach((p) => {
+      const sortedPlayers = sortPlayers(lastRenderedPlayers);
+
+      sortedPlayers.forEach((p) => {
         const row = document.createElement("tr");
 
         row.dataset.orgId = p.organizationId || "";
@@ -214,7 +322,11 @@ function initPlayersPage() {
         row.dataset.status = (p.status || "").toLowerCase();
 
         const teamNames = p.teams?.length
-          ? p.teams.map((t) => `${t.teamName} - ${t.levelName}`).join("<br>")
+          ? p.teams
+              .map((t) =>
+                formatTeamWithTypeLevel(t.teamName, t.teamType, t.levelName),
+              )
+              .join("<br>")
           : "None";
 
         const teamIds = p.teams?.map((t) => t.teamId).join(",") || "";
@@ -222,6 +334,8 @@ function initPlayersPage() {
 
         row.innerHTML = `
           <td>${p.firstName} ${p.lastName}</td>
+          <td>${p.jerseyNumber ?? ""}</td>
+          <td>${p.position ?? ""}</td>
           <td>${p.organizationName || "External Team"}</td>
           <td>${teamNames}</td>
           <td>${p.grade || ""}</td>
@@ -238,6 +352,7 @@ function initPlayersPage() {
         body.appendChild(row);
       });
 
+      updatePlayerSortHeaderIndicators();
       applyPlayerFilters();
     },
 

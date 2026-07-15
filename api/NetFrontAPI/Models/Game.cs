@@ -16,6 +16,7 @@ namespace NetFrontAPI.Models
 
         public int GameTypeId { get; set; }
         public int? GameRoundId { get; set; }
+        public int PeriodLengthMinutes { get; set; } = 17;
 
         public string? Notes { get; set; }
 

@@ -2,6 +2,24 @@
 // USERS PAGE — MODERN ADMINPAGE VERSION (FIXED FILTERS)
 // =========================================================
 
+function formatTeamWithTypeLevel(teamName, teamType, levelName) {
+  const allowedTypes = new Map([
+    ["boys", "Boys"],
+    ["girls", "Girls"],
+    ["co-ed", "Co-Ed"],
+    ["coed", "Co-Ed"],
+    ["men", "Men"],
+    ["women", "Women"],
+  ]);
+
+  const normalizedType = allowedTypes.get((teamType || "").toString().trim().toLowerCase()) || "";
+
+  return [teamName, normalizedType, levelName]
+    .map((value) => (value || "").toString().trim())
+    .filter((value) => value.length > 0)
+    .join(" ");
+}
+
 // Enforce SuperAdmin/OrgAdmin-only access
 (function checkPermission() {
   if (!Auth.canManageUsers()) {
@@ -84,6 +102,7 @@ window.UsersPage = {
     teams.forEach((t) => {
       const row = document.createElement("div");
       row.className = "team-toggle-row";
+      const teamLabel = formatTeamWithTypeLevel(t.name, t.teamType, t.levelName);
 
       row.innerHTML = `
         <label class="switch">
@@ -91,7 +110,7 @@ window.UsersPage = {
             ${selectedTeamIds.includes(t.id) ? "checked" : ""}>
           <span class="slider"></span>
         </label>
-        <span class="label-text">${t.name} - ${t.levelName}</span>
+        <span class="label-text">${teamLabel}</span>
       `;
 
       container.appendChild(row);
@@ -141,7 +160,7 @@ window.UsersPage = {
 
       const teamList = u.teams?.length
         ? u.teams
-            .map((t) => `${t.teamName} - ${t.levelName || ""}`)
+            .map((t) => formatTeamWithTypeLevel(t.teamName, t.teamType, t.levelName))
             .join("<br>")
         : "None";
 

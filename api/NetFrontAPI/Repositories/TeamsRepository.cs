@@ -26,11 +26,17 @@ namespace NetFrontAPI.Repositories
                 SELECT 
                     t.Id AS TeamId,
                     t.OrganizationId,
+                    t.ConferenceDistrictId,
+                    t.SectionRegionId,
                     t.LevelId,
                     t.SeasonId,
                     t.Name,
                     t.Abbreviation,
+                    t.TeamType,
+                    COALESCE(NULLIF(t.TeamMascot, ''), o.Mascot) AS TeamMascot,
                     o.Name AS OrganizationName,
+                    cd.Name AS ConferenceDistrictName,
+                    sr.Name AS SectionRegionName,
                     l.Name AS LevelName,
                     s.SeasonName,
                     (SELECT COUNT(*) FROM RosterEntries r WHERE r.TeamId = t.Id) AS RosterCount,
@@ -55,6 +61,8 @@ namespace NetFrontAPI.Repositories
 
                 FROM Teams t
                 LEFT JOIN Organizations o ON t.OrganizationId = o.OrganizationId
+                LEFT JOIN ConferenceDistricts cd ON t.ConferenceDistrictId = cd.Id
+                LEFT JOIN SectionRegions sr ON t.SectionRegionId = sr.Id
                 LEFT JOIN Levels l ON t.LevelId = l.Id
                 LEFT JOIN Seasons s ON t.SeasonId = s.SeasonId
                 ORDER BY t.Name";
@@ -71,11 +79,18 @@ namespace NetFrontAPI.Repositories
                 SELECT 
                     t.Id AS TeamId,
                     t.OrganizationId,
+                    t.ConferenceDistrictId,
+                    t.SectionRegionId,
                     t.LevelId,
                     t.SeasonId,
                     t.Name,
                     t.Gender,
                     t.Abbreviation,
+                    t.TeamType,
+                    COALESCE(NULLIF(t.TeamMascot, ''), o.Mascot) AS TeamMascot,
+                    cd.Name AS ConferenceDistrictName,
+                    sr.Name AS SectionRegionName,
+                    l.Name AS LevelName,
 
                     t.HeadCoachName,
                     t.AssistantCoach1Name,
@@ -106,6 +121,8 @@ namespace NetFrontAPI.Repositories
 
                 FROM Teams t
                 LEFT JOIN Organizations o ON t.OrganizationId = o.OrganizationId
+                LEFT JOIN ConferenceDistricts cd ON t.ConferenceDistrictId = cd.Id
+                LEFT JOIN SectionRegions sr ON t.SectionRegionId = sr.Id
                 LEFT JOIN Levels l ON t.LevelId = l.Id
                 LEFT JOIN Seasons s ON t.SeasonId = s.SeasonId
                 WHERE t.Id = @Id;
@@ -125,11 +142,15 @@ namespace NetFrontAPI.Repositories
                 INSERT INTO Teams (
                     Id,
                     OrganizationId,
+                    ConferenceDistrictId,
+                    SectionRegionId,
                     LevelId,
                     SeasonId,
                     Name,
                     Gender,
                     Abbreviation,
+                    TeamType,
+                    TeamMascot,
 
                     HeadCoachName,
                     AssistantCoach1Name,
@@ -149,9 +170,7 @@ namespace NetFrontAPI.Repositories
                     AssistantCoach4HasLogin,
 
                     ScorekeeperCode,
-                    GameManagerCodeExpiresAt,
                     StatManagerCode,
-                    StatManagerCodeExpiresAt,
                     IsActive,
                     IsExternal,
                     Notes
@@ -159,11 +178,15 @@ namespace NetFrontAPI.Repositories
                 VALUES (
                     @Id,
                     @OrganizationId,
+                    @ConferenceDistrictId,
+                    @SectionRegionId,
                     @LevelId,
                     @SeasonId,
                     @Name,
                     @Gender,
                     @Abbreviation,
+                    @TeamType,
+                    @TeamMascot,
 
                     @HeadCoachName,
                     @AssistantCoach1Name,
@@ -183,9 +206,7 @@ namespace NetFrontAPI.Repositories
                     @AssistantCoach4HasLogin,
 
                     @GameManagerCode,
-                    @GameManagerCodeExpiresAt,
                     @StatManagerCode,
-                    @StatManagerCodeExpiresAt,
                     @IsActive,
                     @IsExternal,
                     @Notes
@@ -195,11 +216,15 @@ namespace NetFrontAPI.Repositories
             {
                 Id = id,
                 dto.OrganizationId,
+                dto.ConferenceDistrictId,
+                dto.SectionRegionId,
                 dto.LevelId,
                 dto.SeasonId,
                 dto.Name,
                 dto.Gender,
                 dto.Abbreviation,
+                dto.TeamType,
+                dto.TeamMascot,
 
                 dto.HeadCoachName,
                 dto.AssistantCoach1Name,
@@ -219,9 +244,7 @@ namespace NetFrontAPI.Repositories
                 dto.AssistantCoach4HasLogin,
 
                 dto.GameManagerCode,
-                dto.GameManagerCodeExpiresAt,
                 dto.StatManagerCode,
-                dto.StatManagerCodeExpiresAt,
                 dto.IsActive,
                 dto.IsExternal,
                 dto.Notes
@@ -239,11 +262,15 @@ namespace NetFrontAPI.Repositories
                 UPDATE Teams
                 SET
                     OrganizationId = @OrganizationId,
+                    ConferenceDistrictId = @ConferenceDistrictId,
+                    SectionRegionId = @SectionRegionId,
                     LevelId = @LevelId,
                     SeasonId = @SeasonId,
                     Name = @Name,
                     Gender = @Gender,
                     Abbreviation = @Abbreviation,
+                    TeamType = @TeamType,
+                    TeamMascot = @TeamMascot,
 
                     HeadCoachName = @HeadCoachName,
                     AssistantCoach1Name = @AssistantCoach1Name,
@@ -263,9 +290,7 @@ namespace NetFrontAPI.Repositories
                     AssistantCoach4HasLogin = @AssistantCoach4HasLogin,
 
                     ScorekeeperCode = @GameManagerCode,
-                    GameManagerCodeExpiresAt = @GameManagerCodeExpiresAt,
                     StatManagerCode = @StatManagerCode,
-                    StatManagerCodeExpiresAt = @StatManagerCodeExpiresAt,
                     IsActive = @IsActive,
                     IsExternal = @IsExternal,
                     Notes = @Notes
@@ -275,11 +300,15 @@ namespace NetFrontAPI.Repositories
             {
                 Id = id,
                 dto.OrganizationId,
+                dto.ConferenceDistrictId,
+                dto.SectionRegionId,
                 dto.LevelId,
                 dto.SeasonId,
                 dto.Name,
                 dto.Gender,
                 dto.Abbreviation,
+                dto.TeamType,
+                dto.TeamMascot,
 
                 dto.HeadCoachName,
                 dto.AssistantCoach1Name,
@@ -299,9 +328,7 @@ namespace NetFrontAPI.Repositories
                 dto.AssistantCoach4HasLogin,
 
                 dto.GameManagerCode,
-                dto.GameManagerCodeExpiresAt,
                 dto.StatManagerCode,
-                dto.StatManagerCodeExpiresAt,
                 dto.IsActive,
                 dto.IsExternal,
                 dto.Notes
@@ -325,8 +352,12 @@ namespace NetFrontAPI.Repositories
             var sql = @"
                 SELECT 
                     t.*,
+                    cd.Name AS ConferenceDistrictName,
+                    sr.Name AS SectionRegionName,
                     l.Name AS LevelName
                 FROM Teams t
+                LEFT JOIN ConferenceDistricts cd ON cd.Id = t.ConferenceDistrictId
+                LEFT JOIN SectionRegions sr ON sr.Id = t.SectionRegionId
                 LEFT JOIN Levels l ON l.Id = t.LevelId
                 WHERE t.OrganizationId = @OrganizationId
                 ORDER BY t.Name;

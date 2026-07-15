@@ -23,12 +23,7 @@
 
     <!-- Load layout FIRST -->
     <script>
-      loadLayout("schedules").then(() => {
-        console.log(
-          "🔥 Layout finished loading — calling PageScriptRegistry.schedules()",
-        );
-        PageScriptRegistry.schedules();
-      });
+      loadLayout("schedules");
     </script>
 
     <!-- Page Scripts -->

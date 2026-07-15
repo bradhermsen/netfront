@@ -2,3 +2,46 @@
   color: var(--accent-color, #ff7f00);
   font-weight: 600;
 }
+
+.org-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.org-external-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.org-external-toggle .external-switch {
+  width: 42px;
+  height: 22px;
+}
+
+.org-external-toggle .external-switch .slider {
+  background-color: #475569;
+}
+
+.org-external-toggle .external-switch .slider:before {
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+}
+
+.org-external-toggle .external-switch input:checked + .slider {
+  background-color: #ff7f00;
+}
+
+.org-external-toggle .external-switch input:checked + .slider:before {
+  transform: translateX(20px);
+}

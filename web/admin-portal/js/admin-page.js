@@ -89,6 +89,7 @@ window.AdminPage = {
       this.btnDeleteCancel.onclick = () => {
         this.deleteId = null;
         this.deleteModal.classList.remove("active");
+        this.deleteModal.classList.add("hidden");
       };
     }
 
@@ -99,6 +100,7 @@ window.AdminPage = {
           await c.api.delete(this.deleteId);
           this.deleteId = null;
           this.deleteModal.classList.remove("active");
+          this.deleteModal.classList.add("hidden");
           this.loadData();
         }
       };
@@ -130,8 +132,12 @@ window.AdminPage = {
   // LOAD DROPDOWNS
   // -------------------------------------------------------
   async loadDropdowns() {
-    if (this.config.loadDropdowns) {
+    if (!this.config.loadDropdowns) return;
+
+    try {
       await this.config.loadDropdowns();
+    } catch (err) {
+      console.error("❌ Failed loading dropdowns:", err);
     }
   },
 
@@ -139,13 +145,21 @@ window.AdminPage = {
   // LOAD DATA
   // -------------------------------------------------------
   async loadData() {
-    this.allItems = await this.config.api.getAll();
+    try {
+      this.allItems = await this.config.api.getAll();
 
-    if (this.searchInput) {
-      this.searchInput.value = "";
+      if (this.searchInput) {
+        this.searchInput.value = "";
+      }
+
+      this.config.renderTable(this.allItems);
+    } catch (err) {
+      console.error("❌ Failed loading page data:", err);
+      this.allItems = [];
+      if (this.config.renderTable) {
+        this.config.renderTable([]);
+      }
     }
-
-    this.config.renderTable(this.allItems);
   },
 
   // -------------------------------------------------------
@@ -176,6 +190,7 @@ window.AdminPage = {
 
     this.config.clearForm();
 
+    this.modal.classList.remove("hidden");
     this.modal.classList.add("active");
 
     const panel = this.modal.querySelector(".nf-modal");
@@ -197,6 +212,7 @@ window.AdminPage = {
     const item = await this.config.api.getById(id);
     await this.config.populateForm(item);
 
+    this.modal.classList.remove("hidden");
     this.modal.classList.add("active");
 
     const panel = this.modal.querySelector(".nf-modal");
@@ -208,6 +224,7 @@ window.AdminPage = {
   // -------------------------------------------------------
   openDelete(id) {
     this.deleteId = id;
+    this.deleteModal.classList.remove("hidden");
     this.deleteModal.classList.add("active");
   },
 
@@ -216,6 +233,7 @@ window.AdminPage = {
   // -------------------------------------------------------
   closeModal() {
     this.modal.classList.remove("active");
+    this.modal.classList.add("hidden");
 
     const panel = this.modal.querySelector(".nf-modal");
     if (panel) panel.classList.remove("active");

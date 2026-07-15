@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "NetFront Game Manager",
+    "slug": "game-manager-mobile",
+    "version": "1.0.0",
+    "jsEngine": "hermes",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+
+    "scheme": "netfront",
+    "developmentClient": {
+      "silentLaunch": false
+    },
+
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.netfront.gamemanager",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

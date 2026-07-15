@@ -11,6 +11,14 @@ window.ROLES = {
   Viewer: "Viewer",
 };
 
+// Global notification fallback so pages can safely call showMessage.
+if (typeof window.showMessage !== "function") {
+  window.showMessage = function (message, type = "info") {
+    const level = type === "error" ? "error" : "log";
+    console[level](`[${type}] ${message}`);
+  };
+}
+
 // Helper for authenticated API calls with error handling
 window.authFetch = async function (url, options = {}) {
   if (window.configReady) {
@@ -32,20 +40,57 @@ window.authFetch = async function (url, options = {}) {
     headers,
   });
 
+  const buildErrorResponse = (status, message) =>
+    new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+
+  const redirectForAuthFailure = (status) => {
+    if (status === 401) {
+      console.warn("401 Unauthorized - redirecting to login");
+      localStorage.removeItem("nf_token");
+      localStorage.removeItem("nf_role");
+      window.location.href = "./login.html";
+      return;
+    }
+
+    if (status === 403) {
+      console.warn("403 Forbidden - redirecting to not-authorized");
+      window.location.href = "./not-authorized.html";
+    }
+  };
+
   // Handle 401 Unauthorized - redirect to login
   if (response.status === 401) {
-    console.warn("401 Unauthorized - redirecting to login");
-    localStorage.removeItem("nf_token");
-    localStorage.removeItem("nf_role");
-    window.location.href = "./login.html";
-    return null;
+    redirectForAuthFailure(401);
+    return buildErrorResponse(401, "Unauthorized");
   }
 
   // Handle 403 Forbidden - redirect to not-authorized page
   if (response.status === 403) {
-    console.warn("403 Forbidden - redirecting to not-authorized");
-    window.location.href = "./not-authorized.html";
-    return null;
+    redirectForAuthFailure(403);
+    return buildErrorResponse(403, "Forbidden");
+  }
+
+  // Defensive: some endpoints/proxies can return auth errors with HTTP 200.
+  // Detect that shape and treat it as an auth failure.
+  try {
+    const contentType = response.headers.get("Content-Type") || "";
+    if (response.ok && contentType.includes("application/json")) {
+      const probe = await response.clone().json();
+      const normalizedError = (probe?.error || "").toString().toLowerCase();
+      if (
+        normalizedError.includes("invalid or expired token") ||
+        normalizedError.includes("no authorization token") ||
+        normalizedError.includes("unauthorized")
+      ) {
+        redirectForAuthFailure(401);
+        return buildErrorResponse(401, probe.error || "Unauthorized");
+      }
+    }
+  } catch {
+    // Ignore parse/probe failures and return original response.
   }
 
   // Return the raw Response so callers can use .ok, .status, and .json().

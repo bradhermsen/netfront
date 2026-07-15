@@ -1103,53 +1103,248 @@
    Sidebar Component Styles
 --------------------------------------- */
 .sidebar {
-  background: var(--nf-bg);
-  border-right: 1px solid var(--nf-border-light);
+  background:
+    radial-gradient(circle at top, rgba(255, 123, 0, 0.12), transparent 26%),
+    linear-gradient(180deg, #0b1528 0%, #09111f 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
 }
-.sidebar-section-label {
+
+.sidebar-section-label,
+.sidebar-section-title {
   color: var(--nf-text-muted);
-  padding: 12px 20px;
-  font-size: 12px;
+  padding: 0 22px;
+  margin: 18px 0 10px;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.8px;
+  opacity: 0.88;
 }
+
+.sidebar-section {
+  padding: 0 14px;
+}
+
 .sidebar-link {
-  display: block;
-  padding: 12px 20px;
-  color: var(--nf-text);
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  margin: 4px 0;
+  color: rgba(255, 255, 255, 0.88);
   text-decoration: none;
-  border-left: 3px solid transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.sidebar-link::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  margin-right: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.02);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
 .sidebar-link:hover {
-  background: var(--nf-bg-light);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  transform: translateX(2px);
 }
 
 .sidebar-link.active {
-  background: var(--nf-bg-light);
-  border-left-color: var(--nf-accent);
-  color: var(--nf-accent);
+  background: linear-gradient(90deg, rgba(255, 123, 0, 0.18), rgba(255, 123, 0, 0.05));
+  border-color: rgba(255, 123, 0, 0.35);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 123, 0, 0.08);
+}
 
-  #sidebarContainer {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+.sidebar-link:hover::before,
+.sidebar-link.active::before {
+  background: var(--nf-accent);
+  box-shadow: 0 0 0 4px rgba(255, 123, 0, 0.12);
+  transform: scale(1.05);
+}
+
+#sidebarContainer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 18px 0 14px;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 0 14px 12px;
+}
+
+.sidebar-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 16px 18px 14px;
+  opacity: 1;
+}
+
+/* ---------------------------------------
+   Sidebar Brand Header (Logo + Title)
+--------------------------------------- */
+.sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 14px 16px;
+  padding: 18px 16px 16px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    rgba(9, 17, 31, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.logo-frame {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  margin-bottom: 12px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.12), transparent 55%),
+    linear-gradient(180deg, rgba(17, 28, 48, 0.96), rgba(9, 16, 29, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 18px rgba(0, 0, 0, 0.22);
+}
+
+.nf-logo {
+  width: 56px;
+  height: auto;
+  margin: 0;
+}
+
+.brand-copy {
+  max-width: 190px;
+}
+
+.brand-title {
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-weight: 700;
+  font-size: 1.85rem;
+  color: #fff4ea;
+  margin: 0;
+  line-height: 1.04;
+  text-wrap: balance;
+  text-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+.subtext {
+  display: inline-block;
+  font-family: "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: #c7d0e0;
+  margin-top: 8px;
+  letter-spacing: 2.8px;
+  text-transform: uppercase;
+}
+
+.brand-divider {
+  width: 64px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 123, 0, 0.15), var(--nf-accent), rgba(255, 123, 0, 0.15));
+  margin-top: 14px;
+}
+
+.logout-link {
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #ffd8c0;
+}
+
+.logout-link::before {
+  background: rgba(255, 123, 0, 0.5);
+}
+
+.logout-link:hover {
+  background: rgba(255, 123, 0, 0.12);
+  border-color: rgba(255, 123, 0, 0.24);
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .sidebar-brand {
+    margin: 0 10px 14px;
+    padding: 16px 12px 14px;
   }
 
-  .sidebar-bottom {
-    margin-top: auto;
-    padding: 1rem 0;
+  .logo-frame {
+    width: 70px;
+    height: 70px;
   }
 
-  .sidebar-divider {
-    border: none;
-    border-top: 1px solid #2f3b52;
-    margin: 1rem 0;
-    opacity: 0.4;
+  .nf-logo {
+    width: 50px;
+  }
+
+  .brand-title {
+    font-size: 1.55rem;
+  }
+
+  .sidebar-link {
+    padding: 9px 12px;
   }
 }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .brand-title {
+    font-size: 1.35rem;
+  }
+
+  .subtext {
+    letter-spacing: 2.2px;
+    font-size: 10px;
+  }
+
+  .logo-frame {
+    width: 64px;
+    height: 64px;
+  }
+
+  .nf-logo {
+    width: 46px;
+  }
+
+  .sidebar-section {
+    padding: 0 10px;
+  }
+
+  .sidebar-link {
+    min-height: 40px;
+  }
+}
+
 /* ---------------------------------------
    Header Component Styles
 --------------------------------------- */

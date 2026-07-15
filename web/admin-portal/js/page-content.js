@@ -45,6 +45,20 @@ window.PageContentRegistry.teams = () => `
         <option value="">Level: All</option>
       </select>
 
+      <select id="filter-team-type" class="nf-select">
+        <option value="">Type: All</option>
+      </select>
+
+      <!-- Conference Filter -->
+      <select id="filter-team-conference" class="nf-select">
+        <option value="">Conference: All</option>
+      </select>
+
+      <!-- Section Filter -->
+      <select id="filter-team-section" class="nf-select">
+        <option value="">Section: All</option>
+      </select>
+
       <!-- Status Filter -->
       <select id="filter-status" class="nf-select">
         <option value="">Status: All</option>
@@ -61,9 +75,22 @@ window.PageContentRegistry.teams = () => `
         <thead>
           <tr>
             <th>Team Name</th>
-            <th>Organization</th>
+            <th>
+              <div class="teams-org-header-controls">
+                <span>Organization</span>
+                <label class="teams-org-external-toggle" for="teams-show-external">
+                  <span class="teams-external-switch">
+                    <input id="teams-show-external" type="checkbox" aria-label="Display External Teams" />
+                    <span class="teams-external-slider"></span>
+                  </span>
+                  <span>Display External Teams</span>
+                </label>
+              </div>
+            </th>
+            <th>Conference</th>
+            <th>Section</th>
             <th>Level</th>
-            <th>Season</th>
+            <th>Type</th>
             <th>Roster</th>
             <th>Head Coach</th>
             <th>Access Codes</th>
@@ -120,13 +147,44 @@ window.PageContentRegistry.teamsModals = () => `
             </div>
 
             <div>
+              <label>Team Type</label>
+              <select id="team-type" class="nf-input">
+                <option value="">Select Type</option>
+                <option value="Boys">Boys</option>
+                <option value="Girls">Girls</option>
+                <option value="Co-Ed">Co-Ed</option>
+                <option value="Men">Men</option>
+                <option value="Women">Women</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Conference</label>
+              <select id="team-conference-district" class="nf-input">
+                <option value="">Select Conference</option>
+              </select>
+            </div>
+
+            <div>
               <label>Season</label>
               <div id="team-season-display" class="season-display"></div>
+            </div>
+
+            <div>
+              <label>Section</label>
+              <select id="team-section-region" class="nf-input">
+                <option value="">Select Section</option>
+              </select>
             </div>
 
             <div class="full-width">
               <label>Notes</label>
               <textarea id="team-notes" class="nf-input" rows="2"></textarea>
+            </div>
+
+            <div class="full-width">
+              <label>Team Mascot</label>
+              <input id="team-mascot" type="text" class="nf-input" placeholder="Mascot" />
             </div>
           </div>
         </div>
@@ -219,14 +277,6 @@ window.PageContentRegistry.teamsModals = () => `
                 <span class="slider round"></span>
               </label>
             </div>
-
-            <div>
-              <label>External Team</label>
-              <label class="switch">
-                <input type="checkbox" id="team-external" />
-                <span class="slider round"></span>
-              </label>
-            </div>
           </div>
         </div>
 
@@ -255,6 +305,259 @@ window.PageContentRegistry.teamsModals = () => `
         <button id="btnCancelTeamDelete" class="nf-btn nf-btn-secondary">Cancel</button>
         <button id="btnConfirmTeamDelete" class="nf-btn nf-btn-danger">Delete</button>
       </div>
+    </div>
+  </div>
+`;
+
+//=================================================================
+// STATS PAGE CONTENT
+//=================================================================
+window.PageContentRegistry.stats = () => `
+  <div class="page-header-block">
+    <div class="page-header-row">
+      <div class="page-header-text">
+        <h1 class="page-header">Stats Dashboard</h1>
+        <p class="page-subtext">V1: Team, Player, Game, Season, and League Leaders</p>
+      </div>
+      <button id="stats-refresh" class="nf-btn nf-btn-primary">Refresh Stats</button>
+    </div>
+  </div>
+
+  <div class="nf-card">
+    <div class="nf-filter-bar" id="stats-filter-bar-component">
+      <select id="stats-filter-season" class="nf-select">
+        <option value="">Season: All</option>
+      </select>
+
+      <select id="stats-filter-level" class="nf-select">
+        <option value="">Level: All</option>
+      </select>
+
+      <select id="stats-filter-team-type" class="nf-select">
+        <option value="">Type: All</option>
+      </select>
+
+      <select id="stats-filter-team" class="nf-select">
+        <option value="">Team: All</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="nf-card mt-4">
+    <h3 class="section-header">Team Stats</h3>
+    <div class="table-wrapper">
+      <table id="stats-team-table" class="data-table stats-sortable-table">
+        <thead>
+          <tr>
+            <th class="stats-sortable" data-field="teamName">Team</th>
+            <th class="stats-sortable" data-field="seasonName">Season</th>
+            <th class="stats-sortable" data-field="gp">GP</th>
+            <th class="stats-sortable" data-field="gf">GF</th>
+            <th class="stats-sortable" data-field="ga">GA</th>
+            <th class="stats-sortable" data-field="goalDiff">Diff</th>
+            <th class="stats-sortable" data-field="shotsFor">SF</th>
+            <th class="stats-sortable" data-field="shotsAgainst">SA</th>
+            <th class="stats-sortable" data-field="shootingPct">Sh%</th>
+            <th class="stats-sortable" data-field="pim">PIM</th>
+            <th class="stats-sortable" data-field="ppGoals">PP G</th>
+            <th class="stats-sortable" data-field="shGoals">SH G</th>
+          </tr>
+        </thead>
+        <tbody id="stats-team-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="nf-card mt-4">
+    <h3 class="section-header">Player Stats</h3>
+    <div class="table-wrapper">
+      <table id="stats-player-table" class="data-table stats-sortable-table">
+        <thead>
+          <tr>
+            <th class="stats-sortable" data-field="fullName">Player</th>
+            <th class="stats-sortable" data-field="position">Pos</th>
+            <th class="stats-sortable" data-field="gp">GP</th>
+            <th class="stats-sortable" data-field="g">G</th>
+            <th class="stats-sortable" data-field="a">A</th>
+            <th class="stats-sortable" data-field="pts">Pts</th>
+            <th class="stats-sortable" data-field="pim">PIM</th>
+            <th class="stats-sortable" data-field="estShotsAgainst">Est SA</th>
+            <th class="stats-sortable" data-field="estSaves">Est SV</th>
+            <th class="stats-sortable" data-field="estSavePct">Est SV%</th>
+            <th class="stats-sortable" data-field="estGAA">Est GAA</th>
+          </tr>
+        </thead>
+        <tbody id="stats-player-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="nf-card mt-4">
+    <h3 class="section-header">Game Stats</h3>
+    <div class="table-wrapper">
+      <table id="stats-game-table" class="data-table stats-sortable-table">
+        <thead>
+          <tr>
+            <th class="stats-sortable" data-field="gameDateTime">Date</th>
+            <th class="stats-sortable" data-field="seasonName">Season</th>
+            <th class="stats-sortable" data-field="homeTeamName">Home</th>
+            <th class="stats-sortable" data-field="awayTeamName">Away</th>
+            <th class="stats-sortable" data-field="homeGoals">Home G</th>
+            <th class="stats-sortable" data-field="awayGoals">Away G</th>
+            <th class="stats-sortable" data-field="homeShots">Home S</th>
+            <th class="stats-sortable" data-field="awayShots">Away S</th>
+            <th class="stats-sortable" data-field="homePIM">Home PIM</th>
+            <th class="stats-sortable" data-field="awayPIM">Away PIM</th>
+          </tr>
+        </thead>
+        <tbody id="stats-game-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="nf-card mt-4">
+    <h3 class="section-header">Season Stats</h3>
+    <div class="table-wrapper">
+      <table id="stats-season-table" class="data-table stats-sortable-table">
+        <thead>
+          <tr>
+            <th class="stats-sortable" data-field="seasonName">Season</th>
+            <th class="stats-sortable" data-field="gamesFinal">Final Games</th>
+            <th class="stats-sortable" data-field="goals">Goals</th>
+            <th class="stats-sortable" data-field="shots">Shots</th>
+            <th class="stats-sortable" data-field="penalties">Penalties</th>
+            <th class="stats-sortable" data-field="pim">PIM</th>
+            <th class="stats-sortable" data-field="avgGoalsPerGame">Avg Goals/Game</th>
+            <th class="stats-sortable" data-field="avgShotsPerGame">Avg Shots/Game</th>
+          </tr>
+        </thead>
+        <tbody id="stats-season-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="nf-card mt-4">
+    <h3 class="section-header">League Leaders</h3>
+    <div class="leaders-grid">
+      <div>
+        <h4>Top Points</h4>
+        <table class="data-table compact-table">
+          <thead><tr><th>Player</th><th>Pts</th></tr></thead>
+          <tbody id="leaders-points-body"></tbody>
+        </table>
+      </div>
+      <div>
+        <h4>Top Goals</h4>
+        <table class="data-table compact-table">
+          <thead><tr><th>Player</th><th>G</th></tr></thead>
+          <tbody id="leaders-goals-body"></tbody>
+        </table>
+      </div>
+      <div>
+        <h4>Top Assists</h4>
+        <table class="data-table compact-table">
+          <thead><tr><th>Player</th><th>A</th></tr></thead>
+          <tbody id="leaders-assists-body"></tbody>
+        </table>
+      </div>
+      <div>
+        <h4>Top PIM</h4>
+        <table class="data-table compact-table">
+          <thead><tr><th>Player</th><th>PIM</th></tr></thead>
+          <tbody id="leaders-pim-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+`;
+
+//=================================================================
+// SETTINGS PAGE CONTENT
+//=================================================================
+window.PageContentRegistry.settings = () => `
+  <div class="page-header-block">
+    <div class="page-header-row">
+      <div class="page-header-text">
+        <h1 class="page-header">Settings</h1>
+        <p class="page-subtext">System configuration and outbound email delivery</p>
+      </div>
+      <button id="settings-save" class="nf-btn nf-btn-primary">Save Settings</button>
+    </div>
+  </div>
+
+  <div class="nf-card settings-card">
+    <h3 class="section-header">Email Server</h3>
+    <p class="settings-helper-text">
+      Configure SMTP for mobile finalize/send and admin test emails. For MailHog use host
+      <strong>localhost</strong> and port <strong>1025</strong>.
+    </p>
+
+    <div class="settings-grid">
+      <label class="settings-field">
+        <span>SMTP Host</span>
+        <input id="smtp-host" class="nf-input" type="text" placeholder="localhost" />
+      </label>
+
+      <label class="settings-field">
+        <span>SMTP Port</span>
+        <input id="smtp-port" class="nf-input" type="number" min="1" step="1" placeholder="1025" />
+      </label>
+
+      <label class="settings-field">
+        <span>Username (optional)</span>
+        <input id="smtp-username" class="nf-input" type="text" placeholder="Leave blank for MailHog" />
+      </label>
+
+      <label class="settings-field">
+        <span>Password (optional)</span>
+        <input id="smtp-password" class="nf-input" type="password" placeholder="Enter to update stored password" />
+      </label>
+
+      <label class="settings-field">
+        <span>From Address</span>
+        <input id="smtp-from-address" class="nf-input" type="email" placeholder="no-reply@netfront.local" />
+      </label>
+
+      <label class="settings-field">
+        <span>From Name</span>
+        <input id="smtp-from-name" class="nf-input" type="text" placeholder="NetFront" />
+      </label>
+    </div>
+
+    <div class="settings-toggle-row">
+      <label class="settings-toggle">
+        <input id="smtp-enabled" type="checkbox" />
+        <span>Email Enabled</span>
+      </label>
+      <label class="settings-toggle">
+        <input id="smtp-use-ssl" type="checkbox" />
+        <span>Use SSL/TLS</span>
+      </label>
+      <span id="smtp-password-status" class="settings-password-status"></span>
+    </div>
+  </div>
+
+  <div class="nf-card settings-card mt-4">
+    <h3 class="section-header">Send Test Email</h3>
+    <div class="settings-grid settings-grid-test">
+      <label class="settings-field">
+        <span>To</span>
+        <input id="email-test-to" class="nf-input" type="email" placeholder="test@local.dev" />
+      </label>
+
+      <label class="settings-field">
+        <span>Subject</span>
+        <input id="email-test-subject" class="nf-input" type="text" placeholder="NetFront test" />
+      </label>
+    </div>
+
+    <label class="settings-field mt-3">
+      <span>Message</span>
+      <textarea id="email-test-body" class="nf-textarea" rows="4" placeholder="This is a test email from NetFront settings."></textarea>
+    </label>
+
+    <div class="settings-actions mt-3">
+      <button id="settings-test-send" class="nf-btn nf-btn-secondary">Send Test Email</button>
     </div>
   </div>
 `;
@@ -297,11 +600,6 @@ window.PageContentRegistry.organizations = () => `
         <option value="">League: All</option>
       </select>
 
-      <!-- Conference Filter -->
-      <select id="filter-conference" class="nf-select">
-        <option value="">Conference: All</option>
-      </select>
-
       <!-- Status Filter -->
       <select id="filter-status" class="nf-select">
         <option value="">Status: All</option>
@@ -319,7 +617,6 @@ window.PageContentRegistry.organizations = () => `
           <tr>
             <th>Organization</th>
             <th>League</th>
-            <th>Conference</th>
             <th>Teams</th>
             <th>Status</th>
             <th class="actions-col">Actions</th>
@@ -375,10 +672,6 @@ window.PageContentRegistry.organizationsModals = () => `
               </select>
             </div>
 
-            <div>
-              <label>District / Conference</label>
-              <input id="org-district" class="nf-input" />
-            </div>
           </div>
         </div>
 
@@ -584,11 +877,23 @@ window.PageContentRegistry.rosters = () => `
       <table class="data-table" id="teamsRosterTable">
         <thead>
           <tr>
-            <th>Team Name</th>
-            <th>Level</th>
-            <th>Organization</th>
-            <th>Roster Count</th>
-            <th>Status</th>
+            <th class="sortable" data-field="name">Team Name</th>
+            <th class="sortable" data-field="teamType">Team Type</th>
+            <th class="sortable" data-field="levelName">Level</th>
+            <th>
+              <div class="org-header-controls">
+                <span class="sortable" data-field="organizationName" style="cursor:pointer;">Organization</span>
+                <label class="org-external-toggle" for="rosters-show-external">
+                  <span class="switch external-switch">
+                    <input id="rosters-show-external" type="checkbox" aria-label="Display External Teams" />
+                    <span class="slider"></span>
+                  </span>
+                  <span>Display External Teams</span>
+                </label>
+              </div>
+            </th>
+            <th class="sortable" data-field="rosterCount">Roster Count</th>
+            <th class="sortable" data-field="status">Status</th>
             <th class="actions-col">Actions</th>
           </tr>
         </thead>
@@ -609,7 +914,7 @@ window.PageContentRegistry.rostersModals = () => `
     <div id="rosterManagerModal" class="nf-modal large">
 
       <div class="nf-modal-header">
-        <h2 id="rosterManagerTitle">Manage Roster</h2>
+        <h2 id="rosterManagerTitle">Manager Roster</h2>
         <button class="modal-close rm-close">×</button>
       </div>
 
@@ -620,7 +925,8 @@ window.PageContentRegistry.rostersModals = () => `
 
           <!-- SECTION HEADER -->
           <h3 class="section-header">
-            Roster <span id="rm-current-team" class="accent-text"></span>
+            Manager Roster - <span id="rm-current-team" class="accent-text"></span>
+            <span id="rm-team-totals" class="accent-text" style="margin-left:12px; font-weight:500; font-size:0.92em;"></span>
           </h3>
 
           <!-- ACTION BAR -->
@@ -653,6 +959,20 @@ window.PageContentRegistry.rostersModals = () => `
             <button id="rm-add-player" class="nf-btn nf-btn-primary" style="margin-left:auto;">
               + Add Player
             </button>
+
+            <button id="rm-upload-roster" class="nf-btn nf-btn-secondary">
+              Upload Roster CSV
+            </button>
+
+            <button id="rm-download-sample" class="nf-btn nf-btn-secondary">
+              Download Sample CSV
+            </button>
+
+            <button id="rm-refresh-jerseys" class="nf-btn nf-btn-secondary">
+              Refresh Jersey Numbers
+            </button>
+
+            <input id="rm-upload-input" type="file" accept=".csv,text/csv" style="display:none;" />
           </div>
 
           <!-- ROSTER TABLE -->
@@ -795,6 +1115,137 @@ window.PageContentRegistry.rostersModals = () => `
 `;
 
 //=================================================================
+// OFFICIALS PAGE CONTENT
+//=================================================================
+window.PageContentRegistry.officials = () => `
+  <div class="page-header-block">
+    <div class="page-header-row">
+      <div class="page-header-text">
+        <h1 class="page-header">Officials</h1>
+        <p class="page-subtext">Manage referee and linesman assignments used in schedules</p>
+      </div>
+
+      <div class="page-header-actions">
+        <button id="btnAddOfficial" class="nf-btn nf-btn-primary">
+          <i class="fa fa-plus"></i> Add Official
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nf-card">
+    <div class="nf-filter-bar" id="officials-filter-bar-component">
+
+      <input
+        id="officials-search-bar"
+        class="nf-search"
+        type="text"
+        placeholder="🔍  Search officials…"
+      />
+
+      <select id="filter-official-role" class="nf-select">
+        <option value="">Role: All</option>
+        <option value="Referee">Referee</option>
+        <option value="Linesman">Linesman</option>
+      </select>
+
+      <select id="filter-official-status" class="nf-select">
+        <option value="">Status: All</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="nf-card mt-4">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="officialsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+`;
+
+//=================================================================
+// OFFICIALS MODALS
+//=================================================================
+window.PageContentRegistry.officialsModals = () => `
+  <div id="officialModalOverlay" class="nf-modal-overlay hidden">
+    <div id="officialModal" class="nf-modal medium">
+
+      <div class="nf-modal-header">
+        <h2 id="officialModalTitle">Add Official</h2>
+        <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
+      </div>
+
+      <div class="nf-modal-body">
+        <div class="full-width-section">
+          <h3 class="section-header">Official Information</h3>
+
+          <div class="two-col">
+            <div>
+              <label>First Name</label>
+              <input id="official-first-name" class="nf-input" />
+            </div>
+
+            <div>
+              <label>Last Name</label>
+              <input id="official-last-name" class="nf-input" />
+            </div>
+
+            <div>
+              <label>Role</label>
+              <select id="official-role" class="nf-input">
+                <option value="Referee">Referee</option>
+                <option value="Linesman">Linesman</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Active</label>
+              <label class="switch">
+                <input type="checkbox" id="official-active" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="officialCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="officialSave" class="nf-btn nf-btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="officialDeleteModalOverlay" class="nf-modal-overlay hidden">
+    <div id="officialDeleteModal" class="nf-modal small">
+      <div class="nf-modal-header">
+        <h2>Delete Official</h2>
+      </div>
+
+      <div class="nf-modal-body full">
+        <p>Are you sure you want to delete this official?</p>
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="officialDeleteCancel" class="nf-btn nf-btn-secondary">Cancel</button>
+        <button id="officialDeleteConfirm" class="nf-btn nf-btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+`;
+
+//=================================================================
 // GAME SCHEDULES PAGE CONTENT (FULL CRUD)
 //=================================================================
 window.PageContentRegistry.schedules = () => `
@@ -825,6 +1276,11 @@ window.PageContentRegistry.schedules = () => `
         placeholder="🔍  Search games…"
       />
 
+      <!-- Organization Filter -->
+      <select id="filter-game-org" class="nf-select">
+        <option value="">Organization: All</option>
+      </select>
+
       <!-- Team Filter -->
       <select id="filter-game-team" class="nf-select">
         <option value="">Team: All</option>
@@ -833,6 +1289,11 @@ window.PageContentRegistry.schedules = () => `
       <!-- Level Filter -->
       <select id="filter-game-level" class="nf-select">
         <option value="">Level: All</option>
+      </select>
+
+      <!-- Team Type Filter -->
+      <select id="filter-game-team-type" class="nf-select">
+        <option value="">Team Type: All</option>
       </select>
 
       <!-- Type Filter -->
@@ -864,7 +1325,7 @@ window.PageContentRegistry.schedules = () => `
             <th>Arena</th>
             <th>Rink</th>
             <th>Type</th>
-            <th>Round</th>
+            <th>Officials</th>
             <th>Status</th>
             <th class="actions-col">Actions</th>
           </tr>
@@ -991,6 +1452,59 @@ window.PageContentRegistry.schedulesModals = () => `
               <label>Game Round</label>
               <select id="game-round" class="nf-input"></select>
             </div>
+
+            <div>
+              <label>Period Length (minutes)</label>
+              <select id="game-period-length" class="nf-input">
+                <option value="12">12</option>
+                <option value="15">15</option>
+                <option value="17">17</option>
+                <option value="20">20</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            <div id="game-period-length-custom-wrap" style="display:none;">
+              <label>Custom Period Length</label>
+              <input id="game-period-length-custom" type="number" min="1" step="1" class="nf-input" placeholder="Enter minutes" />
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-divider full-width-section" />
+
+        <!-- OFFICIALS -->
+        <div class="full-width-section">
+          <h3 class="section-header">Officials</h3>
+
+          <div class="two-col officials-grid">
+            <div>
+              <label>Referee 1</label>
+              <select id="game-referee-1" class="nf-input">
+                <option value="">Select Referee 1</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Referee 2</label>
+              <select id="game-referee-2" class="nf-input">
+                <option value="">Select Referee 2</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Linesman 1</label>
+              <select id="game-linesman-1" class="nf-input">
+                <option value="">Select Linesman 1</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Linesman 2</label>
+              <select id="game-linesman-2" class="nf-input">
+                <option value="">Select Linesman 2</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1111,11 +1625,13 @@ window.PageContentRegistry.players = () => `
       <table class="data-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th class="sortable" data-field="name">Name</th>
+            <th class="sortable" data-field="jerseyNumber">Jersey #</th>
+            <th class="sortable" data-field="position">Position</th>
             <th>Organization</th>
             <th>Team</th>
-            <th>Grade</th>
-            <th>Status</th>
+            <th class="sortable" data-field="grade">Grade</th>
+            <th class="sortable" data-field="status">Status</th>
             <th class="actions-col">Actions</th>
           </tr>
         </thead>

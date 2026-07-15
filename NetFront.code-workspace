@@ -23,7 +23,7 @@
       {
         "label": "Start Azure Functions Host",
         "type": "shell",
-        "command": "func start",
+        "command": "func start --host 0.0.0.0",
         "options": {
           "cwd": "C:\\NetFront\\api\\NetFrontAPI"
         },

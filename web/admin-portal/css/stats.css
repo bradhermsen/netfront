@@ -1,0 +1,43 @@
+.leaders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 8px 10px;
+}
+
+#stats-filter-bar-component {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stats-sortable-table th.stats-sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 20px;
+}
+
+.stats-sortable-table th.stats-sortable::after {
+  content: "<->";
+  position: absolute;
+  right: 6px;
+  opacity: 0.45;
+  font-size: 11px;
+}
+
+.stats-sortable-table th.stats-sortable.is-sorted::after {
+  opacity: 1;
+}
+
+.stats-sortable-table th.stats-sortable.is-sorted-asc::after {
+  content: "^";
+}
+
+.stats-sortable-table th.stats-sortable.is-sorted-desc::after {
+  content: "v";
+}

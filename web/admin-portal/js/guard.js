@@ -28,6 +28,8 @@
     "schedules.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.TeamManager, window.ROLES.Coach],
     "rosters.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.Coach, window.ROLES.TeamManager],
     "players.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.Coach, window.ROLES.TeamManager],
+    "stats.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.Coach, window.ROLES.TeamManager, window.ROLES.Viewer],
+    "settings.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin],
     "access-codes.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.TeamManager]
   };
 

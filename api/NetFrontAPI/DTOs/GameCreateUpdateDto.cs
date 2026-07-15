@@ -14,6 +14,12 @@ namespace NetFrontAPI.DTOs
 
         public int GameTypeId { get; set; }
         public int? GameRoundId { get; set; }
+        public int? PeriodLengthMinutes { get; set; }
+
+        public Guid? Referee1OfficialId { get; set; }
+        public Guid? Referee2OfficialId { get; set; }
+        public Guid? Linesman1OfficialId { get; set; }
+        public Guid? Linesman2OfficialId { get; set; }
 
         public string? Notes { get; set; }
 

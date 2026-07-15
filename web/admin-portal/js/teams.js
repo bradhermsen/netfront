@@ -4,10 +4,270 @@ console.log("Teams.js loaded");
 // TEAMS PAGE — MODERNIZED + MATCHED DESIGN
 // =========================================================
 
+const notify = (message, type = "info") => {
+  if (typeof window.showMessage === "function") {
+    window.showMessage(message, type);
+    return;
+  }
+  console[type === "error" ? "error" : "log"](message);
+};
+
+function getAccessCodeSuffix(value) {
+  const raw = (value ?? "").toString().trim().toUpperCase();
+  const withoutPrefix = raw.replace(/^(GM|SM)\s*-\s*/i, "");
+  const alnum = withoutPrefix.replace(/[^A-Z0-9]/g, "");
+  return alnum.slice(0, 6);
+}
+
+const teamConferenceDistrictState = {
+  list: [],
+};
+
+const teamSectionRegionState = {
+  list: [],
+};
+
+const teamOrganizationState = {
+  byId: new Map(),
+};
+
+const allowedTeamTypes = new Map([
+  ["boys", "Boys"],
+  ["girls", "Girls"],
+  ["co-ed", "Co-Ed"],
+  ["coed", "Co-Ed"],
+  ["men", "Men"],
+  ["women", "Women"],
+]);
+
+function normalizeTeamTypeValue(value) {
+  const raw = (value || "").toString().trim();
+  if (!raw) return "";
+
+  const key = raw.toLowerCase();
+  return allowedTeamTypes.get(key) || "";
+}
+
+function getDisplayTeamType(team) {
+  const fromType = normalizeTeamTypeValue(team?.teamType);
+  if (fromType) return fromType;
+
+  return normalizeTeamTypeValue(team?.gender);
+}
+
+function getOrganizationMascot(orgId) {
+  if (!orgId) return "";
+  return teamOrganizationState.byId.get(orgId)?.mascot || "";
+}
+
+function isExternalOrganizationById(orgId) {
+  if (!orgId) return false;
+
+  const orgName = (teamOrganizationState.byId.get(orgId)?.name || "")
+    .toString()
+    .trim()
+    .toLowerCase();
+
+  return (
+    orgName === "external" ||
+    orgName === "external team" ||
+    orgName.includes("external team")
+  );
+}
+
+function applyTeamMascotRules() {
+  const orgSelect = document.getElementById("team-org");
+  const mascotInput = document.getElementById("team-mascot");
+  if (!orgSelect || !mascotInput) return;
+
+  const selectedOrgId = orgSelect.value || "";
+  const isExternal = isExternalOrganizationById(selectedOrgId);
+
+  if (isExternal) {
+    mascotInput.placeholder = "Optional for external teams";
+    return;
+  }
+
+  mascotInput.placeholder = "Defaults to organization mascot";
+  const current = (mascotInput.value || "").trim();
+  const orgMascot = (getOrganizationMascot(orgSelect.value) || "").trim();
+
+  if (!current || current.toLowerCase() === orgMascot.toLowerCase()) {
+    mascotInput.value = orgMascot;
+  }
+}
+
+function populateTeamTypeFilterFromTeams(teams) {
+  const typeFilter = document.getElementById("filter-team-type");
+  if (!typeFilter) return;
+
+  const selected = typeFilter.value || "";
+  const uniqueTypes = Array.from(
+    new Set(
+      (Array.isArray(teams) ? teams : [])
+        .map((team) => getDisplayTeamType(team))
+        .filter((type) => !!type),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
+
+  typeFilter.innerHTML = '<option value="">Type: All</option>';
+  uniqueTypes.forEach((type) => {
+    const opt = document.createElement("option");
+    opt.value = type;
+    opt.textContent = type;
+    typeFilter.appendChild(opt);
+  });
+
+  const hasSelected = Array.from(typeFilter.options).some(
+    (opt) => opt.value === selected,
+  );
+  typeFilter.value = hasSelected ? selected : "";
+}
+
+function normalizeConferenceDistrict(item) {
+  return {
+    id: item?.id || item?.conferenceDistrictId || "",
+    name: item?.name || item?.conferenceDistrictName || "",
+    sortOrder: item?.sortOrder ?? 0,
+    isActive: item?.isActive ?? true,
+  };
+}
+
+function getTeamConferenceName(team) {
+  if (team?.conferenceDistrictName) return team.conferenceDistrictName;
+
+  const conferenceId =
+    team?.conferenceDistrictId ||
+    team?.conferenceDistrictID ||
+    team?.conferenceId ||
+    "";
+
+  if (!conferenceId) return "";
+
+  const match = teamConferenceDistrictState.list.find(
+    (c) => c.id === conferenceId,
+  );
+
+  return match?.name || "";
+}
+
+function normalizeSectionRegion(item) {
+  return {
+    id: item?.id || item?.sectionRegionId || "",
+    name: item?.name || item?.sectionRegionName || "",
+    sortOrder: item?.sortOrder ?? 0,
+    isActive: item?.isActive ?? true,
+  };
+}
+
+function getTeamSectionName(team) {
+  if (team?.sectionRegionName) return team.sectionRegionName;
+
+  const sectionId =
+    team?.sectionRegionId ||
+    team?.sectionRegionID ||
+    team?.sectionId ||
+    "";
+
+  if (!sectionId) return "";
+
+  const match = teamSectionRegionState.list.find(
+    (s) => s.id === sectionId,
+  );
+
+  return match?.name || "";
+}
+
+async function loadConferenceDistricts() {
+  const payload = await ConferenceDistrictApi.getAll();
+  const conferences = (payload || []).map(normalizeConferenceDistrict);
+
+  teamConferenceDistrictState.list = conferences;
+
+  const modalSelect = document.getElementById("team-conference-district");
+  if (modalSelect) {
+    const selectedValue = modalSelect.value || "";
+    modalSelect.innerHTML = `<option value="">Select Conference</option>`;
+
+    conferences
+      .filter((c) => c.isActive)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name))
+      .forEach((conference) => {
+        const opt = document.createElement("option");
+        opt.value = conference.id;
+        opt.textContent = conference.name;
+        modalSelect.appendChild(opt);
+      });
+
+    modalSelect.value = selectedValue;
+  }
+
+  const filter = document.getElementById("filter-team-conference");
+  if (filter) {
+    const selectedValue = filter.value || "";
+    filter.innerHTML = `<option value="">Conference: All</option>`;
+
+    conferences
+      .filter((c) => c.isActive)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach((conference) => {
+        const opt = document.createElement("option");
+        opt.value = conference.id;
+        opt.textContent = conference.name;
+        filter.appendChild(opt);
+      });
+
+    filter.value = selectedValue;
+  }
+}
+
+async function loadSectionRegions() {
+  const payload = await SectionRegionApi.getAll();
+  const sections = (payload || []).map(normalizeSectionRegion);
+
+  teamSectionRegionState.list = sections;
+
+  const modalSelect = document.getElementById("team-section-region");
+  if (modalSelect) {
+    const selectedValue = modalSelect.value || "";
+    modalSelect.innerHTML = `<option value="">Select Section</option>`;
+
+    sections
+      .filter((s) => s.isActive)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name))
+      .forEach((section) => {
+        const opt = document.createElement("option");
+        opt.value = section.id;
+        opt.textContent = section.name;
+        modalSelect.appendChild(opt);
+      });
+
+    modalSelect.value = selectedValue;
+  }
+
+  const filter = document.getElementById("filter-team-section");
+  if (filter) {
+    const selectedValue = filter.value || "";
+    filter.innerHTML = `<option value="">Section: All</option>`;
+
+    sections
+      .filter((s) => s.isActive)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach((section) => {
+        const opt = document.createElement("option");
+        opt.value = section.id;
+        opt.textContent = section.name;
+        filter.appendChild(opt);
+      });
+
+    filter.value = selectedValue;
+  }
+}
+
 // Enforce SuperAdmin/OrgAdmin/TeamManager access
 (function checkPermission() {
   if (!Auth.canManageTeams()) {
-    showMessage("Access Denied: Team management requires Super Admin, Org Admin, or Team Manager role", "error");
+    notify("Access Denied: Team management requires Super Admin, Org Admin, or Team Manager role", "error");
     setTimeout(() => {
       window.location.href = "./not-authorized.html";
     }, 2000);
@@ -22,6 +282,8 @@ async function loadAllTeamDropdowns() {
     loadTeamOrganizations(),
     loadTeamLevels(),
     loadTeamSeasons(),
+    loadConferenceDistricts(),
+    loadSectionRegions(),
   ]);
 }
 
@@ -37,6 +299,19 @@ async function loadTeamOrganizations() {
     }
 
     const orgs = await res.json();
+    if (!Array.isArray(orgs)) {
+      throw new Error(orgs?.error || "Organizations response was not an array");
+    }
+
+    teamOrganizationState.byId.clear();
+    orgs.forEach((o) => {
+      if (o?.organizationId) {
+        teamOrganizationState.byId.set(o.organizationId, {
+          name: o.name || "",
+          mascot: o.mascot || "",
+        });
+      }
+    });
 
     const select = document.getElementById("team-org");
     if (!select) return;
@@ -61,7 +336,7 @@ async function loadTeamOrganizations() {
     }
   } catch (err) {
     console.error("Failed to load organizations:", err);
-    showMessage("Failed to load organizations", "error");
+    notify("Failed to load organizations", "error");
   }
 }
 
@@ -77,6 +352,9 @@ async function loadTeamLevels() {
     }
 
     const levels = await res.json();
+    if (!Array.isArray(levels)) {
+      throw new Error(levels?.error || "Levels response was not an array");
+    }
 
     const select = document.getElementById("team-level");
     if (!select) return;
@@ -101,7 +379,7 @@ async function loadTeamLevels() {
     }
   } catch (err) {
     console.error("Failed to load levels:", err);
-    showMessage("Failed to load levels", "error");
+    notify("Failed to load levels", "error");
   }
 }
 
@@ -119,6 +397,9 @@ async function loadTeamSeasons() {
     }
 
     const seasons = await res.json();
+    if (!Array.isArray(seasons)) {
+      throw new Error(seasons?.error || "Seasons response was not an array");
+    }
 
     const display = document.getElementById("team-season-display");
     if (!display) return;
@@ -251,6 +532,21 @@ function wireTeamAbbreviation() {
   if (orgSelect) orgSelect.addEventListener("change", updateTeamAbbreviation);
 }
 
+function isExternalTeamRow(team) {
+  if (!team) return false;
+
+  if (team.isExternal === true || team.external === true) {
+    return true;
+  }
+
+  const organizationName = (team.organizationName ?? "")
+    .toString()
+    .trim()
+    .toLowerCase();
+
+  return organizationName === "external team" || organizationName === "external";
+}
+
 // =========================================================
 // MAIN PAGE INITIALIZER
 // =========================================================
@@ -273,6 +569,7 @@ function initTeamsPage() {
 
     editHandlerName: "openEditTeam",
     deleteHandlerName: "openDeleteTeam",
+    addHandler: openAddTeam,
 
     addTitle: "Add Team",
     editTitle: "Edit Team",
@@ -306,29 +603,51 @@ function initTeamsPage() {
       const body = document.getElementById("teamsBody");
       body.innerHTML = "";
 
+      if (!Array.isArray(teams)) {
+        console.error("Teams response was not an array:", teams);
+        notify("Failed to load teams", "error");
+        return;
+      }
+
       // Keep a copy for abbreviation duplicate detection
       window.loadedTeams = teams || [];
+      populateTeamTypeFilterFromTeams(teams);
 
       teams.forEach((team) => {
         const row = document.createElement("tr");
 
+        const conferenceId =
+          team.conferenceDistrictId || team.conferenceDistrictID || "";
+        const conferenceName = getTeamConferenceName(team);
+        const sectionId = team.sectionRegionId || team.sectionRegionID || "";
+        const sectionName = getTeamSectionName(team);
+        const displayTeamType = getDisplayTeamType(team);
+
         row.dataset.orgId = team.organizationId || "";
+        row.dataset.conferenceDistrictId = conferenceId;
+        row.dataset.sectionRegionId = sectionId;
         row.dataset.levelId = team.levelId || "";
+        row.dataset.teamType = displayTeamType;
         row.dataset.status = team.isActive ? "active" : "inactive";
+        row.dataset.isExternal = isExternalTeamRow(team) ? "true" : "false";
 
         const rosterCount = team.rosterCount ?? team.playerCount ?? 0;
+        const gmCode = getAccessCodeSuffix(team.gameManagerCode);
+        const smCode = getAccessCodeSuffix(team.statManagerCode);
 
         row.innerHTML = `
           <td>${team.name}</td>
           <td>${team.organizationName || "External Team"}</td>
+          <td>${conferenceName}</td>
+          <td>${sectionName}</td>
           <td>${team.levelName ?? ""}</td>
-          <td>${team.seasonName ?? ""}</td>
+          <td>${displayTeamType}</td>
           <td>${rosterCount}</td>
           <td>${team.headCoachName ?? ""}</td>
           <td>
             <div class="code-stack">
-              <div class="code-badge gm-code">GM-${team.gameManagerCode ?? ""}</div>
-              <div class="code-badge sm-code">SM-${team.statManagerCode ?? ""}</div>
+              <div class="code-badge gm-code">GM-${gmCode}</div>
+              <div class="code-badge sm-code">SM-${smCode}</div>
             </div>
           </td>
           <td>
@@ -345,6 +664,7 @@ function initTeamsPage() {
 
         const [btnView, btnEdit, btnDelete] = row.querySelectorAll("button");
 
+        btnView.addEventListener("click", () => openEditTeam(team.teamId));
         btnEdit.addEventListener("click", () => openEditTeam(team.teamId));
         btnDelete.addEventListener("click", () => openDeleteTeam(team.teamId));
 
@@ -362,13 +682,17 @@ function initTeamsPage() {
         "team-name",
         "team-abbreviation",
         "team-org",
+        "team-conference-district",
+        "team-section-region",
         "team-level",
+        "team-type",
         "team-head-coach",
         "team-asst1",
         "team-asst2",
         "team-asst3",
         "team-asst4",
         "team-notes",
+        "team-mascot",
         "team-score-code",
         "team-stat-code",
         "team-head-coach-email",
@@ -395,8 +719,8 @@ function initTeamsPage() {
       });
 
       document.getElementById("team-active").checked = true;
-      document.getElementById("team-external").checked = false;
-      document.getElementById("team-org").disabled = false;
+      window.currentTeamIsExternal = false;
+      applyTeamMascotRules();
 
       // Re-wire toggles after clearing
       wireAssistantCoachLoginToggles();
@@ -406,11 +730,37 @@ function initTeamsPage() {
     // POPULATE FORM
     // -------------------------------------------------------
     populateForm: (team) => {
+      const conferenceId =
+        team.conferenceDistrictId ||
+        team.conferenceDistrictID ||
+        teamConferenceDistrictState.list.find(
+          (c) =>
+            c.name &&
+            (c.name === team.conferenceDistrictName ||
+              c.name === team.conferenceName),
+        )?.id ||
+        "";
+
+      const sectionId =
+        team.sectionRegionId ||
+        team.sectionRegionID ||
+        teamSectionRegionState.list.find(
+          (s) =>
+            s.name &&
+            (s.name === team.sectionRegionName || s.name === team.sectionName),
+        )?.id ||
+        "";
+
       document.getElementById("team-name").value = team.name ?? "";
       document.getElementById("team-abbreviation").value =
         team.abbreviation ?? "";
       document.getElementById("team-org").value = team.organizationId || "";
+      document.getElementById("team-conference-district").value =
+        conferenceId;
+      document.getElementById("team-section-region").value = sectionId;
       document.getElementById("team-level").value = team.levelId || "";
+      document.getElementById("team-type").value = getDisplayTeamType(team);
+      document.getElementById("team-mascot").value = team.teamMascot || "";
 
       // Store seasonId for editing so collectFormData can use it
       window.editingSeasonId = team.seasonId || null;
@@ -438,9 +788,11 @@ function initTeamsPage() {
         team.assistantCoach4Email ?? "";
 
       document.getElementById("team-score-code").value =
-        team.gameManagerCode ?? "";
+        getAccessCodeSuffix(team.gameManagerCode);
       document.getElementById("team-stat-code").value =
-        team.statManagerCode ?? "";
+        getAccessCodeSuffix(team.statManagerCode);
+      window.currentTeamIsExternal = !!team.isExternal;
+      applyTeamMascotRules();
 
       const togglePairs = [
         {
@@ -484,15 +836,20 @@ function initTeamsPage() {
     // COLLECT FORM DATA
     // -------------------------------------------------------
     collectFormData: () => {
-      const isExternal = document.getElementById("team-external").checked;
+      const selectedOrgId = document.getElementById("team-org").value || null;
+      const inferredExternal = selectedOrgId
+        ? isExternalOrganizationById(selectedOrgId)
+        : !!window.currentTeamIsExternal;
 
       return {
         name: document.getElementById("team-name").value,
         abbreviation:
           document.getElementById("team-abbreviation").value || null,
-        organizationId: isExternal
-          ? null
-          : document.getElementById("team-org").value || null,
+        organizationId: selectedOrgId,
+        conferenceDistrictId:
+          document.getElementById("team-conference-district").value || null,
+        sectionRegionId:
+          document.getElementById("team-section-region").value || null,
 
         // Correct season logic
         seasonId: AdminPage.editingId
@@ -500,6 +857,8 @@ function initTeamsPage() {
           : window.activeSeasonId,
 
         levelId: document.getElementById("team-level").value || null,
+        teamType: document.getElementById("team-type").value || null,
+        teamMascot: document.getElementById("team-mascot").value || null,
 
         headCoachName: document.getElementById("team-head-coach").value,
         assistantCoach1Name: document.getElementById("team-asst1").value,
@@ -523,13 +882,23 @@ function initTeamsPage() {
           .checked,
 
         notes: document.getElementById("team-notes").value,
-        gameManagerCode: document.getElementById("team-score-code").value,
-        statManagerCode: document.getElementById("team-stat-code").value,
+        gameManagerCode: getAccessCodeSuffix(document.getElementById("team-score-code").value),
+        statManagerCode: getAccessCodeSuffix(document.getElementById("team-stat-code").value),
         isActive: document.getElementById("team-active").checked,
-        isExternal: isExternal,
+        isExternal: inferredExternal,
       };
     },
   });
+
+  const showExternalToggle = document.getElementById("teams-show-external");
+  if (showExternalToggle) {
+    showExternalToggle.checked = false;
+  }
+
+  const teamOrg = document.getElementById("team-org");
+  if (teamOrg) {
+    teamOrg.addEventListener("change", applyTeamMascotRules);
+  }
 }
 
 // =========================================================
@@ -629,10 +998,19 @@ async function ensureCoachUser(name, email, orgId, teamId) {
 // =========================================================
 // ADD TEAM
 // =========================================================
-function openAddTeam() {
+async function openAddTeam() {
   AdminPage.editingId = null;
   window.editingSeasonId = null;
+  window.currentTeamIsExternal = false;
+  window.currentEditingTeamId = null;
+  const modalOverlay = document.getElementById("teamModalOverlay");
+  if (modalOverlay) {
+    delete modalOverlay.dataset.teamId;
+  }
+  await loadConferenceDistricts();
+  await loadSectionRegions();
   AdminPage.config.clearForm();
+  applyTeamMascotRules();
 
   document.getElementById("teamModalTitle").textContent = "Add Team";
   document.getElementById("teamModalOverlay").classList.add("active");
@@ -646,7 +1024,14 @@ function openAddTeam() {
 async function openEditTeam(id) {
   try {
     const team = await TeamApi.getById(id);
+    await loadConferenceDistricts();
+    await loadSectionRegions();
     AdminPage.editingId = id;
+    window.currentEditingTeamId = id;
+    const modalOverlay = document.getElementById("teamModalOverlay");
+    if (modalOverlay) {
+      modalOverlay.dataset.teamId = id;
+    }
     AdminPage.config.populateForm(team);
 
     document.getElementById("teamModalTitle").textContent = "Edit Team";
@@ -673,19 +1058,30 @@ async function saveTeam() {
   console.log(">>> saveTeam() FIRED");
 
   const payload = AdminPage.config.collectFormData();
+  if (!payload.teamType) {
+    notify("Team type is required.", "error");
+    return;
+  }
+
   console.log(">>> PAYLOAD:", payload);
 
   let teamId;
   const orgId = payload.organizationId;
 
-  if (AdminPage.editingId) {
-    console.log(">>> Updating existing team:", AdminPage.editingId);
-    await TeamApi.update(AdminPage.editingId, payload);
-    teamId = AdminPage.editingId;
-  } else {
-    console.log(">>> Creating NEW team...");
-    teamId = await TeamApi.create(payload);
-    console.log(">>> Team created with ID:", teamId);
+  try {
+    if (AdminPage.editingId) {
+      console.log(">>> Updating existing team:", AdminPage.editingId);
+      await TeamApi.update(AdminPage.editingId, payload);
+      teamId = AdminPage.editingId;
+    } else {
+      console.log(">>> Creating NEW team...");
+      teamId = await TeamApi.create(payload);
+      console.log(">>> Team created with ID:", teamId);
+    }
+  } catch (err) {
+    const message = err?.message || "Failed to save team.";
+    notify(message, "error");
+    throw err;
   }
 
   console.log(">>> Processing HEAD COACH");
@@ -752,26 +1148,55 @@ function applyTeamFiltersAndSearch() {
     document.getElementById("teams-search-bar")?.value || ""
   ).toLowerCase();
   const orgFilter = document.getElementById("filter-org")?.value || "";
+  const conferenceFilter =
+    document.getElementById("filter-team-conference")?.value || "";
+  const sectionFilter =
+    document.getElementById("filter-team-section")?.value || "";
   const levelFilter = document.getElementById("filter-level")?.value || "";
+  const typeFilter = document.getElementById("filter-team-type")?.value || "";
   const statusFilter = document.getElementById("filter-status")?.value || "";
+  const showExternal = !!document.getElementById("teams-show-external")?.checked;
 
   Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
     const rowText = row.textContent.toLowerCase();
 
     const matchesSearch = !searchTerm || rowText.includes(searchTerm);
     const matchesOrg = !orgFilter || row.dataset.orgId === orgFilter;
+    const matchesConference =
+      !conferenceFilter ||
+      row.dataset.conferenceDistrictId === conferenceFilter;
+    const matchesSection =
+      !sectionFilter || row.dataset.sectionRegionId === sectionFilter;
     const matchesLevel = !levelFilter || row.dataset.levelId === levelFilter;
+    const matchesType = !typeFilter || row.dataset.teamType === typeFilter;
     const matchesStatus = !statusFilter || row.dataset.status === statusFilter;
+    const matchesExternal = showExternal || row.dataset.isExternal !== "true";
 
     row.style.display =
-      matchesSearch && matchesOrg && matchesLevel && matchesStatus
+      matchesSearch &&
+      matchesOrg &&
+      matchesConference &&
+      matchesSection &&
+      matchesLevel &&
+      matchesType &&
+      matchesStatus &&
+      matchesExternal
         ? ""
         : "none";
   });
 }
 
 function wireTeamFilterEvents() {
-  ["teams-search-bar", "filter-org", "filter-level", "filter-status"].forEach(
+  [
+    "teams-search-bar",
+    "filter-org",
+    "filter-team-conference",
+    "filter-team-section",
+    "filter-level",
+    "filter-team-type",
+    "filter-status",
+    "teams-show-external",
+  ].forEach(
     (id) => {
       const el = document.getElementById(id);
       if (el) el.addEventListener("input", applyTeamFiltersAndSearch);
@@ -784,26 +1209,29 @@ function wireTeamFilterEvents() {
 // GENERATE ACCESS CODES
 // =========================================================
 document.addEventListener("click", async (e) => {
-  if (e.target.id === "btnGenerateCodes") {
+  const btn = e.target?.closest?.("#btnGenerateCodes");
+  if (btn) {
     // Check role permission
     if (!Auth.canGenerateAccessCodes()) {
-      showMessage("Only Team Manager or OrgAdmin can generate access codes", "error");
+      notify("Only Team Manager or OrgAdmin can generate access codes", "error");
       return;
     }
 
-    const btn = e.target;
     btn.disabled = true;
     btn.textContent = "Generating...";
 
     try {
-      // Get the team ID from the modal
-      const teamIdInput = document.getElementById("team-id");
-      if (!teamIdInput || !teamIdInput.value) {
-        showMessage("Team ID not found", "error");
+      // Only supported while editing an existing team.
+      const teamId =
+        window.currentEditingTeamId ||
+        AdminPage.editingId ||
+        document.getElementById("teamModalOverlay")?.dataset?.teamId ||
+        "";
+
+      if (!teamId) {
+        notify("Open an existing team in Edit mode before generating access codes.", "warning");
         return;
       }
-
-      const teamId = teamIdInput.value;
 
       // Call backend to generate codes
       const res = await authFetch(`/teams/${teamId}/generate-codes`, {
@@ -813,19 +1241,19 @@ document.addEventListener("click", async (e) => {
 
       if (res.ok) {
         const data = await res.json();
-        document.getElementById("team-score-code").value = data.gameManagerCode || "";
-        document.getElementById("team-stat-code").value = data.statManagerCode || "";
-        showMessage("✓ Access codes generated successfully (GM-XXXXXX and SM-XXXXXX format)", "success");
+        document.getElementById("team-score-code").value = getAccessCodeSuffix(data.gameManagerCode);
+        document.getElementById("team-stat-code").value = getAccessCodeSuffix(data.statManagerCode);
+        notify("✓ Access codes generated successfully (GM-XXXXXX and SM-XXXXXX format)", "success");
       } else if (res.status === 403) {
-        showMessage("You do not have permission to generate access codes for this team", "error");
+        notify("You do not have permission to generate access codes for this team", "error");
       } else if (res.status === 401) {
-        showMessage("Your session has expired. Please log in again.", "error");
+        notify("Your session has expired. Please log in again.", "error");
       } else {
-        showMessage("Failed to generate access codes", "error");
+        notify("Failed to generate access codes", "error");
       }
     } catch (err) {
       console.error("Error generating codes:", err);
-      showMessage("Error generating codes: " + err.message, "error");
+      notify("Error generating codes: " + err.message, "error");
     } finally {
       btn.disabled = false;
       btn.textContent = "Generate Access Codes";

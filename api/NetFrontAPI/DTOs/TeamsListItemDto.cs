@@ -5,14 +5,20 @@ namespace NetFrontAPI.DTOs
     public class TeamsListItemDto
     {
         public Guid TeamId { get; set; }
-        public Guid OrganizationId { get; set; }
+        public Guid? OrganizationId { get; set; }
+        public Guid? ConferenceDistrictId { get; set; }
+        public Guid? SectionRegionId { get; set; }
         public Guid LevelId { get; set; }
  
         public Guid SeasonId { get; set; }
 
         public string? Name { get; set; }
         public string? Abbreviation { get; set; }
+        public string? TeamType { get; set; }
+        public string? TeamMascot { get; set; }
         public string? OrganizationName { get; set; }
+        public string? ConferenceDistrictName { get; set; }
+        public string? SectionRegionName { get; set; }
         public string? LevelName { get; set; }
         public string? SeasonName { get; set; }
 

@@ -3,13 +3,15 @@ using System;
 public class TeamDto
 {
     public Guid TeamId { get; set; }
-    public Guid OrganizationId { get; set; }
+    public Guid? OrganizationId { get; set; }
     public Guid LevelId { get; set; }
     public Guid SeasonId { get; set; }
 
     public string? Name { get; set; }
     public string? Gender { get; set; }
     public string? Abbreviation { get; set; }
+    public string? TeamType { get; set; }
+    public string? TeamMascot { get; set; }
 
     public string? HeadCoachName { get; set; }
     public string? AssistantCoach1Name { get; set; }

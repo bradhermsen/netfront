@@ -291,31 +291,61 @@ function populateScheduleFilters() {
 // FORMAT HELPERS
 // =========================================================
 function formatDate(dt) {
-  const date = new Date(dt);
-  return date.toLocaleDateString("en-US");
+  const parts = extractDateTimeParts(dt);
+  if (!parts) return "";
+
+  const [year, month, day] = parts.date.split("-");
+  return `${Number(month)}/${Number(day)}/${year}`;
 }
 
 function formatTime(dt) {
-  return new Date(dt).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  const parts = extractDateTimeParts(dt);
+  if (!parts) return "";
+
+  const [h, m] = parts.time.split(":");
+  let hour = Number(h);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${hour}:${m} ${ampm}`;
 }
 
 function formatInputDate(dt) {
-  const date = new Date(dt);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  const parts = extractDateTimeParts(dt);
+  return parts?.date || "";
 }
 
 function formatInputTime(dt) {
-  const date = new Date(dt);
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
+  const parts = extractDateTimeParts(dt);
+  return parts?.time || "";
+}
+
+function extractDateTimeParts(value) {
+  if (!value) return null;
+
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}):(\d{2})/);
+    if (match) {
+      return {
+        date: match[1],
+        time: `${match[2]}:${match[3]}`,
+      };
+    }
+  }
+
+  const dateObj = new Date(value);
+  if (Number.isNaN(dateObj.getTime())) return null;
+
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  const hours = String(dateObj.getHours()).padStart(2, "0");
+  const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hours}:${minutes}`,
+  };
 }
 
 function formatOfficialName(value) {
@@ -575,12 +605,17 @@ async function openEditGame(id) {
 async function saveGame() {
   const date = document.getElementById("game-date").value;
   const time = document.getElementById("game-time").value;
-  const gameDateTime = new Date(`${date}T${time}:00`);
+  const gameDateTime = `${date}T${time}:00`;
+
+  if (!date || !time) {
+    showMessage("Game date and time are required", "error");
+    return;
+  }
 
   const payload = {
     homeTeamId: document.getElementById("game-home-team").value,
     awayTeamId: document.getElementById("game-away-team").value,
-    gameDateTime: gameDateTime.toISOString(),
+    gameDateTime,
     arenaName:
       document.getElementById("game-arena-custom").value ||
       document.getElementById("game-arena-select").value,

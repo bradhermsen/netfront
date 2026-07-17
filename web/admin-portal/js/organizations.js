@@ -2,11 +2,168 @@
 // ORGANIZATIONS PAGE — MODERNIZED + COMPATIBLE VERSION
 // =========================================================
 
+const ORG_GROUP_PAGE_SIZE = 10;
+const orgGroupPaginationState = {};
+
+function resetOrgGroupPagination() {
+  Object.keys(orgGroupPaginationState).forEach((k) => delete orgGroupPaginationState[k]);
+}
+
+function getFilteredOrganizations() {
+  const source = Array.isArray(AdminPage?.allItems) ? AdminPage.allItems : [];
+  const searchTerm = (document.getElementById("org-search-bar")?.value || "").toLowerCase();
+  const leagueFilter = document.getElementById("filter-league")?.value || "";
+  const statusFilter = document.getElementById("filter-status")?.value || "";
+
+  return source.filter((org) => {
+    const orgText = JSON.stringify(org || {}).toLowerCase();
+    const orgLeague = org?.leagueId || "";
+    const orgStatus = org?.isActive ? "active" : "inactive";
+
+    const matchesSearch = !searchTerm || orgText.includes(searchTerm);
+    const matchesLeague = !leagueFilter || orgLeague === leagueFilter;
+    const matchesStatus = !statusFilter || orgStatus === statusFilter;
+
+    return matchesSearch && matchesLeague && matchesStatus;
+  });
+}
+
+function applyOrgFiltersAndSearch() {
+  renderOrganizationsGrouped(getFilteredOrganizations());
+}
+
+function renderOrganizationsGrouped(orgs) {
+  const container = document.getElementById("orgGroupedList");
+  if (!container) return;
+
+  if (!orgs.length) {
+    container.innerHTML = `<div class="nf-empty-state">No organizations match your current filters.</div>`;
+    return;
+  }
+
+  const statusGroups = {
+    active: orgs.filter((org) => org.isActive),
+    inactive: orgs.filter((org) => !org.isActive),
+  };
+
+  const statusOrder = ["active", "inactive"].filter((key) => statusGroups[key].length > 0);
+
+  container.innerHTML = statusOrder
+    .map((statusKey, statusIndex) => {
+      const statusLabel = statusKey === "active" ? "Active" : "Inactive";
+      const statusItems = [...statusGroups[statusKey]].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+      const totalPages = Math.max(1, Math.ceil(statusItems.length / ORG_GROUP_PAGE_SIZE));
+      const currentPage = Math.min(orgGroupPaginationState[statusKey] || 1, totalPages);
+      orgGroupPaginationState[statusKey] = currentPage;
+
+      const paged = statusItems.slice((currentPage - 1) * ORG_GROUP_PAGE_SIZE, currentPage * ORG_GROUP_PAGE_SIZE);
+
+      const byLeague = new Map();
+      paged.forEach((org) => {
+        const leagueLabel = org.leagueName || "No League";
+        if (!byLeague.has(leagueLabel)) byLeague.set(leagueLabel, []);
+        byLeague.get(leagueLabel).push(org);
+      });
+
+      const leagueMarkup = [...byLeague.entries()]
+        .map(([leagueLabel, leagueItems], leagueIndex) => {
+          const cards = leagueItems
+            .map((org) => `
+              <article class="nf-item-card org-item-card">
+                <div class="nf-item-card-top">
+                  <h4>${org.name || "Unnamed Organization"}</h4>
+                  <span class="status-badge ${org.isActive ? "active" : "inactive"}">${org.isActive ? "Active" : "Inactive"}</span>
+                </div>
+                <div class="nf-item-card-meta">
+                  <span><i class="fa fa-building"></i> ${org.abbreviation || "No abbreviation"}</span>
+                  <span><i class="fa fa-map-marker-alt"></i> ${org.city || "Unknown city"}${org.state ? `, ${org.state}` : ""}</span>
+                  <span><i class="fa fa-users"></i> ${org.teamCount || 0} teams</span>
+                </div>
+                <div class="nf-item-card-actions">
+                  <button class="nf-btn-icon view org-view-btn" data-id="${org.organizationId}" title="View Teams"><i class="fa-solid fa-users"></i></button>
+                  <button class="nf-btn-icon edit org-edit-btn" data-id="${org.organizationId}" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                  <button class="nf-btn-icon delete org-delete-btn" data-id="${org.organizationId}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </article>
+            `)
+            .join("");
+
+          return `
+            <details class="nf-subgroup" ${leagueIndex === 0 ? "open" : ""}>
+              <summary>
+                <span>${leagueLabel}</span>
+                <span class="nf-group-count">${leagueItems.length}</span>
+              </summary>
+              <div class="nf-card-grid">${cards}</div>
+            </details>
+          `;
+        })
+        .join("");
+
+      return `
+        <details class="nf-group" ${statusIndex === 0 ? "open" : ""}>
+          <summary>
+            <span>${statusLabel}</span>
+            <span class="nf-group-count">${statusItems.length}</span>
+          </summary>
+          <div class="nf-group-content">
+            ${leagueMarkup}
+            ${statusItems.length > ORG_GROUP_PAGE_SIZE ? `
+              <div class="nf-pagination">
+                <button class="nf-btn nf-btn-secondary org-page-btn" data-status="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
+                <span>Page ${currentPage} of ${totalPages}</span>
+                <button class="nf-btn nf-btn-secondary org-page-btn" data-status="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
+              </div>
+            ` : ""}
+          </div>
+        </details>
+      `;
+    })
+    .join("");
+
+  wireOrganizationCardActions();
+  wireOrganizationPagination();
+}
+
+function wireOrganizationCardActions() {
+  document.querySelectorAll(".org-view-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const id = btn.dataset.id;
+      window.location.href = `teams.html?orgId=${id}`;
+    };
+  });
+
+  document.querySelectorAll(".org-edit-btn").forEach((btn) => {
+    btn.onclick = () => openEditOrganization(btn.dataset.id);
+  });
+
+  document.querySelectorAll(".org-delete-btn").forEach((btn) => {
+    btn.onclick = () => openDeleteOrganization(btn.dataset.id);
+  });
+}
+
+function wireOrganizationPagination() {
+  document.querySelectorAll(".org-page-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const status = btn.dataset.status;
+      const direction = btn.dataset.direction;
+      const current = orgGroupPaginationState[status] || 1;
+
+      orgGroupPaginationState[status] = direction === "prev"
+        ? Math.max(1, current - 1)
+        : current + 1;
+
+      applyOrgFiltersAndSearch();
+    };
+  });
+}
+
 // ---------------------------------------------------------
 // ADMIN PAGE INITIALIZATION
 // ---------------------------------------------------------
 AdminPage.init({
-  tableBodyId: "orgTableBody",
+  tableBodyId: "orgGroupedList",
   searchInputId: "org-search-bar",
 
   modalId: "orgModalOverlay",
@@ -40,57 +197,7 @@ AdminPage.init({
   // TABLE RENDERING (MODERNIZED)
   // -------------------------------------------------------
   renderTable: (orgs) => {
-    const body = document.getElementById("orgTableBody");
-    body.innerHTML = "";
-
-    orgs.forEach((org) => {
-      const row = document.createElement("tr");
-
-      row.dataset.leagueId = org.leagueId || "";
-      row.dataset.status = org.isActive ? "active" : "inactive";
-
-      const orgDisplay = `
-        <div class="org-col">
-          <div class="org-name">${org.name}</div>
-          <div class="org-sub muted">
-            ${org.abbreviation ?? ""} • ${org.city ?? ""}, ${org.state ?? ""}
-          </div>
-        </div>
-      `;
-
-      row.innerHTML = `
-        <td>${orgDisplay}</td>
-        <td>${org.leagueName ?? ""}</td>
-        <td>${org.teamCount ?? 0}</td>
-        <td>
-          <span class="status-badge ${org.isActive ? "active" : "inactive"}">
-            ${org.isActive ? "Active" : "Inactive"}
-          </span>
-        </td>
-        <td class="actions-col">
-          <button class="nf-btn-icon view" title="View Team"><i class="fa-solid fa-users"></i></button>
-          <button class="nf-btn-icon edit" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
-          <button class="nf-btn-icon delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
-        </td>
-      `;
-      const [btnView, btnEdit, btnDelete] = row.querySelectorAll("button");
-
-      btnView.addEventListener("click", () => {
-        window.location.href = `teams.html?orgId=${org.organizationId}`;
-      });
-
-      btnEdit.addEventListener("click", () => {
-        openEditOrganization(org.organizationId);
-      });
-
-      btnDelete.addEventListener("click", () => {
-        openDeleteOrganization(org.organizationId);
-      });
-
-      body.appendChild(row);
-    });
-
-    applyOrgFiltersAndSearch();
+    renderOrganizationsGrouped(orgs);
   },
 
   // -------------------------------------------------------
@@ -231,42 +338,31 @@ async function loadLeagues() {
 // =========================================================
 // FILTER + SEARCH
 // =========================================================
-function applyOrgFiltersAndSearch() {
-  const tbody = document.getElementById("orgTableBody");
-  if (!tbody) return;
-
-  const searchTerm = (
-    document.getElementById("org-search-bar")?.value || ""
-  ).toLowerCase();
-
-  const leagueFilter = document.getElementById("filter-league")?.value || "";
-  const statusFilter = document.getElementById("filter-status")?.value || "";
-
-  Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
-    const rowText = row.textContent.toLowerCase();
-
-    const rowLeague = row.dataset.leagueId || "";
-    const rowStatus = row.dataset.status || "";
-
-    const matchesSearch = !searchTerm || rowText.includes(searchTerm);
-    const matchesLeague = !leagueFilter || rowLeague === leagueFilter;
-    const matchesStatus = !statusFilter || rowStatus === statusFilter;
-
-    row.style.display =
-      matchesSearch && matchesLeague && matchesStatus
-        ? ""
-        : "none";
-  });
-}
-
 function wireOrgFilterEvents() {
   const search = document.getElementById("org-search-bar");
   const league = document.getElementById("filter-league");
   const status = document.getElementById("filter-status");
 
-  if (search) search.addEventListener("input", applyOrgFiltersAndSearch);
-  if (league) league.addEventListener("change", applyOrgFiltersAndSearch);
-  if (status) status.addEventListener("change", applyOrgFiltersAndSearch);
+  if (search) {
+    search.addEventListener("input", () => {
+      resetOrgGroupPagination();
+      applyOrgFiltersAndSearch();
+    });
+  }
+
+  if (league) {
+    league.addEventListener("change", () => {
+      resetOrgGroupPagination();
+      applyOrgFiltersAndSearch();
+    });
+  }
+
+  if (status) {
+    status.addEventListener("change", () => {
+      resetOrgGroupPagination();
+      applyOrgFiltersAndSearch();
+    });
+  }
 }
 
 // =========================================================

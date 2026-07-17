@@ -111,3 +111,14 @@
 .teams-external-switch input:checked + .teams-external-slider:before {
   transform: translateX(20px);
 }
+
+.teams-group-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.team-item-card .code-stack {
+  margin-top: 2px;
+  width: fit-content;
+}

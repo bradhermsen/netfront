@@ -28,3 +28,163 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.games-grouped-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-status-group,
+.schedule-month-group {
+  background: var(--nf-bg-light);
+  border: 1px solid var(--nf-border-light);
+  border-radius: var(--nf-radius-md);
+  overflow: hidden;
+}
+
+.schedule-status-group > summary,
+.schedule-month-group > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  font-weight: 600;
+}
+
+.schedule-status-group > summary {
+  background: #14213a;
+  color: #ffffff;
+}
+
+.schedule-month-group > summary {
+  background: #111b30;
+  color: var(--nf-text);
+}
+
+.schedule-status-group > summary::-webkit-details-marker,
+.schedule-month-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.schedule-count {
+  background: var(--nf-accent);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.schedule-status-content {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-month-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  padding: 10px;
+}
+
+.schedule-game-card {
+  background: #0f192d;
+  border: 1px solid #263a5f;
+  border-radius: var(--nf-radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-game-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.schedule-game-top h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.schedule-status-badge {
+  background: #203e66;
+  border: 1px solid #325d92;
+  color: #d4e8ff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.schedule-game-meta {
+  display: grid;
+  gap: 4px;
+  color: var(--nf-text-muted);
+  font-size: 12px;
+}
+
+.schedule-game-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-game-officials {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  font-size: 12px;
+  color: #c2cad6;
+}
+
+.schedule-game-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.schedule-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 4px 2px;
+}
+
+.schedule-pagination span {
+  color: var(--nf-text-muted);
+  font-size: 12px;
+}
+
+.schedules-empty {
+  border: 1px dashed var(--nf-border-light);
+  border-radius: var(--nf-radius-md);
+  padding: 18px;
+  text-align: center;
+  color: var(--nf-text-muted);
+  background: #101b31;
+}
+
+@media (max-width: 768px) {
+  .schedule-month-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-game-officials {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-pagination {
+    justify-content: space-between;
+  }
+}

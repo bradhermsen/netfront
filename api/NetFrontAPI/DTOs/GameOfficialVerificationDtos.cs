@@ -8,6 +8,7 @@ namespace NetFrontAPI.DTOs
         public Guid? OfficialId { get; set; }
         public string Role { get; set; } = string.Empty;
         public string OfficialName { get; set; } = string.Empty;
+        public string? OfficialEmail { get; set; }
         public string? SignatureImageBase64 { get; set; }
         public DateTime? SignedAtUtc { get; set; }
     }

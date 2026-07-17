@@ -38,3 +38,26 @@
   background-color: #455a64;
   color: #cfd8dc;
 }
+
+.official-role-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.official-role-toggle-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid var(--nf-border);
+  border-radius: 10px;
+  background: var(--nf-surface-soft);
+}
+
+.official-role-toggle-item span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--nf-text);
+}

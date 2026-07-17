@@ -40,6 +40,13 @@ const allowedTeamTypes = new Map([
   ["women", "Women"],
 ]);
 
+const TEAMS_GROUP_PAGE_SIZE = 10;
+const teamsGroupPaginationState = {};
+
+function resetTeamsGroupPagination() {
+  Object.keys(teamsGroupPaginationState).forEach((k) => delete teamsGroupPaginationState[k]);
+}
+
 function normalizeTeamTypeValue(value) {
   const raw = (value || "").toString().trim();
   if (!raw) return "";
@@ -547,14 +554,191 @@ function isExternalTeamRow(team) {
   return organizationName === "external team" || organizationName === "external";
 }
 
+function getFilteredTeams() {
+  const source = Array.isArray(AdminPage?.allItems) ? AdminPage.allItems : [];
+
+  const searchTerm = (document.getElementById("teams-search-bar")?.value || "").toLowerCase();
+  const orgFilter = document.getElementById("filter-org")?.value || "";
+  const conferenceFilter = document.getElementById("filter-team-conference")?.value || "";
+  const sectionFilter = document.getElementById("filter-team-section")?.value || "";
+  const levelFilter = document.getElementById("filter-level")?.value || "";
+  const typeFilter = document.getElementById("filter-team-type")?.value || "";
+  const statusFilter = document.getElementById("filter-status")?.value || "";
+  const showExternal = !!document.getElementById("teams-show-external")?.checked;
+
+  return source.filter((team) => {
+    const conferenceId = team.conferenceDistrictId || team.conferenceDistrictID || "";
+    const sectionId = team.sectionRegionId || team.sectionRegionID || "";
+    const teamType = getDisplayTeamType(team);
+    const isExternal = isExternalTeamRow(team);
+    const status = team.isActive ? "active" : "inactive";
+
+    const matchesSearch = !searchTerm || JSON.stringify(team || {}).toLowerCase().includes(searchTerm);
+    const matchesOrg = !orgFilter || (team.organizationId || "") === orgFilter;
+    const matchesConference = !conferenceFilter || conferenceId === conferenceFilter;
+    const matchesSection = !sectionFilter || sectionId === sectionFilter;
+    const matchesLevel = !levelFilter || (team.levelId || "") === levelFilter;
+    const matchesType = !typeFilter || teamType === typeFilter;
+    const matchesStatus = !statusFilter || status === statusFilter;
+    const matchesExternal = showExternal || !isExternal;
+
+    return (
+      matchesSearch &&
+      matchesOrg &&
+      matchesConference &&
+      matchesSection &&
+      matchesLevel &&
+      matchesType &&
+      matchesStatus &&
+      matchesExternal
+    );
+  });
+}
+
+function renderTeamsGrouped(teams) {
+  const container = document.getElementById("teamsGroupedList");
+  if (!container) return;
+
+  if (!teams.length) {
+    container.innerHTML = `<div class="nf-empty-state">No teams match your current filters.</div>`;
+    return;
+  }
+
+  const statusGroups = {
+    active: teams.filter((team) => team.isActive),
+    inactive: teams.filter((team) => !team.isActive),
+  };
+
+  const statusOrder = ["active", "inactive"].filter((key) => statusGroups[key].length > 0);
+
+  container.innerHTML = statusOrder
+    .map((statusKey, statusIndex) => {
+      const statusItems = [...statusGroups[statusKey]].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      const totalPages = Math.max(1, Math.ceil(statusItems.length / TEAMS_GROUP_PAGE_SIZE));
+      const currentPage = Math.min(teamsGroupPaginationState[statusKey] || 1, totalPages);
+      teamsGroupPaginationState[statusKey] = currentPage;
+
+      const paged = statusItems.slice((currentPage - 1) * TEAMS_GROUP_PAGE_SIZE, currentPage * TEAMS_GROUP_PAGE_SIZE);
+      const orgGroups = new Map();
+
+      paged.forEach((team) => {
+        const orgLabel = team.organizationName || "External Team";
+        if (!orgGroups.has(orgLabel)) orgGroups.set(orgLabel, []);
+        orgGroups.get(orgLabel).push(team);
+      });
+
+      const orgMarkup = [...orgGroups.entries()]
+        .map(([orgLabel, orgTeams], orgIndex) => {
+          const cards = orgTeams
+            .map((team) => {
+              const conferenceName = getTeamConferenceName(team) || "No conference";
+              const sectionName = getTeamSectionName(team) || "No section";
+              const displayTeamType = getDisplayTeamType(team) || "No type";
+              const rosterCount = team.rosterCount ?? team.playerCount ?? 0;
+              const gmCode = getAccessCodeSuffix(team.gameManagerCode);
+              const smCode = getAccessCodeSuffix(team.statManagerCode);
+
+              return `
+                <article class="nf-item-card team-item-card">
+                  <div class="nf-item-card-top">
+                    <h4>${team.name || "Unnamed Team"}</h4>
+                    <span class="status-badge ${team.isActive ? "active" : "inactive"}">${team.isActive ? "Active" : "Inactive"}</span>
+                  </div>
+                  <div class="nf-item-card-meta">
+                    <span><i class="fa fa-building"></i> ${team.organizationName || "External Team"}</span>
+                    <span><i class="fa fa-shield"></i> ${conferenceName} • ${sectionName}</span>
+                    <span><i class="fa fa-layer-group"></i> ${team.levelName || "No level"} • ${displayTeamType}</span>
+                    <span><i class="fa fa-users"></i> ${rosterCount} rostered • ${team.headCoachName || "No head coach"}</span>
+                  </div>
+                  <div class="code-stack">
+                    <div class="code-badge gm-code">GM-${gmCode}</div>
+                    <div class="code-badge sm-code">SM-${smCode}</div>
+                  </div>
+                  <div class="nf-item-card-actions">
+                    <button class="nf-btn-icon view team-view-btn" data-id="${team.teamId}" title="View Team"><i class="fa-solid fa-users"></i></button>
+                    <button class="nf-btn-icon edit team-edit-btn" data-id="${team.teamId}" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button class="nf-btn-icon delete team-delete-btn" data-id="${team.teamId}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                  </div>
+                </article>
+              `;
+            })
+            .join("");
+
+          return `
+            <details class="nf-subgroup" ${orgIndex === 0 ? "open" : ""}>
+              <summary>
+                <span>${orgLabel}</span>
+                <span class="nf-group-count">${orgTeams.length}</span>
+              </summary>
+              <div class="nf-card-grid">${cards}</div>
+            </details>
+          `;
+        })
+        .join("");
+
+      return `
+        <details class="nf-group" ${statusIndex === 0 ? "open" : ""}>
+          <summary>
+            <span>${statusKey === "active" ? "Active" : "Inactive"}</span>
+            <span class="nf-group-count">${statusItems.length}</span>
+          </summary>
+          <div class="nf-group-content">
+            ${orgMarkup}
+            ${statusItems.length > TEAMS_GROUP_PAGE_SIZE ? `
+              <div class="nf-pagination">
+                <button class="nf-btn nf-btn-secondary team-page-btn" data-status="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
+                <span>Page ${currentPage} of ${totalPages}</span>
+                <button class="nf-btn nf-btn-secondary team-page-btn" data-status="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
+              </div>
+            ` : ""}
+          </div>
+        </details>
+      `;
+    })
+    .join("");
+
+  wireTeamCardActions();
+  wireTeamPagination();
+}
+
+function wireTeamCardActions() {
+  document.querySelectorAll(".team-view-btn").forEach((btn) => {
+    btn.onclick = () => openEditTeam(btn.dataset.id);
+  });
+
+  document.querySelectorAll(".team-edit-btn").forEach((btn) => {
+    btn.onclick = () => openEditTeam(btn.dataset.id);
+  });
+
+  document.querySelectorAll(".team-delete-btn").forEach((btn) => {
+    btn.onclick = () => openDeleteTeam(btn.dataset.id);
+  });
+}
+
+function wireTeamPagination() {
+  document.querySelectorAll(".team-page-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const status = btn.dataset.status;
+      const direction = btn.dataset.direction;
+      const current = teamsGroupPaginationState[status] || 1;
+
+      teamsGroupPaginationState[status] = direction === "prev"
+        ? Math.max(1, current - 1)
+        : current + 1;
+
+      applyTeamFiltersAndSearch();
+    };
+  });
+}
+
 // =========================================================
 // MAIN PAGE INITIALIZER
 // =========================================================
 function initTeamsPage() {
-  if (!document.getElementById("teamsBody")) return;
+  if (!document.getElementById("teamsGroupedList")) return;
 
   AdminPage.init({
-    tableBodyId: "teamsBody",
+    tableBodyId: "teamsGroupedList",
     searchInputId: "teams-search-bar",
 
     modalId: "teamModalOverlay",
@@ -600,9 +784,6 @@ function initTeamsPage() {
     // TABLE RENDERING
     // -------------------------------------------------------
     renderTable: (teams) => {
-      const body = document.getElementById("teamsBody");
-      body.innerHTML = "";
-
       if (!Array.isArray(teams)) {
         console.error("Teams response was not an array:", teams);
         notify("Failed to load teams", "error");
@@ -612,66 +793,7 @@ function initTeamsPage() {
       // Keep a copy for abbreviation duplicate detection
       window.loadedTeams = teams || [];
       populateTeamTypeFilterFromTeams(teams);
-
-      teams.forEach((team) => {
-        const row = document.createElement("tr");
-
-        const conferenceId =
-          team.conferenceDistrictId || team.conferenceDistrictID || "";
-        const conferenceName = getTeamConferenceName(team);
-        const sectionId = team.sectionRegionId || team.sectionRegionID || "";
-        const sectionName = getTeamSectionName(team);
-        const displayTeamType = getDisplayTeamType(team);
-
-        row.dataset.orgId = team.organizationId || "";
-        row.dataset.conferenceDistrictId = conferenceId;
-        row.dataset.sectionRegionId = sectionId;
-        row.dataset.levelId = team.levelId || "";
-        row.dataset.teamType = displayTeamType;
-        row.dataset.status = team.isActive ? "active" : "inactive";
-        row.dataset.isExternal = isExternalTeamRow(team) ? "true" : "false";
-
-        const rosterCount = team.rosterCount ?? team.playerCount ?? 0;
-        const gmCode = getAccessCodeSuffix(team.gameManagerCode);
-        const smCode = getAccessCodeSuffix(team.statManagerCode);
-
-        row.innerHTML = `
-          <td>${team.name}</td>
-          <td>${team.organizationName || "External Team"}</td>
-          <td>${conferenceName}</td>
-          <td>${sectionName}</td>
-          <td>${team.levelName ?? ""}</td>
-          <td>${displayTeamType}</td>
-          <td>${rosterCount}</td>
-          <td>${team.headCoachName ?? ""}</td>
-          <td>
-            <div class="code-stack">
-              <div class="code-badge gm-code">GM-${gmCode}</div>
-              <div class="code-badge sm-code">SM-${smCode}</div>
-            </div>
-          </td>
-          <td>
-            <span class="status-badge ${team.isActive ? "active" : "inactive"}">
-              ${team.isActive ? "Active" : "Inactive"}
-            </span>
-          </td>
-          <td class="actions-col">
-            <button class="nf-btn-icon view"><i class="fa-solid fa-users"></i></button>
-            <button class="nf-btn-icon edit"><i class="fa-solid fa-pen-to-square"></i></button>
-            <button class="nf-btn-icon delete"><i class="fa-solid fa-trash"></i></button>
-          </td>
-        `;
-
-        const [btnView, btnEdit, btnDelete] = row.querySelectorAll("button");
-
-        btnView.addEventListener("click", () => openEditTeam(team.teamId));
-        btnEdit.addEventListener("click", () => openEditTeam(team.teamId));
-        btnDelete.addEventListener("click", () => openDeleteTeam(team.teamId));
-
-        body.appendChild(row);
-      });
-
-      applyTeamFiltersAndSearch();
+      renderTeamsGrouped(teams);
     },
 
     // -------------------------------------------------------
@@ -1141,49 +1263,7 @@ async function saveTeam() {
 // FILTERS
 // =========================================================
 function applyTeamFiltersAndSearch() {
-  const tbody = document.getElementById("teamsBody");
-  if (!tbody) return;
-
-  const searchTerm = (
-    document.getElementById("teams-search-bar")?.value || ""
-  ).toLowerCase();
-  const orgFilter = document.getElementById("filter-org")?.value || "";
-  const conferenceFilter =
-    document.getElementById("filter-team-conference")?.value || "";
-  const sectionFilter =
-    document.getElementById("filter-team-section")?.value || "";
-  const levelFilter = document.getElementById("filter-level")?.value || "";
-  const typeFilter = document.getElementById("filter-team-type")?.value || "";
-  const statusFilter = document.getElementById("filter-status")?.value || "";
-  const showExternal = !!document.getElementById("teams-show-external")?.checked;
-
-  Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
-    const rowText = row.textContent.toLowerCase();
-
-    const matchesSearch = !searchTerm || rowText.includes(searchTerm);
-    const matchesOrg = !orgFilter || row.dataset.orgId === orgFilter;
-    const matchesConference =
-      !conferenceFilter ||
-      row.dataset.conferenceDistrictId === conferenceFilter;
-    const matchesSection =
-      !sectionFilter || row.dataset.sectionRegionId === sectionFilter;
-    const matchesLevel = !levelFilter || row.dataset.levelId === levelFilter;
-    const matchesType = !typeFilter || row.dataset.teamType === typeFilter;
-    const matchesStatus = !statusFilter || row.dataset.status === statusFilter;
-    const matchesExternal = showExternal || row.dataset.isExternal !== "true";
-
-    row.style.display =
-      matchesSearch &&
-      matchesOrg &&
-      matchesConference &&
-      matchesSection &&
-      matchesLevel &&
-      matchesType &&
-      matchesStatus &&
-      matchesExternal
-        ? ""
-        : "none";
-  });
+  renderTeamsGrouped(getFilteredTeams());
 }
 
 function wireTeamFilterEvents() {
@@ -1199,8 +1279,18 @@ function wireTeamFilterEvents() {
   ].forEach(
     (id) => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener("input", applyTeamFiltersAndSearch);
-      if (el) el.addEventListener("change", applyTeamFiltersAndSearch);
+      if (el) {
+        el.addEventListener("input", () => {
+          resetTeamsGroupPagination();
+          applyTeamFiltersAndSearch();
+        });
+      }
+      if (el) {
+        el.addEventListener("change", () => {
+          resetTeamsGroupPagination();
+          applyTeamFiltersAndSearch();
+        });
+      }
     },
   );
 }

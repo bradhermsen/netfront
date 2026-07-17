@@ -20,12 +20,25 @@ namespace NetFrontAPI.Functions
             _connectionFactory = connectionFactory;
         }
 
+        private static Task EnsureOfficialsEmailColumnAsync(System.Data.IDbConnection conn)
+        {
+            const string sql = @"
+                IF COL_LENGTH('dbo.Officials', 'Email') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.Officials
+                    ADD Email NVARCHAR(255) NULL;
+                END;";
+
+            return conn.ExecuteAsync(sql);
+        }
+
         [Function("GetGameOfficialsVerification")]
         public async Task<HttpResponseData> GetGameOfficialsVerification(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "games/{gameId:guid}/officials/verification")] HttpRequestData req,
             Guid gameId)
         {
             using var conn = _connectionFactory.CreateConnection();
+            await EnsureOfficialsEmailColumnAsync(conn);
 
             const string gameExistsSql = @"
                 SELECT COUNT(1)
@@ -50,6 +63,7 @@ namespace NetFrontAPI.Functions
                             ''
                         )
                     )) AS OfficialName,
+                    o.Email AS OfficialEmail,
                     gov.SignatureImageBase64,
                     gov.SignedAtUtc
                 FROM GameOfficials go

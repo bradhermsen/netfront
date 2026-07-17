@@ -22,6 +22,18 @@ namespace NetFrontAPI.Functions
             _authorizationService = authorizationService;
         }
 
+        private async Task EnsureOfficialsEmailColumnAsync()
+        {
+            const string sql = @"
+                IF COL_LENGTH('dbo.Officials', 'Email') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.Officials
+                    ADD Email NVARCHAR(255) NULL;
+                END;";
+
+            await _db.ExecuteAsync(sql);
+        }
+
         [Function("GetOfficials")]
         public async Task<HttpResponseData> GetOfficials(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "officials")] HttpRequestData req)
@@ -37,11 +49,14 @@ namespace NetFrontAPI.Functions
             if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "TeamManager", "Coach", "Viewer"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view officials");
 
+            await EnsureOfficialsEmailColumnAsync();
+
             var sql = @"
                 SELECT
                     OfficialId,
                     FirstName,
                     LastName,
+                    Email,
                     Role,
                     LTRIM(RTRIM(CONCAT(FirstName, ' ', LastName))) AS DisplayName
                 FROM Officials
@@ -70,11 +85,14 @@ namespace NetFrontAPI.Functions
             if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "TeamManager", "Coach", "Viewer"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view officials");
 
+            await EnsureOfficialsEmailColumnAsync();
+
             var sql = @"
                 SELECT
                     OfficialId,
                     FirstName,
                     LastName,
+                    Email,
                     Role,
                     IsActive,
                     LTRIM(RTRIM(CONCAT(FirstName, ' ', LastName))) AS DisplayName
@@ -104,11 +122,14 @@ namespace NetFrontAPI.Functions
             if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "TeamManager", "Coach", "Viewer"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view official details");
 
+            await EnsureOfficialsEmailColumnAsync();
+
             var sql = @"
                 SELECT
                     OfficialId,
                     FirstName,
                     LastName,
+                    Email,
                     Role,
                     IsActive,
                     LTRIM(RTRIM(CONCAT(FirstName, ' ', LastName))) AS DisplayName
@@ -148,6 +169,8 @@ namespace NetFrontAPI.Functions
                 return bad;
             }
 
+            await EnsureOfficialsEmailColumnAsync();
+
             var officialId = Guid.NewGuid();
             var sql = @"
                 INSERT INTO Officials
@@ -155,6 +178,7 @@ namespace NetFrontAPI.Functions
                     OfficialId,
                     FirstName,
                     LastName,
+                    Email,
                     Role,
                     IsActive,
                     CreatedAt,
@@ -165,6 +189,7 @@ namespace NetFrontAPI.Functions
                     @OfficialId,
                     @FirstName,
                     @LastName,
+                    @Email,
                     @Role,
                     @IsActive,
                     SYSUTCDATETIME(),
@@ -177,6 +202,7 @@ namespace NetFrontAPI.Functions
                 OfficialId = officialId,
                 FirstName = dto.FirstName.Trim(),
                 LastName = dto.LastName.Trim(),
+                Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim(),
                 Role = string.IsNullOrWhiteSpace(dto.Role) ? null : dto.Role.Trim(),
                 IsActive = dto.IsActive
             });
@@ -210,11 +236,14 @@ namespace NetFrontAPI.Functions
                 return bad;
             }
 
+            await EnsureOfficialsEmailColumnAsync();
+
             var sql = @"
                 UPDATE Officials
                 SET
                     FirstName = @FirstName,
                     LastName = @LastName,
+                    Email = @Email,
                     Role = @Role,
                     IsActive = @IsActive,
                     UpdatedAt = SYSUTCDATETIME()
@@ -226,6 +255,7 @@ namespace NetFrontAPI.Functions
                 OfficialId = id,
                 FirstName = dto.FirstName.Trim(),
                 LastName = dto.LastName.Trim(),
+                Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim(),
                 Role = string.IsNullOrWhiteSpace(dto.Role) ? null : dto.Role.Trim(),
                 IsActive = dto.IsActive
             });

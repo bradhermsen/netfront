@@ -23,3 +23,35 @@
   background: #842029;
   color: #f8d7da;
 }
+
+.player-item-card .nf-item-card-meta {
+  margin-bottom: 2px;
+}
+
+.player-team-list {
+  font-size: 12px;
+  color: #c8d3e2;
+  background: #101a2d;
+  border: 1px solid #213756;
+  border-radius: 8px;
+  padding: 8px;
+  line-height: 1.35;
+}
+
+.players-table-wrap {
+  padding: 8px 10px 10px;
+}
+
+.players-group-table {
+  width: 100%;
+}
+
+.players-group-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.players-group-table td {
+  vertical-align: top;
+}

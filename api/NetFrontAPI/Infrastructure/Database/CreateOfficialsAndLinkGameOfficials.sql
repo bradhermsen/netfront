@@ -12,6 +12,12 @@ BEGIN
     );
 END;
 
+IF COL_LENGTH('dbo.Officials', 'Email') IS NULL
+BEGIN
+    ALTER TABLE dbo.Officials
+    ADD Email NVARCHAR(255) NULL;
+END;
+
 IF COL_LENGTH('dbo.GameOfficials', 'OfficialId') IS NULL
 BEGIN
     ALTER TABLE dbo.GameOfficials

@@ -3,7 +3,7 @@ import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -21,10 +21,11 @@ import {
 } from "react-native";
 
 type AccessRole = "GM" | "SM" | "CA" | "AD";
+
 type Stage =
   | "login"
   | "home"
-  | "gameSetup"
+  | "verifyGame"
   | "rosterVerify"
   | "coachSignature"
   | "officialsVerify"
@@ -108,9 +109,17 @@ type OfficialVerification = {
   role: string;
   officialName: string;
   officialId?: string;
+  officialEmail?: string | null;
   signatureImageBase64?: string | null;
   signedByName?: string | null;
   signedAtUtc?: string | null;
+};
+
+type EmailRecipientOption = {
+  key: string;
+  recipientName: string;
+  recipientMeta: string;
+  email: string;
 };
 
 type GoalStrength =
@@ -384,6 +393,10 @@ function getDefaultLanApiBase() {
   return "http://192.168.68.69:7071/api";
 }
 
+function isValidEmailAddress(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 const DEFAULT_LAN_API_BASE = getDefaultLanApiBase();
 const GOAL_OFFLINE_QUEUE_KEY = "netfront.goalOfflineQueue";
 const PENALTY_OFFLINE_QUEUE_KEY = "netfront.penaltyOfflineQueue";
@@ -478,9 +491,10 @@ async function storageRemoveItem(key: string) {
       file.delete();
     }
   } catch {
-    // Ignore fallback cleanup failures.
+    // Ignore cleanup failures.
   }
 }
+
 const QUICK_PICK_INFRACTIONS = [
   "Tripping",
   "Hooking",
@@ -586,9 +600,9 @@ const PENALTY_RULES: Record<PenaltyType, PenaltyRule> = {
   Disqualification: {
     durationMinutes: 0,
     affectsManpower: false,
-    suspensionBehavior: "automatic",
-    requiresRefereeNotes: false,
-    reviewRequired: false,
+    suspensionBehavior: "automatic_review",
+    requiresRefereeNotes: true,
+    reviewRequired: true,
     goalExpiration: "none",
   },
   "Bench Minor": {
@@ -702,8 +716,12 @@ function canControlGame(role: AccessRole) {
   return role === "GM" || role === "AD";
 }
 
-function canEditSetup(role: AccessRole) {
+function canEditVerifyGame(role: AccessRole) {
   return role === "GM" || role === "AD";
+}
+
+function isVarsityLevelName(levelName?: string | null) {
+  return (levelName || "").trim().toLowerCase().includes("varsity");
 }
 
 function isGuid(value: string) {
@@ -1231,6 +1249,10 @@ export default function App() {
     useState<ThemedDropdownState | null>(null);
   const [showSuspensionNotesModal, setShowSuspensionNotesModal] =
     useState(false);
+  const [rosterPreviewTeam, setRosterPreviewTeam] = useState<
+    "home" | "away" | null
+  >(null);
+  const [showOfficialsPreview, setShowOfficialsPreview] = useState(false);
   const [suspensionNotesByPenaltyId, setSuspensionNotesByPenaltyId] = useState<
     Record<string, string>
   >({});
@@ -1238,6 +1260,8 @@ export default function App() {
   const [sendRecipientSelection, setSendRecipientSelection] = useState<
     Record<string, boolean>
   >({});
+  const [customEmailInput, setCustomEmailInput] = useState("");
+  const [customEmails, setCustomEmails] = useState<string[]>([]);
   const [sendScoresheetError, setSendScoresheetError] = useState("");
   const [emailDeliveryStatus, setEmailDeliveryStatus] = useState<
     "idle" | "sent" | "failed"
@@ -1249,6 +1273,8 @@ export default function App() {
   const [homeGoaliePulled, setHomeGoaliePulled] = useState(false);
   const [awayGoaliePulled, setAwayGoaliePulled] = useState(false);
   const [penaltyShotActive, setPenaltyShotActive] = useState(false);
+  const rosterScrollViewRef = useRef<ScrollView | null>(null);
+  const rosterScrollOffsetRef = useRef(0);
 
   const activeApiBase = useMemo(
     () => (useLanApi ? lanApiBase : DEFAULT_LOCAL_API_BASE),
@@ -1681,6 +1707,48 @@ export default function App() {
     };
   }, [rostersByTeam, homeTeamId, awayTeamId]);
 
+  const rosterPreviewData = useMemo(() => {
+    if (!session || !rosterPreviewTeam) return null;
+
+    const isHome = rosterPreviewTeam === "home";
+    const teamId = isHome ? homeTeamId : awayTeamId;
+    const teamName = isHome ? session.homeTeam : session.awayTeam;
+    const basePlayers = isHome
+      ? activePlayersByTeam.home
+      : activePlayersByTeam.away;
+    const starterIds = new Set(startersByTeam[teamId] ?? []);
+    const players = [...basePlayers].sort((a, b) => {
+      const aIsStarter = starterIds.has(a.playerId);
+      const bIsStarter = starterIds.has(b.playerId);
+      if (aIsStarter !== bIsStarter) {
+        return aIsStarter ? -1 : 1;
+      }
+
+      const jerseyA = a.jerseyNumber ?? Number.MAX_SAFE_INTEGER;
+      const jerseyB = b.jerseyNumber ?? Number.MAX_SAFE_INTEGER;
+      if (jerseyA !== jerseyB) return jerseyA - jerseyB;
+      return a.fullName.localeCompare(b.fullName);
+    });
+    const coaches = (coachesByTeam[teamId] ?? []).filter(
+      (coach) => coach.coachName.trim().length > 0,
+    );
+
+    return {
+      teamName,
+      players,
+      starterIds,
+      coaches,
+    };
+  }, [
+    session,
+    rosterPreviewTeam,
+    homeTeamId,
+    awayTeamId,
+    activePlayersByTeam,
+    startersByTeam,
+    coachesByTeam,
+  ]);
+
   const coachEmailRecipients = useMemo(() => {
     const teamRows = [
       { teamId: homeTeamId, teamName: session?.homeTeam ?? "Home" },
@@ -1700,6 +1768,32 @@ export default function App() {
         })),
     );
   }, [coachesByTeam, homeTeamId, awayTeamId, session]);
+
+  const refereeEmailRecipients = useMemo<EmailRecipientOption[]>(() => {
+    return officials
+      .filter((official) => /referee/i.test(official.role || ""))
+      .map((official, index) => {
+        const email = (official.officialEmail ?? "").trim();
+        return {
+          key: `referee:${official.officialId ?? official.role ?? index}:${email.toLowerCase()}`,
+          recipientName: official.officialName || toOfficialRoleLabel(official.role),
+          recipientMeta: `${toOfficialRoleLabel(official.role)} • ${email || "No email on file"}`,
+          email,
+        };
+      })
+      .filter((recipient) => recipient.email.length > 0);
+  }, [officials]);
+
+  const customEmailRecipients = useMemo<EmailRecipientOption[]>(
+    () =>
+      customEmails.map((email) => ({
+        key: `custom:${email.toLowerCase()}`,
+        recipientName: email,
+        recipientMeta: "Additional recipient",
+        email,
+      })),
+    [customEmails],
+  );
 
   useEffect(() => {
     if (!session || stage !== "gameDashboard") {
@@ -2182,6 +2276,39 @@ export default function App() {
     }
   }
 
+  function autoReturnPulledGoalieIfNeeded(scoringTeamId: string) {
+    if (!session) return;
+
+    const defendingTeamId = scoringTeamId === homeTeamId ? awayTeamId : homeTeamId;
+    const defendingTeamName =
+      scoringTeamId === homeTeamId ? session.awayTeam : session.homeTeam;
+    const defendingGoaliePulled =
+      scoringTeamId === homeTeamId ? awayGoaliePulled : homeGoaliePulled;
+
+    if (!defendingGoaliePulled) {
+      return;
+    }
+
+    const goalieId = currentGoalieByTeam[defendingTeamId] ?? null;
+    const goalieName = goalieId
+      ? findPlayerName(defendingTeamId, goalieId)
+      : "Goalie";
+
+    if (scoringTeamId === homeTeamId) {
+      setAwayGoaliePulled(false);
+    } else {
+      setHomeGoaliePulled(false);
+    }
+
+    appendGoalieEvent(
+      defendingTeamId,
+      defendingTeamName,
+      "returned",
+      goalieName,
+      goalieName,
+    );
+  }
+
   function addEventToFeed(event: GameFeedEvent) {
     setEventFeed((prev) => [event, ...prev]);
   }
@@ -2490,7 +2617,6 @@ export default function App() {
     const periodLengthMinutes = getPeriodLengthMinutes(session.periodLength);
     const elapsed = computeElapsedTime(periodLengthMinutes, session.clock);
 
-    setIsClockRunning(false);
     setResumeClockAfterGoalModal(false);
 
     openGoalModal({
@@ -2541,6 +2667,7 @@ export default function App() {
     updateScore(goalModal.scoringTeamId);
     addEventToFeed(goalEvent);
     adjustShots(goalModal.scoringTeamId === homeTeamId ? "home" : "away", 1);
+    autoReturnPulledGoalieIfNeeded(goalModal.scoringTeamId);
 
     const isHomeScoring = goalModal.scoringTeamId === homeTeamId;
     const scoringSkaters = isHomeScoring ? homeSkatersOnIce : awaySkatersOnIce;
@@ -2634,7 +2761,6 @@ export default function App() {
     const periodLengthMinutes = getPeriodLengthMinutes(session.periodLength);
     const elapsed = computeElapsedTime(periodLengthMinutes, session.clock);
 
-    setIsClockRunning(false);
     setResumeClockAfterPenaltyModal(false);
 
     openPenaltyModal({
@@ -2660,7 +2786,6 @@ export default function App() {
   function openSetEditClockModal() {
     if (!session || !canControlGame(session.role)) return;
 
-    setIsClockRunning(false);
     setClockModalMinutes(Math.floor(parseClockToSeconds(session.clock) / 60));
     setClockModalSeconds(parseClockToSeconds(session.clock) % 60);
     setShowClockModal(true);
@@ -3440,6 +3565,10 @@ export default function App() {
           (typeof row.officialId === "string" && row.officialId) ||
           (typeof row.OfficialId === "string" && row.OfficialId) ||
           undefined,
+        officialEmail:
+          (typeof row.officialEmail === "string" && row.officialEmail) ||
+          (typeof row.OfficialEmail === "string" && row.OfficialEmail) ||
+          null,
         signatureImageBase64:
           (typeof row.signatureImageBase64 === "string" &&
             row.signatureImageBase64) ||
@@ -3494,11 +3623,27 @@ export default function App() {
     );
 
     const hasGoalieStarter = starterPlayers.some((player) => player.isGoalie);
+    const requiresSixStarters = isVarsityLevelName(
+      nextGame?.levelName || session?.level,
+    );
     return {
       count: starters.length,
       hasGoalieStarter,
-      isValid: starters.length === 6 && hasGoalieStarter,
+      requiresSixStarters,
+      isValid: requiresSixStarters
+        ? starters.length === 6 && hasGoalieStarter
+        : hasGoalieStarter,
     };
+  }
+
+  async function markGameInProgress(gameId: string) {
+    const response = await fetch(`${activeApiBase}/games/${gameId}/start-mobile`, {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to mark game in progress (${response.status}).`);
+    }
   }
 
   async function loadRosterAndCoaches(game: NextGame) {
@@ -3553,6 +3698,100 @@ export default function App() {
       const message = err instanceof Error ? err.message : String(err);
       setRosterError("Unable to load roster/coaches.");
       trace("roster.load.error", { message });
+    } finally {
+      setIsRosterLoading(false);
+    }
+  }
+
+  async function refreshRosterAndCoaches() {
+    if (!nextGame) return;
+
+    const homeId = nextGame.homeTeamId;
+    const awayId = nextGame.awayTeamId;
+    if (!homeId || !awayId) {
+      setRosterError("Game data is missing team IDs.");
+      return;
+    }
+
+    setIsRosterLoading(true);
+    setRosterError("");
+
+    try {
+      const [homeRoster, awayRoster, homeCoaches, awayCoaches] =
+        await Promise.all([
+          fetchRosterForTeam(homeId),
+          fetchRosterForTeam(awayId),
+          fetchCoachesForTeam(homeId),
+          fetchCoachesForTeam(awayId),
+        ]);
+
+      const preserveStarterSelections = (
+        teamId: string,
+        refreshedRoster: RosterPlayer[],
+      ) => {
+        setStartersByTeam((prev) => {
+          const existingSelections = prev[teamId] ?? [];
+          const refreshedActivePlayerIds = new Set(
+            refreshedRoster
+              .filter((player) => player.isActive)
+              .map((player) => player.playerId),
+          );
+
+          const nextSelections = existingSelections.filter((playerId) =>
+            refreshedActivePlayerIds.has(playerId),
+          );
+
+          if (nextSelections.length === existingSelections.length) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            [teamId]: nextSelections,
+          };
+        });
+      };
+
+      setRostersByTeam((prev) => ({
+        ...prev,
+        [homeId]: homeRoster,
+        [awayId]: awayRoster,
+      }));
+
+      setCoachesByTeam((prev) => ({
+        ...prev,
+        [homeId]: homeCoaches,
+        [awayId]: awayCoaches,
+      }));
+
+      setCurrentGoalieByTeam((prev) => ({
+        ...prev,
+        [homeId]:
+          homeRoster.find((player) => player.isGoalie && player.isActive)
+            ?.playerId ?? prev[homeId] ?? null,
+        [awayId]:
+          awayRoster.find((player) => player.isGoalie && player.isActive)
+            ?.playerId ?? prev[awayId] ?? null,
+      }));
+
+      preserveStarterSelections(homeId, homeRoster);
+      preserveStarterSelections(awayId, awayRoster);
+
+      requestAnimationFrame(() => {
+        rosterScrollViewRef.current?.scrollTo({
+          y: rosterScrollOffsetRef.current,
+          animated: false,
+        });
+      });
+
+      trace("roster.refresh.complete", {
+        homeCount: homeRoster.length,
+        awayCount: awayRoster.length,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setRosterError("Unable to load roster/coaches.");
+      trace("roster.refresh.error", { message });
     } finally {
       setIsRosterLoading(false);
     }
@@ -3758,7 +3997,7 @@ export default function App() {
     setSession(defaultSession);
     setGameStartedAtIso(null);
     setGameHasEnded(false);
-    setStage("home");
+    setStage("verifyGame");
     setRestoreStatus("checking");
 
     const snapshot = await loadActiveGameSnapshot();
@@ -3812,6 +4051,7 @@ export default function App() {
     await loadNextGame(response.userId);
 
     setSession((prev) => prev ?? defaultSession);
+    setStage("verifyGame");
   }
 
   async function handleAccessCodeContinue() {
@@ -3888,9 +4128,13 @@ export default function App() {
     setEventEditModal(null);
     setEventEditModalError("");
     setShowSuspensionNotesModal(false);
+    setRosterPreviewTeam(null);
+    setShowOfficialsPreview(false);
     setSuspensionNotesByPenaltyId({});
     setSuspensionNotesError("");
     setSendRecipientSelection({});
+    setCustomEmailInput("");
+    setCustomEmails([]);
     setSendScoresheetError("");
     setEmailDeliveryStatus("idle");
     setEmailDeliveryMessage("");
@@ -3991,24 +4235,108 @@ export default function App() {
       {},
     );
 
-    if (suspensionFlaggedPenaltyEvents.length > 0) {
-      defaults.mnReview = true;
+    for (const recipient of customEmailRecipients) {
+      defaults[recipient.key] = true;
+    }
+
+    if (gameDqPenaltyEvents.length > 0) {
+      for (const recipient of refereeEmailRecipients) {
+        defaults[recipient.key] = true;
+      }
     }
 
     setSendRecipientSelection(defaults);
     setStage("sendScoresheet");
   }
 
+  function addCustomEmailRecipient() {
+    const email = customEmailInput.trim();
+    if (!email) {
+      setSendScoresheetError("Enter an email address before tapping Add Email.");
+      return;
+    }
+
+    if (!isValidEmailAddress(email)) {
+      setSendScoresheetError("Enter a valid email address.");
+      return;
+    }
+
+    const normalized = email.toLowerCase();
+    const alreadyIncluded = [
+      ...coachEmailRecipients.map((recipient) =>
+        (recipient.coachEmail ?? "").toLowerCase(),
+      ),
+      ...refereeEmailRecipients.map((recipient) => recipient.email.toLowerCase()),
+      ...customEmails.map((recipient) => recipient.toLowerCase()),
+    ].includes(normalized);
+
+    if (alreadyIncluded) {
+      setSendScoresheetError("That email is already in the recipient list.");
+      return;
+    }
+
+    setSendScoresheetError("");
+    setCustomEmails((prev) => [...prev, email]);
+    setSendRecipientSelection((prev) => ({
+      ...prev,
+      [`custom:${normalized}`]: true,
+    }));
+    setCustomEmailInput("");
+  }
+
+  function removeCustomEmailRecipient(email: string) {
+    const key = `custom:${email.toLowerCase()}`;
+    setCustomEmails((prev) => prev.filter((item) => item !== email));
+    setSendRecipientSelection((prev) => {
+      const { [key]: _removed, ...rest } = prev;
+      return rest;
+    });
+  }
+
   async function completeGameInBackend(gameId: string) {
-    const selectedRecipients = coachEmailRecipients.filter((recipient) =>
+    const selectedCoachRecipients = coachEmailRecipients.filter((recipient) =>
       Boolean(sendRecipientSelection[recipient.key]),
     );
-    const selectedRecipientEmails = selectedRecipients
-      .map((recipient) => recipient.coachEmail)
-      .filter((email): email is string => Boolean(email && email.trim()));
-    const selectedRecipientLabels = selectedRecipients.map(
-      (recipient) => `${recipient.coachName} <${recipient.coachEmail}>`,
+
+    const selectedRefereeRecipients = refereeEmailRecipients.filter((recipient) =>
+      Boolean(sendRecipientSelection[recipient.key]),
     );
+
+    const selectedCustomRecipients = customEmailRecipients.filter((recipient) =>
+      Boolean(sendRecipientSelection[recipient.key]),
+    );
+
+    if (
+      gameDqPenaltyEvents.length > 0 &&
+      selectedRefereeRecipients.length === 0 &&
+      selectedCustomRecipients.length === 0
+    ) {
+      throw new Error(
+        "A DQ requires at least one referee email recipient. Add referee emails in Officials Admin or add one in this screen.",
+      );
+    }
+
+    const selectedRecipientEmails = [
+      ...selectedCoachRecipients
+        .map((recipient) => recipient.coachEmail)
+        .filter((email): email is string => Boolean(email && email.trim())),
+      ...selectedRefereeRecipients
+        .map((recipient) => recipient.email)
+        .filter((email): email is string => Boolean(email && email.trim())),
+      ...selectedCustomRecipients
+        .map((recipient) => recipient.email)
+        .filter((email): email is string => Boolean(email && email.trim())),
+    ];
+
+    const selectedRecipientLabels = [
+      ...selectedCoachRecipients.map(
+        (recipient) => `${recipient.coachName} <${recipient.coachEmail}>`,
+      ),
+      ...selectedRefereeRecipients.map(
+        (recipient) => `${recipient.recipientName} <${recipient.email}>`,
+      ),
+      ...selectedCustomRecipients.map((recipient) => recipient.email),
+    ];
 
     const suspensionNotes = gameDqPenaltyEvents
       .map((event) => {
@@ -4101,7 +4429,13 @@ export default function App() {
       },
       goalieSummaries,
       emailDispatch: {
-        to: selectedRecipientEmails,
+        to: Array.from(
+          new Set(
+            selectedRecipientEmails
+              .map((email) => email.trim())
+              .filter((email) => email.length > 0),
+          ),
+        ),
         subject: `Scoresheet: ${session?.homeTeam ?? "Home"} vs ${session?.awayTeam ?? "Away"}`,
       },
     };
@@ -4169,7 +4503,8 @@ export default function App() {
   function confirmSuspensionNotesAndContinue() {
     const missing = gameDqPenaltyEvents.find(
       (event) =>
-        getPenaltyRule(event.penaltyType ?? "Minor").requiresRefereeNotes &&
+        (getPenaltyRule(event.penaltyType ?? "Minor").requiresRefereeNotes ||
+          getPenaltyRule(event.penaltyType ?? "Minor").reviewRequired) &&
         !(suspensionNotesByPenaltyId[event.localId] ?? "").trim(),
     );
     if (missing) {
@@ -4272,7 +4607,9 @@ export default function App() {
 
     if (!homeValidation.isValid || !awayValidation.isValid) {
       setRosterError(
-        "Each team must select exactly 6 starters with at least 1 goalie.",
+        homeValidation.requiresSixStarters || awayValidation.requiresSixStarters
+          ? "Varsity games require 6 starters per team with at least 1 goalie. Other levels require at least 1 goalie starter."
+          : "Each team must select at least 1 goalie starter.",
       );
       return;
     }
@@ -4365,6 +4702,7 @@ export default function App() {
 
     try {
       await saveOfficialsForGame(nextGame.gameId, officials);
+      await markGameInProgress(nextGame.gameId);
       await markActiveGame();
       const startedAtIso = new Date().toISOString();
       setGameStartedAtIso(startedAtIso);
@@ -4446,12 +4784,25 @@ export default function App() {
       ) : null}
 
       <ScrollView
+        ref={rosterScrollViewRef}
         contentContainerStyle={styles.content}
+        onScroll={(event) => {
+          if (stage === "rosterVerify") {
+            rosterScrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+          }
+        }}
+        scrollEventThrottle={16}
         refreshControl={
-          stage === "home" && session ? (
+            stage === "verifyGame" && session ? (
             <RefreshControl
               refreshing={isRefreshingNextGame}
               onRefresh={handleRefreshNextGame}
+              tintColor="#FF7B00"
+            />
+          ) : stage === "rosterVerify" && session ? (
+            <RefreshControl
+              refreshing={isRosterLoading}
+              onRefresh={refreshRosterAndCoaches}
               tintColor="#FF7B00"
             />
           ) : undefined
@@ -4547,91 +4898,9 @@ export default function App() {
           </View>
         ) : null}
 
-        {stage === "home" && session ? (
+        {stage === "verifyGame" && session ? (
           <View style={styles.card}>
-            <Text style={styles.title}>Home</Text>
-            <Text style={styles.note}>Scorer dashboard</Text>
-
-            <Text style={styles.sectionLabel}>NEXT GAME</Text>
-            <View style={styles.nextGameCard}>
-              {isNextGameLoading ? (
-                <View style={styles.nextGameLoadingWrap}>
-                  <ActivityIndicator color="#FF7B00" />
-                  <Text style={styles.nextGameEmptyText}>
-                    Loading next game...
-                  </Text>
-                </View>
-              ) : nextGame ? (
-                <>
-                  <View style={styles.metaRow}>
-                    <Text style={styles.metaLabel}>Opponent</Text>
-                    <Text style={styles.metaValue}>
-                      {nextGame.opponentName}
-                    </Text>
-                  </View>
-                  <View style={styles.metaRow}>
-                    <Text style={styles.metaLabel}>Start</Text>
-                    <Text style={styles.metaValue}>
-                      {formatStartTime(nextGame.startTime)}
-                    </Text>
-                  </View>
-                  <View style={styles.metaRow}>
-                    <Text style={styles.metaLabel}>Rink</Text>
-                    <Text style={styles.metaValue}>{nextGame.rinkName}</Text>
-                  </View>
-                  <View style={styles.metaRow}>
-                    <Text style={styles.metaLabel}>Level</Text>
-                    <Text style={styles.metaValue}>
-                      {nextGame.levelName ?? session.level ?? "-"}
-                    </Text>
-                  </View>
-                  {nextGame.sectionRegion || nextGame.conferenceDistrict ? (
-                    <View style={styles.metaRow}>
-                      <Text style={styles.metaLabel}>Section / Conference</Text>
-                      <Text style={styles.metaValue}>
-                        {nextGame.sectionRegion ?? "-"} /{" "}
-                        {nextGame.conferenceDistrict ?? "-"}
-                      </Text>
-                    </View>
-                  ) : null}
-                </>
-              ) : (
-                <Text style={styles.nextGameEmptyText}>{nextGameMessage}</Text>
-              )}
-            </View>
-
-            <Text style={styles.footerHint}>
-              Pull down to refresh next game.
-            </Text>
-            <Text style={styles.restoreStatusText}>
-              Restore status: {restoreStatus}
-            </Text>
-
-            <View style={styles.rowButtons}>
-              <Pressable style={styles.secondaryButton} onPress={logout}>
-                <Text style={styles.secondaryButtonText}>
-                  {isClosedGameNotice
-                    ? "Game Closed / Back to Login"
-                    : "Wrong Game / Back to Login"}
-                </Text>
-              </Pressable>
-              {!isClosedGameNotice ? (
-                <Pressable
-                  style={styles.primaryButton}
-                  onPress={() => setStage("gameSetup")}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    Continue to Game Setup
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-        ) : null}
-
-        {stage === "gameSetup" && session ? (
-          <View style={styles.card}>
-            <Text style={styles.title}>Verify Game Setup</Text>
+            <Text style={styles.title}>Verify Game</Text>
             <Text style={styles.sectionLabel}>TEAMS</Text>
             <View style={styles.twoColRow}>
               <View style={styles.twoColCell}>
@@ -4653,6 +4922,18 @@ export default function App() {
               <View style={styles.twoColCell}>
                 <Text style={styles.cellLabel}>LEVEL</Text>
                 <Text style={styles.cellValue}>{session.level}</Text>
+              </View>
+            </View>
+            <View style={styles.twoColRow}>
+              <View style={styles.twoColCell}>
+                <Text style={styles.cellLabel}>TEAM TYPE</Text>
+                <Text style={styles.cellValue}>{nextGame?.teamType ?? "-"}</Text>
+              </View>
+              <View style={styles.twoColCell}>
+                <Text style={styles.cellLabel}>STATUS</Text>
+                <Text style={styles.cellValue}>
+                  {isClosedGameNotice ? "Closed" : "Open"}
+                </Text>
               </View>
             </View>
             <View style={styles.twoColRow}>
@@ -4681,25 +4962,11 @@ export default function App() {
             <View style={styles.twoColRow}>
               <View style={styles.twoColCell}>
                 <Text style={styles.cellLabel}>VENUE</Text>
-                <TextInput
-                  style={styles.inputInline}
-                  editable={canEditSetup(session.role)}
-                  value={session.venue}
-                  onChangeText={(venue) => updateSession({ venue })}
-                  placeholder="Venue"
-                  placeholderTextColor="#7a8fa8"
-                />
+                <Text style={styles.cellValue}>{session.venue}</Text>
               </View>
               <View style={styles.twoColCell}>
                 <Text style={styles.cellLabel}>RINK</Text>
-                <TextInput
-                  style={styles.inputInline}
-                  editable={canEditSetup(session.role)}
-                  value={session.rink}
-                  onChangeText={(rink) => updateSession({ rink })}
-                  placeholder="Rink"
-                  placeholderTextColor="#7a8fa8"
-                />
+                <Text style={styles.cellValue}>{session.rink}</Text>
               </View>
             </View>
 
@@ -4711,18 +4978,33 @@ export default function App() {
               </View>
               <View style={styles.twoColCell}>
                 <Text style={styles.cellLabel}>PERIOD LENGTH</Text>
-                <Text style={styles.cellValue}>{session.periodLength}</Text>
+                <TextInput
+                  style={styles.inputInline}
+                  value={session.periodLength}
+                  onChangeText={(periodLength) =>
+                    updateSession({ periodLength })
+                  }
+                  placeholder="17 min"
+                  placeholderTextColor="#7a8fa8"
+                />
               </View>
             </View>
 
-            <Pressable
-              style={styles.primaryButton}
-              onPress={() => setStage("rosterVerify")}
-            >
-              <Text style={styles.primaryButtonText}>
-                Confirm and Next to Verify Rosters
-              </Text>
-            </Pressable>
+            <View style={styles.rowButtons}>
+              <Pressable style={styles.secondaryButton} onPress={logout}>
+                <Text style={styles.secondaryButtonText}>
+                  Wrong Game / Back to Login
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => setStage("rosterVerify")}
+              >
+                <Text style={styles.primaryButtonText}>
+                  Confirm and Next to Verify Rosters
+                </Text>
+              </Pressable>
+            </View>
           </View>
         ) : null}
 
@@ -4942,7 +5224,10 @@ export default function App() {
                     {homeTeamId
                       ? getTeamStarterValidation(homeTeamId).count
                       : 0}
-                    /6
+                    {homeTeamId &&
+                    getTeamStarterValidation(homeTeamId).requiresSixStarters
+                      ? "/6"
+                      : ""}
                     {homeTeamId &&
                     getTeamStarterValidation(homeTeamId).hasGoalieStarter
                       ? " • Goalie OK"
@@ -4955,7 +5240,10 @@ export default function App() {
                     {awayTeamId
                       ? getTeamStarterValidation(awayTeamId).count
                       : 0}
-                    /6
+                    {awayTeamId &&
+                    getTeamStarterValidation(awayTeamId).requiresSixStarters
+                      ? "/6"
+                      : ""}
                     {awayTeamId &&
                     getTeamStarterValidation(awayTeamId).hasGoalieStarter
                       ? " • Goalie OK"
@@ -4976,14 +5264,15 @@ export default function App() {
                 </View>
 
                 <Text style={styles.footerHint}>
-                  Select 6 starters per team (minimum 1 goalie), then collect
-                  both head coach signatures.
+                  {isVarsityLevelName(nextGame?.levelName || session.level)
+                    ? "Select 6 starters per team (minimum 1 goalie), then collect both head coach signatures."
+                    : "Select at least 1 goalie starter per team, then collect both head coach signatures."}
                 </Text>
 
                 <View style={styles.rowButtons}>
                   <Pressable
                     style={styles.secondaryButton}
-                    onPress={() => setStage("gameSetup")}
+                    onPress={() => setStage("verifyGame")}
                   >
                     <Text style={styles.secondaryButtonText}>Previous</Text>
                   </Pressable>
@@ -5149,8 +5438,16 @@ export default function App() {
         ) : null}
 
         {showStartConfirm && session ? (
-          <View style={styles.confirmOverlay}>
-            <View style={styles.confirmModal}>
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setShowStartConfirm(false)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.confirmModal}>
               <View style={styles.confirmHeader}>
                 <Text style={styles.confirmIcon}>⚠</Text>
                 <Text style={styles.confirmTitle}>
@@ -5194,26 +5491,27 @@ export default function App() {
                 </Text>
               </View>
 
-              <View style={styles.confirmActions}>
-                <Pressable
-                  style={styles.confirmSecondaryButton}
-                  onPress={() => setShowStartConfirm(false)}
-                >
-                  <Text style={styles.confirmSecondaryButtonText}>
-                    ← Go Back
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={styles.confirmPrimaryButton}
-                  onPress={handleConfirmStartGame}
-                >
-                  <Text style={styles.confirmPrimaryButtonText}>
-                    Confirm &amp; Start Game →
-                  </Text>
-                </Pressable>
+                <View style={styles.confirmActions}>
+                  <Pressable
+                    style={styles.confirmSecondaryButton}
+                    onPress={() => setShowStartConfirm(false)}
+                  >
+                    <Text style={styles.confirmSecondaryButtonText}>
+                      ← Go Back
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.confirmPrimaryButton}
+                    onPress={handleConfirmStartGame}
+                  >
+                    <Text style={styles.confirmPrimaryButtonText}>
+                      Confirm &amp; Start Game →
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
+          </Modal>
         ) : null}
 
         {goalModal?.visible && session ? (
@@ -5484,8 +5782,16 @@ export default function App() {
         ) : null}
 
         {showClockModal && session ? (
-          <View style={styles.confirmOverlay}>
-            <View style={styles.goalModal}>
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setShowClockModal(false)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
               <Text style={styles.goalModalTitle}>Set / Edit Clock</Text>
               <Text style={styles.goalModalSubtitle}>
                 Clock is stopped. Apply the scheduled period length or choose a
@@ -5584,49 +5890,59 @@ export default function App() {
                 </Text>
               </View>
 
-              <View style={styles.rowButtons}>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={() => setShowClockModal(false)}
-                >
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.primaryButton}
-                  onPress={applyManualClockAdjustment}
-                >
-                  <Text style={styles.primaryButtonText}>Apply Clock</Text>
-                </Pressable>
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={() => setShowClockModal(false)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={applyManualClockAdjustment}
+                  >
+                    <Text style={styles.primaryButtonText}>Apply Clock</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
+          </Modal>
         ) : null}
 
         {showPeriodOverVerify && session ? (
-          <View style={styles.confirmOverlay}>
-            <View style={styles.goalModal}>
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setShowPeriodOverVerify(false)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
               <Text style={styles.goalModalTitle}>Verify Period Over</Text>
               <Text style={styles.goalModalSubtitle}>
                 Clock reached 0:00. Move to intermission?
               </Text>
-              <View style={styles.rowButtons}>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={() => setShowPeriodOverVerify(false)}
-                >
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.primaryButton}
-                  onPress={confirmPeriodOver}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    Confirm Period Over
-                  </Text>
-                </Pressable>
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={() => setShowPeriodOverVerify(false)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={confirmPeriodOver}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      Confirm Period Over
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
+          </Modal>
         ) : null}
 
         {showResumeVerify && session ? (
@@ -5664,40 +5980,58 @@ export default function App() {
         ) : null}
 
         {showEndOfRegulation && session ? (
-          <View style={styles.confirmOverlay}>
-            <View style={styles.goalModal}>
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setShowEndOfRegulation(false)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
               <Text style={styles.goalModalTitle}>End Of Regulation</Text>
               <Text style={styles.goalModalSubtitle}>
                 Choose overtime or finalize the game.
               </Text>
-              <View style={styles.rowButtons}>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={handleGoToOvertime}
-                >
-                  <Text style={styles.secondaryButtonText}>Go To Overtime</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.primaryButton}
-                  onPress={() => {
-                    setShowEndOfRegulation(false);
-                    handleEndGame();
-                  }}
-                >
-                  <Text style={styles.primaryButtonText}>End Game - Final</Text>
-                </Pressable>
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={handleGoToOvertime}
+                  >
+                    <Text style={styles.secondaryButtonText}>Go To Overtime</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={() => {
+                      setShowEndOfRegulation(false);
+                      handleEndGame();
+                    }}
+                  >
+                    <Text style={styles.primaryButtonText}>End Game - Final</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
+          </Modal>
         ) : null}
 
         {showSuspensionNotesModal && session ? (
-          <View style={styles.confirmOverlay}>
-            <View style={styles.goalModal}>
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setShowSuspensionNotesModal(false)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
               <Text style={styles.goalModalTitle}>Suspension Notes</Text>
               <Text style={styles.goalModalSubtitle}>
-                Referee notes are required for possible suspension penalties
-                before the game can be finalized.
+                Enter referee notes for DQ and suspension-related penalties.
+                These notes are stored with the game and included in review
+                reporting.
               </Text>
               {suspensionNotesError ? (
                 <Text style={styles.error}>{suspensionNotesError}</Text>
@@ -5729,25 +6063,161 @@ export default function App() {
                 </View>
               ))}
 
-              <View style={styles.rowButtons}>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={() => {
-                    setSuspensionNotesError("");
-                    setShowSuspensionNotesModal(false);
-                  }}
-                >
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
-                </Pressable>
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={() => {
+                      setSuspensionNotesError("");
+                      setShowSuspensionNotesModal(false);
+                    }}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={confirmSuspensionNotesAndContinue}
+                  >
+                    <Text style={styles.primaryButtonText}>Continue</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        ) : null}
+
+        {rosterPreviewData && session ? (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setRosterPreviewTeam(null)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
+                <Text style={styles.goalModalTitle}>
+                  {rosterPreviewData.teamName} Active Roster
+                </Text>
+
+                <Text style={styles.sectionLabel}>PLAYERS</Text>
+                <ScrollView style={styles.rosterPreviewList}>
+                  {rosterPreviewData.players.length === 0 ? (
+                    <Text style={styles.footerHint}>No active players.</Text>
+                  ) : (
+                    rosterPreviewData.players.map((player) => (
+                      <View
+                        key={`preview-${rosterPreviewData.teamName}-${player.playerId}`}
+                        style={styles.rosterPreviewRow}
+                      >
+                        <View style={styles.rosterPreviewTitleRow}>
+                          <Text style={styles.rosterPreviewName}>
+                            {player.fullName}
+                          </Text>
+                          {rosterPreviewData.starterIds.has(player.playerId) ? (
+                            <View style={styles.starterBadge}>
+                              <Text style={styles.starterBadgeText}>
+                                STARTER
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Text style={styles.rosterPreviewMeta}>
+                          #{player.jerseyNumber ?? "-"} • Pos {player.position || "-"} • Grade {player.grade ?? "-"}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+
+                  <Text style={styles.sectionLabel}>COACHES</Text>
+                  {rosterPreviewData.coaches.length === 0 ? (
+                    <Text style={styles.footerHint}>No coaches listed.</Text>
+                  ) : (
+                    rosterPreviewData.coaches.map((coach, index) => (
+                      <View
+                        key={`preview-coach-${coach.roleName}-${coach.coachName}-${index}`}
+                        style={styles.rosterPreviewRow}
+                      >
+                        <Text style={styles.rosterPreviewName}>
+                          {coach.coachName}
+                        </Text>
+                        <Text style={styles.rosterPreviewMeta}>
+                          {coach.roleName}
+                          {coach.coachEmail ? ` • ${coach.coachEmail}` : ""}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </ScrollView>
+
                 <Pressable
                   style={styles.primaryButton}
-                  onPress={confirmSuspensionNotesAndContinue}
+                  onPress={() => setRosterPreviewTeam(null)}
                 >
-                  <Text style={styles.primaryButtonText}>Continue</Text>
+                  <Text style={styles.primaryButtonText}>Close</Text>
                 </Pressable>
               </View>
             </View>
-          </View>
+          </Modal>
+        ) : null}
+
+        {showOfficialsPreview && session ? (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setShowOfficialsPreview(false)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
+                <Text style={styles.goalModalTitle}>Assigned Officials</Text>
+
+                <ScrollView style={styles.rosterPreviewList}>
+                  {officials.length === 0 ? (
+                    <Text style={styles.footerHint}>No officials assigned.</Text>
+                  ) : (
+                    officials.map((official, index) => (
+                      <View
+                        key={`preview-official-${official.role}-${index}`}
+                        style={styles.rosterPreviewRow}
+                      >
+                        <View style={styles.rosterPreviewTitleRow}>
+                          <Text style={styles.rosterPreviewName}>
+                            {official.officialName || "Not assigned"}
+                          </Text>
+                          {official.signatureImageBase64 ? (
+                            <View style={styles.starterBadge}>
+                              <Text style={styles.starterBadgeText}>SIGNED</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Text style={styles.rosterPreviewMeta}>
+                          {toOfficialRoleLabel(official.role)}
+                          {official.officialEmail
+                            ? ` • ${official.officialEmail}`
+                            : ""}
+                        </Text>
+                        {official.signedByName ? (
+                          <Text style={styles.rosterPreviewMeta}>
+                            Signed by {official.signedByName}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ))
+                  )}
+                </ScrollView>
+
+                <Pressable
+                  style={styles.primaryButton}
+                  onPress={() => setShowOfficialsPreview(false)}
+                >
+                  <Text style={styles.primaryButtonText}>Close</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Modal>
         ) : null}
 
         {goalieModal?.visible ? (
@@ -5843,8 +6313,16 @@ export default function App() {
         ) : null}
 
         {eventActionModal?.visible ? (
-          <View style={styles.confirmOverlay}>
-            <View style={styles.goalModal}>
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={closeEventActions}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
               <Text style={styles.goalModalTitle}>Event Options</Text>
               <Text style={styles.goalModalSubtitle}>
                 Edit or delete selected event.
@@ -5863,55 +6341,78 @@ export default function App() {
                   <Text style={styles.secondaryButtonText}>Delete Event</Text>
                 </Pressable>
               </View>
-              <Pressable
-                style={styles.primaryButton}
-                onPress={closeEventActions}
-              >
-                <Text style={styles.primaryButtonText}>Cancel</Text>
-              </Pressable>
+                <Pressable
+                  style={styles.primaryButton}
+                  onPress={closeEventActions}
+                >
+                  <Text style={styles.primaryButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
+          </Modal>
         ) : null}
 
         {eventDeleteConfirmModal?.visible ? (
-          <View style={styles.confirmOverlay}>
-            <View style={styles.goalModal}>
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={closeEventDeleteConfirmModal}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
               <Text style={styles.goalModalTitle}>Verify Delete</Text>
               <Text style={styles.goalModalSubtitle}>
                 Are you sure you want to delete this{" "}
                 {eventDeleteConfirmModal.event.eventType.toLowerCase()} event?
               </Text>
-              <View style={styles.rowButtons}>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={closeEventDeleteConfirmModal}
-                >
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.primaryButton}
-                  onPress={deleteSelectedEvent}
-                >
-                  <Text style={styles.primaryButtonText}>Delete Event</Text>
-                </Pressable>
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={closeEventDeleteConfirmModal}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={deleteSelectedEvent}
+                  >
+                    <Text style={styles.primaryButtonText}>Delete Event</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
+          </Modal>
         ) : null}
 
         {eventEditModal?.visible ? (
-          <View style={[styles.confirmOverlay, styles.eventEditOverlay]}>
-            <View style={styles.goalModal}>
-              <Text style={styles.goalModalTitle}>Edit Event</Text>
-              <Text style={styles.goalModalSubtitle}>
-                Update event details and save.
-              </Text>
-              {eventEditModalError ? (
-                <Text style={styles.error}>{eventEditModalError}</Text>
-              ) : null}
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={closeEventEditModal}
+          >
+            <View style={[styles.confirmOverlay, styles.eventEditOverlay]}>
+              <View style={styles.goalModal}>
+                <Text style={styles.goalModalTitle}>Edit Event</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Update event details and save.
+                </Text>
+                {eventEditModalError ? (
+                  <Text style={styles.error}>{eventEditModalError}</Text>
+                ) : null}
 
-              {eventEditModal.event.eventType === "Goal" ? (
-                <>
+                <ScrollView
+                  style={styles.eventEditScrollView}
+                  contentContainerStyle={styles.eventEditScrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {eventEditModal.event.eventType === "Goal" ? (
+                    <>
                   <View style={styles.goalLockedGrid}>
                     <View style={styles.goalLockedItem}>
                       <Text style={styles.goalLockedLabel}>Scoring Team</Text>
@@ -6282,28 +6783,31 @@ export default function App() {
                     <Text style={styles.themedSelectChevron}>•</Text>
                   </View>
 
-                  <View style={styles.rowButtons}>
-                    <Pressable
-                      style={styles.secondaryButton}
-                      onPress={closeEventEditModal}
-                    >
-                      <Text style={styles.secondaryButtonText}>Cancel</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.primaryButton}
-                      onPress={saveEventEdit}
-                    >
-                      <Text style={styles.primaryButtonText}>Save</Text>
-                    </Pressable>
-                  </View>
-                </>
-              ) : (
-                <Text style={styles.footerHint}>
-                  Goalie events cannot be edited.
-                </Text>
-              )}
+                    </>
+                  ) : (
+                    <Text style={styles.footerHint}>
+                      Goalie events cannot be edited.
+                    </Text>
+                  )}
+                </ScrollView>
+
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={closeEventEditModal}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={saveEventEdit}
+                  >
+                    <Text style={styles.primaryButtonText}>Save</Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
-          </View>
+          </Modal>
         ) : null}
 
         {penaltyModal?.visible && session ? (
@@ -6847,24 +7351,30 @@ export default function App() {
                     <Pressable
                       style={[
                         styles.clockSecondaryBtn,
+                        homeGoaliePulled && styles.clockSecondaryBtnAlert,
                         styles.clockHalfWidthBtn,
                         isAnyModalOpen && styles.disabledButton,
                       ]}
                       disabled={isAnyModalOpen}
                       onPress={() => openGoalieChangeModal("home")}
                     >
-                      <Text style={styles.clockSecondaryText}>Home Goalie</Text>
+                      <Text style={styles.clockSecondaryText}>
+                        {homeGoaliePulled ? "Goalie Pulled" : "Home Goalie"}
+                      </Text>
                     </Pressable>
                     <Pressable
                       style={[
                         styles.clockSecondaryBtn,
+                        awayGoaliePulled && styles.clockSecondaryBtnAlert,
                         styles.clockHalfWidthBtn,
                         isAnyModalOpen && styles.disabledButton,
                       ]}
                       disabled={isAnyModalOpen}
                       onPress={() => openGoalieChangeModal("away")}
                     >
-                      <Text style={styles.clockSecondaryText}>Away Goalie</Text>
+                      <Text style={styles.clockSecondaryText}>
+                        {awayGoaliePulled ? "Goalie Pulled" : "Away Goalie"}
+                      </Text>
                     </Pressable>
                   </View>
                 </View>
@@ -7050,12 +7560,19 @@ export default function App() {
                       ) : (
                         <>
                           <Text style={styles.eventTitle}>
-                            {event.teamName} GOALIE{" "}
-                            {event.goalieChangeKind?.toUpperCase()}
+                            {event.teamName} GOALIE {" "}
+                            {event.goalieChangeKind === "returned"
+                              ? "RETURNED"
+                              : event.goalieChangeKind === "pulled"
+                                ? "PULLED"
+                                : event.goalieChangeKind?.toUpperCase()}
                           </Text>
                           <Text style={styles.eventSubtitle}>
-                            {event.goalieOldName ?? "-"} →{" "}
-                            {event.goalieNewName ?? "-"}
+                            {event.goalieChangeKind === "pulled"
+                              ? `${event.goalieOldName ?? "-"} → Pulled`
+                              : event.goalieChangeKind === "returned"
+                                ? `Pulled → ${event.goalieNewName ?? "-"}`
+                                : `${event.goalieOldName ?? "-"} → ${event.goalieNewName ?? "-"}`}
                           </Text>
                         </>
                       )}
@@ -7063,6 +7580,31 @@ export default function App() {
                   </Pressable>
                 ))
               )}
+            </View>
+
+            <View style={styles.rowButtons}>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => setRosterPreviewTeam("home")}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  View {session.homeTeam} Roster
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => setRosterPreviewTeam("away")}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  View {session.awayTeam} Roster
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => setShowOfficialsPreview(true)}
+              >
+                <Text style={styles.secondaryButtonText}>View Officials</Text>
+              </Pressable>
             </View>
 
             <Pressable style={styles.endGameButton} onPress={handleEndGame}>
@@ -7664,7 +8206,7 @@ export default function App() {
           <View style={styles.card}>
             <Text style={styles.title}>Send Scoresheet</Text>
             <Text style={styles.note}>
-              Choose which coaches should receive the final scoresheet.
+              Choose who should receive the final scoresheet email.
             </Text>
 
             {sendScoresheetError ? (
@@ -7708,22 +8250,101 @@ export default function App() {
                 ))
               )}
 
-              {suspensionFlaggedPenaltyEvents.length > 0 ? (
-                <View style={styles.recipientRow}>
-                  <View style={styles.recipientTextWrap}>
-                    <Text style={styles.recipientName}>Suspension Review</Text>
-                    <Text style={styles.recipientMeta}>
-                      Required for suspension review reporting
+              {gameDqPenaltyEvents.length > 0 ? (
+                <>
+                  <Text style={styles.sectionLabel}>REFEREE RECIPIENTS</Text>
+                  {refereeEmailRecipients.length === 0 ? (
+                    <Text style={styles.error}>
+                      DQ detected. No referee emails are on file. Add them in
+                      Admin Officials or add one below.
                     </Text>
-                  </View>
-                  <Switch
-                    value={true}
-                    disabled
-                    trackColor={{ false: "#516273", true: "#FF7B00" }}
-                    thumbColor="#FFE0BF"
-                  />
-                </View>
+                  ) : (
+                    refereeEmailRecipients.map((recipient) => (
+                      <View key={recipient.key} style={styles.recipientRow}>
+                        <View style={styles.recipientTextWrap}>
+                          <Text style={styles.recipientName}>
+                            {recipient.recipientName}
+                          </Text>
+                          <Text style={styles.recipientMeta}>
+                            {recipient.recipientMeta}
+                          </Text>
+                        </View>
+                        <Switch
+                          value={Boolean(sendRecipientSelection[recipient.key])}
+                          onValueChange={(value) =>
+                            setSendRecipientSelection((prev) => ({
+                              ...prev,
+                              [recipient.key]: value,
+                            }))
+                          }
+                          trackColor={{ false: "#516273", true: "#FF7B00" }}
+                          thumbColor={
+                            sendRecipientSelection[recipient.key]
+                              ? "#FFE0BF"
+                              : "#d4dbe3"
+                          }
+                        />
+                      </View>
+                    ))
+                  )}
+                </>
               ) : null}
+
+              <Text style={styles.sectionLabel}>ADDITIONAL EMAILS</Text>
+              <View style={styles.addEmailRow}>
+                <TextInput
+                  style={[styles.input, styles.addEmailInput]}
+                  value={customEmailInput}
+                  onChangeText={(value) => {
+                    setCustomEmailInput(value);
+                    if (sendScoresheetError) {
+                      setSendScoresheetError("");
+                    }
+                  }}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholder="name@example.com"
+                  placeholderTextColor="#7a8fa8"
+                />
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={addCustomEmailRecipient}
+                >
+                  <Text style={styles.secondaryButtonText}>Add Email</Text>
+                </Pressable>
+              </View>
+
+              {customEmailRecipients.map((recipient) => (
+                <View key={recipient.key} style={styles.recipientRow}>
+                  <View style={styles.recipientTextWrap}>
+                    <Text style={styles.recipientName}>{recipient.email}</Text>
+                    <Text style={styles.recipientMeta}>Additional recipient</Text>
+                  </View>
+                  <View style={styles.addEmailActions}>
+                    <Switch
+                      value={Boolean(sendRecipientSelection[recipient.key])}
+                      onValueChange={(value) =>
+                        setSendRecipientSelection((prev) => ({
+                          ...prev,
+                          [recipient.key]: value,
+                        }))
+                      }
+                      trackColor={{ false: "#516273", true: "#FF7B00" }}
+                      thumbColor={
+                        sendRecipientSelection[recipient.key]
+                          ? "#FFE0BF"
+                          : "#d4dbe3"
+                      }
+                    />
+                    <Pressable
+                      style={styles.removeEmailButton}
+                      onPress={() => removeCustomEmailRecipient(recipient.email)}
+                    >
+                      <Text style={styles.removeEmailButtonText}>Remove</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
             </View>
 
             <View style={styles.rowButtons}>
@@ -9182,6 +9803,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
   },
+  clockSecondaryBtnAlert: {
+    backgroundColor: "rgba(192, 57, 43, 0.26)",
+    borderColor: "rgba(231, 76, 60, 0.85)",
+  },
   clockSingleWidthBtn: {
     width: "100%",
   },
@@ -9855,6 +10480,87 @@ const styles = StyleSheet.create({
     color: "#8AA1BD",
     fontSize: 11,
     fontWeight: "700",
+  },
+  rosterPreviewList: {
+    maxHeight: 340,
+    marginBottom: 10,
+  },
+  rosterPreviewRow: {
+    borderWidth: 1,
+    borderColor: "rgba(255,123,0,0.14)",
+    borderRadius: 8,
+    backgroundColor: "#132038",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 8,
+    gap: 2,
+  },
+  rosterPreviewTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  rosterPreviewName: {
+    color: "#E8EDF5",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  starterBadge: {
+    borderWidth: 1,
+    borderColor: "rgba(255,123,0,0.9)",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: "rgba(255,123,0,0.18)",
+  },
+  starterBadgeText: {
+    color: "#FFB26B",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  rosterPreviewMeta: {
+    color: "#8AA1BD",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  eventEditScrollView: {
+    flexGrow: 0,
+    maxHeight: "78%",
+  },
+  eventEditScrollContent: {
+    gap: 8,
+    paddingBottom: 6,
+  },
+  addEmailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  addEmailInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  addEmailActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  removeEmailButton: {
+    borderWidth: 1,
+    borderColor: "rgba(239,83,80,0.7)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "rgba(239,83,80,0.12)",
+  },
+  removeEmailButtonText: {
+    color: "#f7a8a6",
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
   emailStatusBadge: {
     borderWidth: 1,

@@ -4,6 +4,8 @@
 
 let playerSort = { field: null, direction: "asc" };
 let lastRenderedPlayers = [];
+const PLAYERS_GROUP_PAGE_SIZE = 50;
+const playersGroupPaginationState = {};
 
 const allowedTeamTypes = new Map([
   ["boys", "Boys"],
@@ -34,6 +36,165 @@ function formatTeamWithTypeLevel(teamName, teamType, levelName, gender) {
     .join(" ");
 }
 
+function resetPlayersGroupPagination() {
+  Object.keys(playersGroupPaginationState).forEach((k) => delete playersGroupPaginationState[k]);
+}
+
+function getNormalizedPlayerStatus(player) {
+  const status = (player?.status || "").toString().trim().toLowerCase();
+  if (status === "inactive") return "inactive";
+  return "active";
+}
+
+function getFilteredPlayers() {
+  const source = Array.isArray(AdminPage?.allItems) ? AdminPage.allItems : [];
+
+  const search = (document.getElementById("players-search-bar")?.value || "").toLowerCase();
+  const org = document.getElementById("filter-player-org")?.value || "";
+  const team = document.getElementById("filter-player-team")?.value || "";
+  const grade = document.getElementById("filter-player-grade")?.value || "";
+  const status = (document.getElementById("filter-player-status")?.value || "").toLowerCase();
+
+  return source.filter((player) => {
+    const playerText = JSON.stringify(player || {}).toLowerCase();
+    const teamIds = (player.teams || []).map((t) => String(t.teamId));
+    const playerOrgId = player.organizationId || "";
+    const playerGrade = player.grade != null ? String(player.grade) : "";
+    const playerStatus = getNormalizedPlayerStatus(player);
+
+    const matchesSearch = !search || playerText.includes(search);
+    const matchesOrg = !org || playerOrgId === org;
+    const matchesTeam = !team || teamIds.includes(String(team));
+    const matchesGrade = !grade || playerGrade === grade;
+    const matchesStatus = !status || playerStatus === status;
+
+    return matchesSearch && matchesOrg && matchesTeam && matchesGrade && matchesStatus;
+  });
+}
+
+function renderPlayersGrouped(players) {
+  const container = document.getElementById("playersGroupedList");
+  if (!container) return;
+
+  if (!players.length) {
+    container.innerHTML = `<div class="nf-empty-state">No players match your current filters.</div>`;
+    return;
+  }
+
+  const sortedPlayers = sortPlayers(players);
+  const statusGroups = {
+    active: sortedPlayers.filter((player) => getNormalizedPlayerStatus(player) === "active"),
+    inactive: sortedPlayers.filter((player) => getNormalizedPlayerStatus(player) === "inactive"),
+  };
+
+  const statusOrder = ["active", "inactive"].filter((key) => statusGroups[key].length > 0);
+
+  container.innerHTML = statusOrder
+    .map((statusKey, statusIndex) => {
+      const statusItems = statusGroups[statusKey];
+      const totalPages = Math.max(1, Math.ceil(statusItems.length / PLAYERS_GROUP_PAGE_SIZE));
+      const currentPage = Math.min(playersGroupPaginationState[statusKey] || 1, totalPages);
+      playersGroupPaginationState[statusKey] = currentPage;
+
+      const paged = statusItems.slice((currentPage - 1) * PLAYERS_GROUP_PAGE_SIZE, currentPage * PLAYERS_GROUP_PAGE_SIZE);
+
+      const rows = paged
+        .map((player) => {
+          const fullName = `${player.firstName || ""} ${player.lastName || ""}`.trim() || "Unnamed Player";
+          const teams = (player.teams || [])
+            .map((t) => formatTeamWithTypeLevel(t.teamName, t.teamType, t.levelName))
+            .filter(Boolean);
+
+          return `
+            <tr>
+              <td>${fullName}</td>
+              <td>${player.jerseyNumber ?? "-"}</td>
+              <td>${player.position || "-"}</td>
+              <td>${player.grade ?? "-"}</td>
+              <td>${player.organizationName || "External Team"}</td>
+              <td>${teams.length ? teams.join("<br>") : "No team assignments"}</td>
+              <td>
+                <span class="player-status-pill ${statusKey === "active" ? "player-status-active" : "player-status-inactive"}">
+                  ${statusKey === "active" ? "Active" : "Inactive"}
+                </span>
+              </td>
+              <td class="actions-col">
+                <button class="nf-btn-icon edit player-edit-btn" data-id="${player.id}" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button class="nf-btn-icon delete player-delete-btn" data-id="${player.id}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            </tr>
+          `;
+        })
+        .join("");
+
+      return `
+        <details class="nf-group" ${statusIndex === 0 ? "open" : ""}>
+          <summary>
+            <span>${statusKey === "active" ? "Active" : "Inactive"}</span>
+            <span class="nf-group-count">${statusItems.length}</span>
+          </summary>
+          <div class="nf-group-content">
+            <div class="players-table-wrap">
+              <table class="data-table players-group-table">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-field="name">Name</th>
+                    <th class="sortable" data-field="jerseyNumber">Jersey</th>
+                    <th class="sortable" data-field="position">Position</th>
+                    <th class="sortable" data-field="grade">Grade</th>
+                    <th>Organization</th>
+                    <th>Teams</th>
+                    <th class="sortable" data-field="status">Status</th>
+                    <th class="actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+            ${statusItems.length > PLAYERS_GROUP_PAGE_SIZE ? `
+              <div class="nf-pagination">
+                <button class="nf-btn nf-btn-secondary player-page-btn" data-status="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
+                <span>Page ${currentPage} of ${totalPages}</span>
+                <button class="nf-btn nf-btn-secondary player-page-btn" data-status="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
+              </div>
+            ` : ""}
+          </div>
+        </details>
+      `;
+    })
+    .join("");
+
+  wirePlayerSortHeaders();
+  wirePlayerCardActions();
+  wirePlayerPagination();
+}
+
+function wirePlayerCardActions() {
+  document.querySelectorAll(".player-edit-btn").forEach((btn) => {
+    btn.onclick = () => openEditPlayer(btn.dataset.id);
+  });
+
+  document.querySelectorAll(".player-delete-btn").forEach((btn) => {
+    btn.onclick = () => openDeletePlayer(btn.dataset.id);
+  });
+}
+
+function wirePlayerPagination() {
+  document.querySelectorAll(".player-page-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const status = btn.dataset.status;
+      const direction = btn.dataset.direction;
+      const current = playersGroupPaginationState[status] || 1;
+
+      playersGroupPaginationState[status] = direction === "prev"
+        ? Math.max(1, current - 1)
+        : current + 1;
+
+      applyPlayerFilters();
+    };
+  });
+}
+
 function sortPlayers(players) {
   if (!playerSort.field) return [...players];
 
@@ -62,7 +223,7 @@ function sortPlayers(players) {
 }
 
 function updatePlayerSortHeaderIndicators() {
-  document.querySelectorAll(".data-table thead th.sortable").forEach((th) => {
+  document.querySelectorAll(".players-group-table thead th.sortable").forEach((th) => {
     if (!th.dataset.baseText) th.dataset.baseText = th.textContent.trim();
 
     const field = th.dataset.field;
@@ -74,7 +235,7 @@ function updatePlayerSortHeaderIndicators() {
 }
 
 function wirePlayerSortHeaders() {
-  document.querySelectorAll(".data-table thead th.sortable").forEach((th) => {
+  document.querySelectorAll(".players-group-table thead th.sortable").forEach((th) => {
     th.style.cursor = "pointer";
 
     if (th.dataset.sortWired === "true") return;
@@ -269,12 +430,12 @@ async function reloadTeamFilterByOrg(orgId) {
 // MAIN PAGE INITIALIZER
 // =========================================================
 function initPlayersPage() {
-  if (!document.getElementById("players-table-body")) return;
+  if (!document.getElementById("playersGroupedList")) return;
 
   wirePlayerSortHeaders();
 
   AdminPage.init({
-    tableBodyId: "players-table-body",
+    tableBodyId: "playersGroupedList",
     searchInputId: "players-search-bar",
 
     modalId: "playerModalOverlay",
@@ -309,51 +470,7 @@ function initPlayersPage() {
     // =========================================================
     renderTable: (players) => {
       lastRenderedPlayers = Array.isArray(players) ? players : [];
-      const body = document.getElementById("players-table-body");
-      body.innerHTML = "";
-
-      const sortedPlayers = sortPlayers(lastRenderedPlayers);
-
-      sortedPlayers.forEach((p) => {
-        const row = document.createElement("tr");
-
-        row.dataset.orgId = p.organizationId || "";
-        row.dataset.grade = p.grade || "";
-        row.dataset.status = (p.status || "").toLowerCase();
-
-        const teamNames = p.teams?.length
-          ? p.teams
-              .map((t) =>
-                formatTeamWithTypeLevel(t.teamName, t.teamType, t.levelName),
-              )
-              .join("<br>")
-          : "None";
-
-        const teamIds = p.teams?.map((t) => t.teamId).join(",") || "";
-        row.dataset.teamIds = teamIds;
-
-        row.innerHTML = `
-          <td>${p.firstName} ${p.lastName}</td>
-          <td>${p.jerseyNumber ?? ""}</td>
-          <td>${p.position ?? ""}</td>
-          <td>${p.organizationName || "External Team"}</td>
-          <td>${teamNames}</td>
-          <td>${p.grade || ""}</td>
-          <td>${p.status || ""}</td>
-          <td class="actions-col">
-            <button class="nf-btn-icon edit"><i class="fa-solid fa-pen-to-square"></i></button>
-            <button class="nf-btn-icon delete"><i class="fa-solid fa-trash"></i></button>
-          </td>
-        `;
-
-        row.querySelector(".edit").onclick = () => openEditPlayer(p.id);
-        row.querySelector(".delete").onclick = () => openDeletePlayer(p.id);
-
-        body.appendChild(row);
-      });
-
-      updatePlayerSortHeaderIndicators();
-      applyPlayerFilters();
+      renderPlayersGrouped(lastRenderedPlayers);
     },
 
     // =========================================================
@@ -468,43 +585,7 @@ function openDeletePlayer(id) {
 // FILTERS (multi-team aware)
 // =========================================================
 function applyPlayerFilters() {
-  const tbody = document.getElementById("players-table-body");
-  if (!tbody) return;
-
-  const search = document
-    .getElementById("players-search-bar")
-    .value.toLowerCase();
-  const org = document.getElementById("filter-player-org").value;
-  const team = document.getElementById("filter-player-team").value;
-  const grade = document.getElementById("filter-player-grade").value;
-  const status = document
-    .getElementById("filter-player-status")
-    .value.toLowerCase();
-
-  Array.from(tbody.querySelectorAll("tr")).forEach((row) => {
-    const teamIds = row.dataset.teamIds?.split(",") || [];
-    const levelIds = row.dataset.levelIds?.split(",") || [];
-
-    const matchesSearch =
-      !search || row.textContent.toLowerCase().includes(search);
-
-    const matchesOrg = !org || row.dataset.orgId === org;
-
-    const matchesTeam = !team || teamIds.includes(team);
-
-    const matchesGrade = !grade || row.dataset.grade === grade;
-
-    const matchesStatus = !status || row.dataset.status === status;
-
-    row.style.display =
-      matchesSearch &&
-      matchesOrg &&
-      matchesTeam &&
-      matchesGrade &&
-      matchesStatus
-        ? ""
-        : "none";
-  });
+  renderPlayersGrouped(getFilteredPlayers());
 }
 
 function wirePlayerFilterEvents() {
@@ -518,12 +599,20 @@ function wirePlayerFilterEvents() {
     const el = document.getElementById(id);
     if (!el) return;
 
-    el.addEventListener("input", applyPlayerFilters);
-    el.addEventListener("change", applyPlayerFilters);
+    el.addEventListener("input", () => {
+      resetPlayersGroupPagination();
+      applyPlayerFilters();
+    });
+
+    el.addEventListener("change", () => {
+      resetPlayersGroupPagination();
+      applyPlayerFilters();
+    });
 
     if (id === "filter-player-org") {
       el.addEventListener("change", async (e) => {
         await reloadTeamFilterByOrg(e.target.value);
+        resetPlayersGroupPagination();
         applyPlayerFilters();
       });
     }

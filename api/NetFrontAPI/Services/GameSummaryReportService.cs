@@ -502,8 +502,8 @@ namespace NetFrontAPI.Services
 
             builder.AppendLine();
             builder.AppendLine("Shots By Period:");
-            builder.AppendLine($"- {report.HomeTeamName}: Period 1 {report.HomeShots.P1}, Period 2 {report.HomeShots.P2}, Period 3 {report.HomeShots.P3}, Overtime {report.HomeShots.OT}, Total {report.HomeShots.Total}");
-            builder.AppendLine($"- {report.AwayTeamName}: Period 1 {report.AwayShots.P1}, Period 2 {report.AwayShots.P2}, Period 3 {report.AwayShots.P3}, Overtime {report.AwayShots.OT}, Total {report.AwayShots.Total}");
+            builder.AppendLine($"- {report.HomeTeamName}: Period 1 - {report.HomeShots.P1}, Period 2 - {report.HomeShots.P2}, Period 3 - {report.HomeShots.P3}, Overtime - {report.HomeShots.OT}, Total - {report.HomeShots.Total}");
+            builder.AppendLine($"- {report.AwayTeamName}: Period 1 - {report.AwayShots.P1}, Period 2 - {report.AwayShots.P2}, Period 3 - {report.AwayShots.P3}, Overtime - {report.AwayShots.OT}, Total - {report.AwayShots.Total}");
 
             builder.AppendLine();
             builder.AppendLine("Goal Summary:");
@@ -515,7 +515,7 @@ namespace NetFrontAPI.Services
             {
                 foreach (var goal in report.Goals)
                 {
-                    builder.AppendLine($"- Period {goal.Period} {goal.TimeInPeriod}: {goal.TeamName} - {FormatNumberAndName(goal.ScorerNumber, goal.Scorer)}{BuildAssistText(goal.Assist1Number, goal.Assist1, goal.Assist2Number, goal.Assist2)} - {ExpandStrength(goal.Strength)}");
+                    builder.AppendLine($"- Period {goal.Period} - {goal.TimeInPeriod}: {goal.TeamName} - {FormatNumberAndName(goal.ScorerNumber, goal.Scorer)}{BuildAssistText(goal.Assist1Number, goal.Assist1, goal.Assist2Number, goal.Assist2)} - {ExpandStrength(goal.Strength)}");
                 }
             }
 
@@ -529,7 +529,21 @@ namespace NetFrontAPI.Services
             {
                 foreach (var goalie in report.Goalies)
                 {
-                    builder.AppendLine($"- {goalie.TeamName} / {goalie.GoalieName}: Period 1 {goalie.P1}, Period 2 {goalie.P2}, Period 3 {goalie.P3}, Overtime {goalie.OT}, Total {goalie.Total}");
+                    builder.AppendLine($"- {goalie.TeamName} / {goalie.GoalieName}: Period 1 - {goalie.P1}, Period 2 - {goalie.P2}, Period 3 - {goalie.P3}, Overtime - {goalie.OT}, Total - {goalie.Total}");
+                }
+            }
+
+            builder.AppendLine();
+            builder.AppendLine("Penalties:");
+            if (report.Penalties.Count == 0)
+            {
+                builder.AppendLine("- No penalties recorded.");
+            }
+            else
+            {
+                foreach (var penalty in report.Penalties)
+                {
+                    builder.AppendLine($"- Period {penalty.Period} - {penalty.TimeInPeriod}: {penalty.TeamName} - {FormatNumberAndName(penalty.PlayerNumber, penalty.PlayerName)} ({penalty.Infraction}, {penalty.DurationMinutes} Min)");
                 }
             }
 

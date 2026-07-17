@@ -68,39 +68,17 @@ window.PageContentRegistry.teams = () => `
     </div>
   </div>
 
-  <!-- TEAMS TABLE -->
   <div class="nf-card mt-4">
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Team Name</th>
-            <th>
-              <div class="teams-org-header-controls">
-                <span>Organization</span>
-                <label class="teams-org-external-toggle" for="teams-show-external">
-                  <span class="teams-external-switch">
-                    <input id="teams-show-external" type="checkbox" aria-label="Display External Teams" />
-                    <span class="teams-external-slider"></span>
-                  </span>
-                  <span>Display External Teams</span>
-                </label>
-              </div>
-            </th>
-            <th>Conference</th>
-            <th>Section</th>
-            <th>Level</th>
-            <th>Type</th>
-            <th>Roster</th>
-            <th>Head Coach</th>
-            <th>Access Codes</th>
-            <th>Active</th>
-            <th class="actions-col">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="teamsBody"></tbody>
-      </table>
+    <div class="teams-group-header">
+      <label class="teams-org-external-toggle" for="teams-show-external">
+        <span class="teams-external-switch">
+          <input id="teams-show-external" type="checkbox" aria-label="Display External Teams" />
+          <span class="teams-external-slider"></span>
+        </span>
+        <span>Display External Teams</span>
+      </label>
     </div>
+    <div id="teamsGroupedList" class="nf-grouped-list"></div>
   </div>
 `;
 
@@ -611,20 +589,7 @@ window.PageContentRegistry.organizations = () => `
   </div>
 
   <div class="nf-card mt-4">
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Organization</th>
-            <th>League</th>
-            <th>Teams</th>
-            <th>Status</th>
-            <th class="actions-col">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="orgTableBody"></tbody>
-      </table>
-    </div>
+    <div id="orgGroupedList" class="nf-grouped-list"></div>
   </div>
 `;
 
@@ -869,37 +834,17 @@ window.PageContentRegistry.rosters = () => `
 
     </div>
   </div>
-
-
-  <!-- ROSTERS TABLE -->
   <div class="nf-card mt-4">
-    <div class="table-wrapper">
-      <table class="data-table" id="teamsRosterTable">
-        <thead>
-          <tr>
-            <th class="sortable" data-field="name">Team Name</th>
-            <th class="sortable" data-field="teamType">Team Type</th>
-            <th class="sortable" data-field="levelName">Level</th>
-            <th>
-              <div class="org-header-controls">
-                <span class="sortable" data-field="organizationName" style="cursor:pointer;">Organization</span>
-                <label class="org-external-toggle" for="rosters-show-external">
-                  <span class="switch external-switch">
-                    <input id="rosters-show-external" type="checkbox" aria-label="Display External Teams" />
-                    <span class="slider"></span>
-                  </span>
-                  <span>Display External Teams</span>
-                </label>
-              </div>
-            </th>
-            <th class="sortable" data-field="rosterCount">Roster Count</th>
-            <th class="sortable" data-field="status">Status</th>
-            <th class="actions-col">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="teamsRosterBody"></tbody>
-      </table>
+    <div class="rosters-group-header">
+      <label class="org-external-toggle" for="rosters-show-external">
+        <span class="switch external-switch">
+          <input id="rosters-show-external" type="checkbox" aria-label="Display External Teams" />
+          <span class="slider"></span>
+        </span>
+        <span>Display External Teams</span>
+      </label>
     </div>
+    <div id="teamsRosterGroupedList" class="nf-grouped-list"></div>
   </div>
 `;
 
@@ -1147,6 +1092,7 @@ window.PageContentRegistry.officials = () => `
         <option value="">Role: All</option>
         <option value="Referee">Referee</option>
         <option value="Linesman">Linesman</option>
+        <option value="Both">Both</option>
       </select>
 
       <select id="filter-official-status" class="nf-select">
@@ -1158,19 +1104,7 @@ window.PageContentRegistry.officials = () => `
   </div>
 
   <div class="nf-card mt-4">
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th class="actions-col">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="officialsTableBody"></tbody>
-      </table>
-    </div>
+    <div id="officialsGroupedList" class="nf-grouped-list"></div>
   </div>
 `;
 
@@ -1202,11 +1136,28 @@ window.PageContentRegistry.officialsModals = () => `
             </div>
 
             <div>
-              <label>Role</label>
-              <select id="official-role" class="nf-input">
-                <option value="Referee">Referee</option>
-                <option value="Linesman">Linesman</option>
-              </select>
+              <label>Email</label>
+              <input id="official-email" class="nf-input" type="email" placeholder="name@example.com" />
+            </div>
+
+            <div>
+              <label>Roles</label>
+              <div class="official-role-toggles">
+                <div class="official-role-toggle-item">
+                  <span>Referee</span>
+                  <label class="switch">
+                    <input type="checkbox" id="official-role-referee" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="official-role-toggle-item">
+                  <span>Linesman</span>
+                  <label class="switch">
+                    <input type="checkbox" id="official-role-linesman" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -1314,25 +1265,7 @@ window.PageContentRegistry.schedules = () => `
   </div>
 
   <div class="nf-card mt-4">
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Home</th>
-            <th>Away</th>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Arena</th>
-            <th>Rink</th>
-            <th>Type</th>
-            <th>Officials</th>
-            <th>Status</th>
-            <th class="actions-col">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="gamesTableBody"></tbody>
-      </table>
-    </div>
+    <div id="gamesGroupedList" class="games-grouped-list"></div>
   </div>
 `;
 
@@ -1619,25 +1552,8 @@ window.PageContentRegistry.players = () => `
     </div>
   </div>
 
-  <!-- PLAYERS TABLE -->
   <div class="nf-card mt-4">
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th class="sortable" data-field="name">Name</th>
-            <th class="sortable" data-field="jerseyNumber">Jersey #</th>
-            <th class="sortable" data-field="position">Position</th>
-            <th>Organization</th>
-            <th>Team</th>
-            <th class="sortable" data-field="grade">Grade</th>
-            <th class="sortable" data-field="status">Status</th>
-            <th class="actions-col">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="players-table-body"></tbody>
-      </table>
-    </div>
+    <div id="playersGroupedList" class="nf-grouped-list"></div>
   </div>
 `;
 

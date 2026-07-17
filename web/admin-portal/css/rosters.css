@@ -45,3 +45,9 @@
 .org-external-toggle .external-switch input:checked + .slider:before {
   transform: translateX(20px);
 }
+
+.rosters-group-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}

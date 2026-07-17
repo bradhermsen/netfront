@@ -34,6 +34,25 @@ const allowedTeamTypes = new Map([
   ["women", "Women"],
 ]);
 
+const officialScheduleSelectIds = [
+  "game-referee-1",
+  "game-referee-2",
+  "game-linesman-1",
+  "game-linesman-2",
+];
+
+const STATUS_GROUP_ORDER = [
+  "In Progress",
+  "Scheduled",
+  "Needs Setup",
+  "Missing Roster",
+  "Final",
+  "Cancelled / Postponed",
+];
+
+const STATUS_PAGE_SIZE = 10;
+const statusPaginationState = {};
+
 // =========================================================
 // LOOKUPS
 // =========================================================
@@ -128,6 +147,7 @@ function populateScheduleDropdowns() {
   populateOfficialsSelect("game-referee-2", "Referee", "Select Referee 2");
   populateOfficialsSelect("game-linesman-1", "Linesman", "Select Linesman 1");
   populateOfficialsSelect("game-linesman-2", "Linesman", "Select Linesman 2");
+  wireOfficialSelectionUniqueness();
 }
 
 function populateOfficialsSelect(selectId, role, placeholder) {
@@ -148,6 +168,47 @@ function populateOfficialsSelect(selectId, role, placeholder) {
     const label = o.displayName || `${o.firstName || ""} ${o.lastName || ""}`.trim();
     el.innerHTML += `<option value="${o.officialId}">${label}</option>`;
   });
+}
+
+function getSelectedOfficialValues() {
+  return officialScheduleSelectIds
+    .map((id) => document.getElementById(id)?.value || "")
+    .filter(Boolean);
+}
+
+function hasDuplicateOfficials() {
+  const selected = getSelectedOfficialValues();
+  return new Set(selected).size !== selected.length;
+}
+
+function syncOfficialSelectOptions() {
+  const selectedValues = new Set(getSelectedOfficialValues());
+
+  officialScheduleSelectIds.forEach((selectId) => {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const currentValue = select.value;
+    Array.from(select.options).forEach((option) => {
+      if (!option.value) {
+        option.disabled = false;
+        return;
+      }
+
+      option.disabled = selectedValues.has(option.value) && option.value !== currentValue;
+    });
+  });
+}
+
+function wireOfficialSelectionUniqueness() {
+  officialScheduleSelectIds.forEach((selectId) => {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    select.onchange = syncOfficialSelectOptions;
+  });
+
+  syncOfficialSelectOptions();
 }
 
 function getTeamLevelNameById(teamId) {
@@ -352,6 +413,48 @@ function formatOfficialName(value) {
   return typeof value === "string" && value.trim() ? value.trim() : "—";
 }
 
+function normalizeStatusGroup(statusLabel) {
+  const normalized = String(statusLabel || "").trim().toLowerCase();
+
+  if (normalized === "cancelled" || normalized === "postponed") {
+    return "Cancelled / Postponed";
+  }
+
+  if (normalized === "in progress") {
+    return "In Progress";
+  }
+
+  if (normalized === "scheduled") {
+    return "Scheduled";
+  }
+
+  if (normalized === "final" || normalized === "completed" || normalized === "closed") {
+    return "Final";
+  }
+
+  if (normalized === "needs setup") {
+    return "Needs Setup";
+  }
+
+  if (normalized === "missing roster") {
+    return "Missing Roster";
+  }
+
+  return statusLabel || "Scheduled";
+}
+
+function getMonthGroupLabel(dt) {
+  const parsed = new Date(dt);
+  if (Number.isNaN(parsed.getTime())) return "Unknown Month";
+  return parsed.toLocaleString("en-US", { month: "long", year: "numeric" });
+}
+
+function resetStatusPagination() {
+  Object.keys(statusPaginationState).forEach((key) => {
+    delete statusPaginationState[key];
+  });
+}
+
 // =========================================================
 // FILTERS
 // =========================================================
@@ -392,7 +495,7 @@ function applyGameFilters() {
     return true;
   });
 
-  renderGamesTable(filtered);
+  renderGamesGrouped(filtered);
 }
 
 function wireGameFilters() {
@@ -404,6 +507,7 @@ function wireGameFilters() {
       if (id === "filter-game-org") {
         populateScheduleFilters();
       }
+      resetStatusPagination();
       applyGameFilters();
     });
 
@@ -411,6 +515,7 @@ function wireGameFilters() {
       if (id === "filter-game-org") {
         populateScheduleFilters();
       }
+      resetStatusPagination();
       applyGameFilters();
     });
   });
@@ -428,60 +533,166 @@ async function loadGames() {
     }
 
     allGames = await res.json();
-    renderGamesTable(allGames);
+    resetStatusPagination();
+    renderGamesGrouped(allGames);
   } catch (err) {
     console.error("Failed to load games:", err);
     showMessage("Failed to load games", "error");
   }
 }
 
-function renderGamesTable(list) {
-  const tbody = document.getElementById("gamesTableBody");
-  tbody.innerHTML = "";
+function renderGamesGrouped(list) {
+  const container = document.getElementById("gamesGroupedList");
+  if (!container) return;
 
-  list.forEach((g) => {
-    const statusLabel = String(g.status || "");
-    const statusNormalized = statusLabel.trim().toLowerCase();
-    const canDownloadFinalPdf = statusNormalized === "final" || statusNormalized === "completed";
-    const homeTeam = allTeams.find((t) => t.teamId === g.homeTeamId);
-    const awayTeam = allTeams.find((t) => t.teamId === g.awayTeamId);
-    const homeLabel = homeTeam ? teamLabel(homeTeam) : g.homeTeamName;
-    const awayLabel = awayTeam ? teamLabel(awayTeam) : g.awayTeamName;
+  if (!list.length) {
+    container.innerHTML = `<div class="schedules-empty">No games match your current filters.</div>`;
+    return;
+  }
 
-    tbody.innerHTML += `
-      <tr>
-        <td>${homeLabel}</td>
-        <td>${awayLabel}</td>
-        <td>${formatDate(g.gameDateTime)}</td>
-        <td>${formatTime(g.gameDateTime)}</td>
-        <td>${g.arenaName}</td>
-        <td>${g.rinkName}</td>
-        <td>${g.gameTypeName}</td>
-        <td class="officials-cell">
-          <span>${formatOfficialName(g.referee1)}</span>
-          <span>${formatOfficialName(g.referee2)}</span>
-          <span>${formatOfficialName(g.linesman1)}</span>
-          <span>${formatOfficialName(g.linesman2)}</span>
-        </td>
-        <td>${statusLabel}</td>
-        <td class="actions-col">
-          ${canDownloadFinalPdf ? `
-          <button class="nf-btn-icon pdf" data-id="${g.gameId}" title="Download Final PDF">
-            <i class="fa fa-file-pdf"></i>
-          </button>
-          ` : ""}
-          <button class="nf-btn-icon edit" data-id="${g.gameId}">
-            <i class="fa fa-edit"></i>
-          </button>
-          <button class="nf-btn-icon delete" data-id="${g.gameId}">
-            <i class="fa fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `;
-  });
+  const groups = new Map();
+
+  [...list]
+    .sort((a, b) => new Date(a.gameDateTime) - new Date(b.gameDateTime))
+    .forEach((game) => {
+      const statusKey = normalizeStatusGroup(game.status);
+      if (!groups.has(statusKey)) {
+        groups.set(statusKey, []);
+      }
+
+      groups.get(statusKey).push(game);
+    });
+
+  const statusKeys = [
+    ...STATUS_GROUP_ORDER.filter((status) => groups.has(status)),
+    ...[...groups.keys()].filter((status) => !STATUS_GROUP_ORDER.includes(status)),
+  ];
+
+  container.innerHTML = statusKeys
+    .map((statusKey, statusIndex) => {
+      const statusGames = groups.get(statusKey) || [];
+      const totalPages = Math.max(1, Math.ceil(statusGames.length / STATUS_PAGE_SIZE));
+      const currentPage = Math.min(statusPaginationState[statusKey] || 1, totalPages);
+      statusPaginationState[statusKey] = currentPage;
+
+      const start = (currentPage - 1) * STATUS_PAGE_SIZE;
+      const pagedGames = statusGames.slice(start, start + STATUS_PAGE_SIZE);
+
+      const monthGroups = new Map();
+      pagedGames.forEach((game) => {
+        const monthLabel = getMonthGroupLabel(game.gameDateTime);
+        if (!monthGroups.has(monthLabel)) {
+          monthGroups.set(monthLabel, []);
+        }
+
+        monthGroups.get(monthLabel).push(game);
+      });
+
+      const monthMarkup = [...monthGroups.entries()]
+        .map(([monthLabel, monthGames], monthIndex) => {
+          const cards = monthGames
+            .map((g) => {
+              const statusLabel = String(g.status || "");
+              const statusNormalized = statusLabel.trim().toLowerCase();
+              const canDownloadFinalPdf = statusNormalized === "final" || statusNormalized === "completed";
+              const homeTeam = allTeams.find((t) => t.teamId === g.homeTeamId);
+              const awayTeam = allTeams.find((t) => t.teamId === g.awayTeamId);
+              const homeLabel = homeTeam ? teamLabel(homeTeam) : g.homeTeamName;
+              const awayLabel = awayTeam ? teamLabel(awayTeam) : g.awayTeamName;
+
+              return `
+                <article class="schedule-game-card">
+                  <div class="schedule-game-top">
+                    <h4>${homeLabel} vs ${awayLabel}</h4>
+                    <span class="schedule-status-badge">${statusLabel || statusKey}</span>
+                  </div>
+
+                  <div class="schedule-game-meta">
+                    <span><i class="fa fa-calendar"></i> ${formatDate(g.gameDateTime)} ${formatTime(g.gameDateTime)}</span>
+                    <span><i class="fa fa-map-marker-alt"></i> ${g.arenaName || "TBD"} ${g.rinkName ? `• ${g.rinkName}` : ""}</span>
+                    <span><i class="fa fa-flag"></i> ${g.gameTypeName || "Unspecified"}</span>
+                  </div>
+
+                  <div class="schedule-game-officials">
+                    <span>Ref 1: ${formatOfficialName(g.referee1)}</span>
+                    <span>Ref 2: ${formatOfficialName(g.referee2)}</span>
+                    <span>Line 1: ${formatOfficialName(g.linesman1)}</span>
+                    <span>Line 2: ${formatOfficialName(g.linesman2)}</span>
+                  </div>
+
+                  <div class="schedule-game-actions">
+                    ${canDownloadFinalPdf ? `
+                    <button class="nf-btn-icon pdf" data-id="${g.gameId}" title="Download Final PDF">
+                      <i class="fa fa-file-pdf"></i>
+                    </button>
+                    ` : ""}
+                    <button class="nf-btn-icon edit" data-id="${g.gameId}" title="Edit">
+                      <i class="fa fa-edit"></i>
+                    </button>
+                    <button class="nf-btn-icon delete" data-id="${g.gameId}" title="Delete">
+                      <i class="fa fa-trash"></i>
+                    </button>
+                  </div>
+                </article>
+              `;
+            })
+            .join("");
+
+          return `
+            <details class="schedule-month-group" ${monthIndex === 0 ? "open" : ""}>
+              <summary>
+                <span>${monthLabel}</span>
+                <span class="schedule-count">${monthGames.length}</span>
+              </summary>
+              <div class="schedule-month-cards">${cards}</div>
+            </details>
+          `;
+        })
+        .join("");
+
+      return `
+        <details class="schedule-status-group" ${statusIndex < 2 ? "open" : ""}>
+          <summary>
+            <span>${statusKey}</span>
+            <span class="schedule-count">${statusGames.length}</span>
+          </summary>
+
+          <div class="schedule-status-content">
+            ${monthMarkup}
+
+            ${statusGames.length > STATUS_PAGE_SIZE ? `
+            <div class="schedule-pagination">
+              <button class="nf-btn nf-btn-secondary schedule-page-btn" data-status-key="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
+              <span>Page ${currentPage} of ${totalPages}</span>
+              <button class="nf-btn nf-btn-secondary schedule-page-btn" data-status-key="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
+            </div>
+            ` : ""}
+          </div>
+        </details>
+      `;
+    })
+    .join("");
 
   wireGameRowButtons();
+  wireStatusPaginationButtons();
+}
+
+function wireStatusPaginationButtons() {
+  document.querySelectorAll(".schedule-page-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const statusKey = btn.dataset.statusKey;
+      const direction = btn.dataset.direction;
+      const current = statusPaginationState[statusKey] || 1;
+
+      if (direction === "prev") {
+        statusPaginationState[statusKey] = Math.max(1, current - 1);
+      } else {
+        statusPaginationState[statusKey] = current + 1;
+      }
+
+      applyGameFilters();
+    };
+  });
 }
 
 function wireGameRowButtons() {
@@ -640,6 +851,11 @@ async function saveGame() {
     return;
   }
 
+  if (hasDuplicateOfficials()) {
+    showMessage("Each official can only be assigned once per schedule", "error");
+    return;
+  }
+
   const method = currentGameId ? "PUT" : "POST";
   const url = currentGameId
     ? `/games/${currentGameId}`
@@ -697,7 +913,7 @@ function closeDeleteGameModal() {
 // =========================================================
 async function initSchedulesPage() {
   if (window.__schedulesPageInitialized) return;
-  if (!document.getElementById("gamesTableBody")) return;
+  if (!document.getElementById("gamesGroupedList")) return;
 
   window.__schedulesPageInitialized = true;
   console.log("schedules.js initialized");
@@ -717,6 +933,6 @@ async function initSchedulesPage() {
 }
 
 document.addEventListener("layoutLoaded", initSchedulesPage);
-if (document.getElementById("gamesTableBody")) {
+if (document.getElementById("gamesGroupedList")) {
   initSchedulesPage();
 }

@@ -269,6 +269,36 @@ namespace NetFrontAPI.Functions
             return response;
         }
 
+        [Function("StartGameForMobile")]
+        public async Task<HttpResponseData> StartGameForMobile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "games/{gameId:guid}/start-mobile")] HttpRequestData req,
+            Guid gameId)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+
+            const string sql = @"
+                UPDATE dbo.Games
+                SET
+                    Status = 'In Progress',
+                    UpdatedAt = SYSUTCDATETIME()
+                WHERE GameId = @GameId
+                  AND UPPER(ISNULL(Status, 'SCHEDULED')) NOT IN ('FINAL', 'COMPLETED', 'CLOSED');";
+
+            var updated = await conn.ExecuteAsync(sql, new { GameId = gameId });
+            if (updated == 0)
+            {
+                return req.CreateResponse(HttpStatusCode.NotFound);
+            }
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(new
+            {
+                GameId = gameId,
+                Status = "In Progress"
+            });
+            return response;
+        }
+
         [Function("GetTeamRosterForMobile")]
         public async Task<HttpResponseData> GetTeamRosterForMobile(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "teams/{teamId:guid}/roster-mobile")] HttpRequestData req,

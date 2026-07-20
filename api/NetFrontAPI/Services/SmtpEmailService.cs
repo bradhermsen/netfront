@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Dapper;
 using Microsoft.Extensions.Configuration;
 using NetFrontAPI.Infrastructure.Database;
@@ -26,7 +27,7 @@ namespace NetFrontAPI.Services
         public async Task<EmailServerSettings> GetSettingsAsync(bool includeSecret = false)
         {
             using var conn = _connectionFactory.CreateConnection();
-            await EnsureTableAsync(conn);
+            await EnsureTablesAsync(conn);
 
             const string sql = @"
                 SELECT TOP 1
@@ -55,7 +56,7 @@ namespace NetFrontAPI.Services
         public async Task<EmailServerSettings> SaveSettingsAsync(EmailServerSettings settings)
         {
             using var conn = _connectionFactory.CreateConnection();
-            await EnsureTableAsync(conn);
+            await EnsureTablesAsync(conn);
 
             var existing = await GetSettingsAsync(includeSecret: true);
             var normalized = NormalizeForSave(settings, existing);
@@ -107,6 +108,92 @@ namespace NetFrontAPI.Services
 
             await conn.ExecuteAsync(upsertSql, normalized);
             return await GetSettingsAsync(includeSecret: false);
+        }
+
+        public async Task<IReadOnlyList<MediaOutletRecipient>> GetMediaOutletsAsync()
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            await EnsureTablesAsync(conn);
+
+            const string sql = @"
+                SELECT
+                    OutletName AS Name,
+                    Email
+                FROM dbo.EmailMediaOutlets
+                WHERE IsActive = 1
+                ORDER BY SortOrder, OutletName, Email;";
+
+            var rows = await conn.QueryAsync<MediaOutletRecipient>(sql);
+            return rows
+                .Where(row => !string.IsNullOrWhiteSpace(row.Email))
+                .Select(row => new MediaOutletRecipient
+                {
+                    Name = (row.Name ?? string.Empty).Trim(),
+                    Email = row.Email.Trim()
+                })
+                .ToList();
+        }
+
+        public async Task<IReadOnlyList<MediaOutletRecipient>> SaveMediaOutletsAsync(IEnumerable<MediaOutletRecipient> outlets)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            await EnsureTablesAsync(conn);
+
+            var normalized = (outlets ?? Array.Empty<MediaOutletRecipient>())
+                .Where(item => item != null && !string.IsNullOrWhiteSpace(item.Email))
+                .Select(item => new MediaOutletRecipient
+                {
+                    Name = (item.Name ?? string.Empty).Trim(),
+                    Email = item.Email.Trim()
+                })
+                .Where(item => item.Email.Length > 0)
+                .GroupBy(item => item.Email, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .ToList();
+
+            using var tx = conn.BeginTransaction();
+
+            await conn.ExecuteAsync("DELETE FROM dbo.EmailMediaOutlets;", transaction: tx);
+
+            const string insertSql = @"
+                INSERT INTO dbo.EmailMediaOutlets
+                (
+                    MediaOutletId,
+                    OutletName,
+                    Email,
+                    IsActive,
+                    SortOrder,
+                    CreatedAt,
+                    UpdatedAt
+                )
+                VALUES
+                (
+                    NEWID(),
+                    @OutletName,
+                    @Email,
+                    1,
+                    @SortOrder,
+                    SYSUTCDATETIME(),
+                    SYSUTCDATETIME()
+                );";
+
+            for (var i = 0; i < normalized.Count; i++)
+            {
+                await conn.ExecuteAsync(
+                    insertSql,
+                    new
+                    {
+                        OutletName = string.IsNullOrWhiteSpace(normalized[i].Name)
+                            ? "Media Outlet"
+                            : normalized[i].Name,
+                        normalized[i].Email,
+                        SortOrder = i + 1
+                    },
+                    tx);
+            }
+
+            tx.Commit();
+            return normalized;
         }
 
         public async Task SendAsync(EmailSendRequest request)
@@ -260,7 +347,7 @@ namespace NetFrontAPI.Services
             };
         }
 
-        private static async Task EnsureTableAsync(IDbConnection conn)
+        private static async Task EnsureTablesAsync(IDbConnection conn)
         {
             const string sql = @"
                 IF OBJECT_ID('dbo.EmailServerSettings', 'U') IS NULL
@@ -278,6 +365,20 @@ namespace NetFrontAPI.Services
                         FromName NVARCHAR(255) NOT NULL,
                         CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_EmailServerSettings_CreatedAt DEFAULT SYSUTCDATETIME(),
                         UpdatedAt DATETIME2 NOT NULL CONSTRAINT DF_EmailServerSettings_UpdatedAt DEFAULT SYSUTCDATETIME()
+                    );
+                END;
+
+                IF OBJECT_ID('dbo.EmailMediaOutlets', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.EmailMediaOutlets
+                    (
+                        MediaOutletId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_EmailMediaOutlets PRIMARY KEY,
+                        OutletName NVARCHAR(255) NOT NULL,
+                        Email NVARCHAR(255) NOT NULL,
+                        IsActive BIT NOT NULL CONSTRAINT DF_EmailMediaOutlets_IsActive DEFAULT 1,
+                        SortOrder INT NOT NULL CONSTRAINT DF_EmailMediaOutlets_SortOrder DEFAULT 0,
+                        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_EmailMediaOutlets_CreatedAt DEFAULT SYSUTCDATETIME(),
+                        UpdatedAt DATETIME2 NOT NULL CONSTRAINT DF_EmailMediaOutlets_UpdatedAt DEFAULT SYSUTCDATETIME()
                     );
                 END;";
 

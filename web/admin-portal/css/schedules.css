@@ -188,3 +188,84 @@
     justify-content: space-between;
   }
 }
+
+/* Flatpickr styling for Add/Edit Game modal */
+.flatpickr-calendar {
+  background: #0f192d;
+  border: 1px solid #325d92;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  color: #dbe8ff;
+  z-index: 20050 !important;
+}
+
+.flatpickr-months,
+.flatpickr-weekdays {
+  background: #14213a;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year,
+.flatpickr-weekday,
+.flatpickr-monthDropdown-month,
+.flatpickr-prev-month,
+.flatpickr-next-month,
+.flatpickr-time .flatpickr-am-pm,
+.flatpickr-time input {
+  color: #dbe8ff;
+}
+
+.flatpickr-day {
+  color: #dbe8ff;
+  border-radius: 8px;
+}
+
+.flatpickr-day:hover,
+.flatpickr-day:focus {
+  background: #203e66;
+  border-color: #325d92;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected:hover {
+  background: var(--nf-accent);
+  border-color: var(--nf-accent);
+  color: #ffffff;
+}
+
+.flatpickr-day.today {
+  border-color: #4e82c0;
+}
+
+.flatpickr-time {
+  border-top: 1px solid #325d92;
+  background: #111b30;
+}
+
+.flatpickr-time .numInputWrapper,
+.flatpickr-time input,
+.flatpickr-time .flatpickr-am-pm,
+.flatpickr-time .flatpickr-time-separator {
+  background: #111b30;
+  color: #dbe8ff;
+}
+
+.flatpickr-time input:hover,
+.flatpickr-time .flatpickr-am-pm:hover,
+.flatpickr-time input:focus,
+.flatpickr-time .flatpickr-am-pm:focus {
+  background: #1a2a46;
+  color: #ffffff;
+}
+
+.flatpickr-time .numInputWrapper:hover,
+.flatpickr-time .numInputWrapper:focus-within {
+  background: #1a2a46;
+}
+
+.flatpickr-time .numInputWrapper span.arrowUp:after,
+.flatpickr-time .numInputWrapper span.arrowDown:after {
+  border-bottom-color: #dbe8ff;
+  border-top-color: #dbe8ff;
+}

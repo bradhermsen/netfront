@@ -24,6 +24,12 @@ namespace NetFrontAPI.Services
         public List<EmailAttachment> Attachments { get; set; } = new List<EmailAttachment>();
     }
 
+    public class MediaOutletRecipient
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
     public class EmailAttachment
     {
         public string FileName { get; set; } = "attachment.bin";
@@ -35,6 +41,8 @@ namespace NetFrontAPI.Services
     {
         Task<EmailServerSettings> GetSettingsAsync(bool includeSecret = false);
         Task<EmailServerSettings> SaveSettingsAsync(EmailServerSettings settings);
+        Task<IReadOnlyList<MediaOutletRecipient>> GetMediaOutletsAsync();
+        Task<IReadOnlyList<MediaOutletRecipient>> SaveMediaOutletsAsync(IEnumerable<MediaOutletRecipient> outlets);
         Task SendAsync(EmailSendRequest request);
     }
 }

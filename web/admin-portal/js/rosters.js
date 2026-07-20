@@ -146,6 +146,23 @@ async function initRostersPage() {
 
   applyMainRosterFilters();
 
+  const params = new URLSearchParams(window.location.search);
+  const deepLinkTeamId = params.get("teamId") || "";
+  if (deepLinkTeamId) {
+    const teamFilter = document.getElementById("filter-team");
+    if (teamFilter) {
+      teamFilter.value = deepLinkTeamId;
+      globalFilters.teamId = deepLinkTeamId;
+      resetRostersGroupPagination();
+      applyMainRosterFilters();
+    }
+
+    await openRosterManager(deepLinkTeamId);
+
+    const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
   console.log("ROSTERS: Page initialized.");
 }
 

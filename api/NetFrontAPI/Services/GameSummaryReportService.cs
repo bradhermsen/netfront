@@ -124,8 +124,11 @@ namespace NetFrontAPI.Services
                     p.JerseyNumber AS PlayerNumber,
                     p.FullName AS PlayerName,
                     gp.Infraction,
-                    ISNULL(gp.DurationMinutes, 0) AS DurationMinutes
+                    ISNULL(gp.DurationMinutes, 0) AS DurationMinutes,
+                    JSON_VALUE(ge.Details, '$.PenaltyType') AS PenaltyType,
+                    gp.Notes
                 FROM GamePenalties gp
+                LEFT JOIN GameEvents ge ON ge.Id = gp.EventId
                 LEFT JOIN Teams t ON t.Id = gp.TeamId
                 LEFT JOIN Players p ON p.PlayerId = gp.PlayerId
                 WHERE gp.GameId = @GameId
@@ -379,7 +382,11 @@ namespace NetFrontAPI.Services
                         {
                             foreach (var penalty in report.Penalties)
                             {
-                                col.Item().Text($"Period {penalty.Period} {penalty.TimeInPeriod} - {penalty.TeamName}: {FormatNumberAndName(penalty.PlayerNumber, penalty.PlayerName)} ({penalty.Infraction}, {penalty.DurationMinutes} Min)");
+                                col.Item().Text($"Period {penalty.Period} {penalty.TimeInPeriod} - {penalty.TeamName}: {FormatNumberAndName(penalty.PlayerNumber, penalty.PlayerName)} ({BuildPenaltyDisplayText(penalty)})");
+                                if (!string.IsNullOrWhiteSpace(penalty.Notes))
+                                {
+                                    col.Item().Text($"Referee Notes: {penalty.Notes.Trim()}");
+                                }
                             }
                         }
 
@@ -449,18 +456,11 @@ namespace NetFrontAPI.Services
                         {
                             foreach (var item in report.SuspensionReviews)
                             {
-                                var flags = new List<string>();
-                                if (!string.IsNullOrWhiteSpace(item.SuspensionBehavior) && !string.Equals(item.SuspensionBehavior.Trim(), "none", StringComparison.OrdinalIgnoreCase)) flags.Add($"Behavior: {item.SuspensionBehavior}");
-                                if (item.ReviewRequired) flags.Add("Review Required");
-                                if (item.RequiresRefereeNotes) flags.Add("Requires Referee Notes");
-                                if (!string.IsNullOrWhiteSpace(item.Notes)) flags.Add($"Notes: {item.Notes}");
+                                var officialsNotes = string.IsNullOrWhiteSpace(item.Notes)
+                                    ? "No officials notes provided"
+                                    : item.Notes.Trim();
 
-                                if (flags.Count == 0)
-                                {
-                                    continue;
-                                }
-
-                                col.Item().Text($"Period {item.Period} {item.TimeInPeriod} - {item.TeamName}: {FormatNumberAndName(item.PlayerNumber, item.PlayerName)} ({string.Join("; ", flags)})");
+                                col.Item().Text($"Period {item.Period} {item.TimeInPeriod} - {item.TeamName}: {FormatNumberAndName(item.PlayerNumber, item.PlayerName)} : Officials notes - {officialsNotes}");
                                 renderedSuspensionLines++;
                             }
 
@@ -543,7 +543,11 @@ namespace NetFrontAPI.Services
             {
                 foreach (var penalty in report.Penalties)
                 {
-                    builder.AppendLine($"- Period {penalty.Period} - {penalty.TimeInPeriod}: {penalty.TeamName} - {FormatNumberAndName(penalty.PlayerNumber, penalty.PlayerName)} ({penalty.Infraction}, {penalty.DurationMinutes} Min)");
+                    builder.AppendLine($"- Period {penalty.Period} - {penalty.TimeInPeriod}: {penalty.TeamName} - {FormatNumberAndName(penalty.PlayerNumber, penalty.PlayerName)} ({BuildPenaltyDisplayText(penalty)})");
+                    if (!string.IsNullOrWhiteSpace(penalty.Notes))
+                    {
+                        builder.AppendLine($"  Referee Notes: {penalty.Notes.Trim()}");
+                    }
                 }
             }
 
@@ -601,7 +605,7 @@ namespace NetFrontAPI.Services
         {
             var away = BuildTeamDisplayName(report.AwayTeamName, report.AwayTeamMascot);
             var home = BuildTeamDisplayName(report.HomeTeamName, report.HomeTeamMascot);
-            return $"Final: Away - {away} {report.AwayGoals} - {report.HomeGoals} Home - {home}";
+            return $"Final: {away} (Away) {report.AwayGoals} - {report.HomeGoals} {home} (Home)";
         }
 
         private static string ResolveMascot(string? teamMascot, string? orgMascot)
@@ -680,6 +684,33 @@ namespace NetFrontAPI.Services
                 "SH" => "Short-Handed",
                 _ => string.IsNullOrWhiteSpace(strength) ? "Even Strength" : strength
             };
+        }
+
+        private static string BuildPenaltyDisplayText(PenaltySummaryLine penalty)
+        {
+            var infraction = string.IsNullOrWhiteSpace(penalty.Infraction)
+                ? "Penalty"
+                : penalty.Infraction.Trim();
+
+            if (IsDisqualificationPenalty(penalty))
+            {
+                return $"{infraction}, DQ";
+            }
+
+            return $"{infraction}, {penalty.DurationMinutes} Min";
+        }
+
+        private static bool IsDisqualificationPenalty(PenaltySummaryLine penalty)
+        {
+            var type = (penalty.PenaltyType ?? string.Empty).Trim().ToLowerInvariant();
+            var infraction = (penalty.Infraction ?? string.Empty).Trim().ToLowerInvariant();
+
+            if (type == "disqualification" || type == "dq" || type.Contains("ejection") || type.Contains("dq"))
+            {
+                return true;
+            }
+
+            return infraction == "disqualification" || infraction == "dq";
         }
 
         private static List<GoalieSummaryLine> ParseGoalieSummary(string? goalieJson)
@@ -797,6 +828,9 @@ namespace NetFrontAPI.Services
                 var cwd = Directory.GetCurrentDirectory();
                 var candidates = new[]
                 {
+                    @"C:\NetFront\api\NetFrontAPI\Assets\NF_Logo_Default.png",
+                    Path.Combine(cwd, "Assets", "NF_Logo_Default.png"),
+                    Path.Combine(baseDir, "Assets", "NF_Logo_Default.png"),
                     @"C:\NetFront\web\shared\styles\NF_Logo_Default.png",
                     Path.Combine(cwd, "web", "shared", "styles", "NF_Logo_Default.png"),
                     Path.Combine(cwd, "..", "web", "shared", "styles", "NF_Logo_Default.png"),

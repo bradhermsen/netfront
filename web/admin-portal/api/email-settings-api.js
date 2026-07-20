@@ -29,6 +29,61 @@ window.EmailSettingsApi = {
     return await res.json();
   },
 
+  async getMediaOutlets() {
+    const res = await authFetch("/email/media-outlets");
+    if (!res || !res.ok) {
+      const settings = await this.getSettings();
+      return settings.mediaOutlets || settings.MediaOutlets || [];
+    }
+    return await res.json();
+  },
+
+  async saveMediaOutlets(payload) {
+    const outlets = payload?.mediaOutlets || payload?.MediaOutlets || [];
+
+    async function saveViaSettingsFallback() {
+      const settings = await window.EmailSettingsApi.getSettings();
+      const mergedPayload = {
+        enabled: Boolean(settings.enabled),
+        smtpHost: settings.smtpHost || "",
+        smtpPort: Number(settings.smtpPort || 0),
+        useSsl: Boolean(settings.useSsl),
+        username: settings.username || null,
+        password: null,
+        fromAddress: settings.fromAddress || "",
+        fromName: settings.fromName || "NetFront",
+        mediaOutlets: outlets,
+        MediaOutlets: outlets,
+      };
+
+      const savedSettings = await window.EmailSettingsApi.saveSettings(mergedPayload);
+      return savedSettings.mediaOutlets || savedSettings.MediaOutlets || outlets;
+    }
+
+    const res = await authFetch("/email/media-outlets", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mediaOutlets: outlets,
+        MediaOutlets: outlets,
+      }),
+    });
+
+    if (!res || !res.ok) {
+      try {
+        return await saveViaSettingsFallback();
+      } catch {
+        const message = await readErrorMessage(
+          res,
+          `Failed to save media outlets (${res?.status ?? "no response"}).`,
+        );
+        throw new Error(message);
+      }
+    }
+
+    return await res.json();
+  },
+
   async sendTestEmail(payload) {
     const res = await authFetch("/email/settings/test", {
       method: "POST",

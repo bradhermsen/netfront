@@ -219,6 +219,7 @@ namespace NetFrontAPI.Functions
                     gp.DurationMinutes,
                     gp.Infraction,
                     JSON_VALUE(ge.Details, '$.PenaltyType') AS PenaltyType,
+                    gp.Notes,
                     t.Name AS TeamName,
                     p.FullName AS PlayerName
                 FROM dbo.GamePenalties gp
@@ -255,7 +256,9 @@ namespace NetFrontAPI.Functions
                     penalty.PlayerName,
                     penalty.Infraction,
                     penalty.DurationMinutes,
-                    PenaltyType = string.IsNullOrWhiteSpace(penalty.PenaltyType) ? "Minor" : penalty.PenaltyType
+                    PenaltyType = string.IsNullOrWhiteSpace(penalty.PenaltyType) ? "Minor" : penalty.PenaltyType,
+                    DurationLabel = ToPenaltyDurationDisplayLabel(penalty.PenaltyType, penalty.Infraction, penalty.DurationMinutes),
+                    penalty.Notes
                 })
                 .ToArray();
 
@@ -365,6 +368,21 @@ namespace NetFrontAPI.Functions
 
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(coaches.ToArray());
+            return response;
+        }
+
+        [Function("GetMediaOutletsForMobile")]
+        public async Task<HttpResponseData> GetMediaOutletsForMobile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "email/media-outlets-mobile")] HttpRequestData req)
+        {
+            var outlets = await _emailService.GetMediaOutletsAsync();
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(outlets.Select(outlet => new
+            {
+                outlet.Name,
+                outlet.Email
+            }));
             return response;
         }
 
@@ -628,7 +646,7 @@ namespace NetFrontAPI.Functions
                     PlayerId = payload.PlayerId,
                     ServedByPlayerId = (Guid?)null,
                     Infraction = string.IsNullOrWhiteSpace(payload.Infraction) ? "Other" : payload.Infraction,
-                    DurationMinutes = payload.DurationMinutes <= 0 ? 2 : payload.DurationMinutes,
+                    DurationMinutes = payload.DurationMinutes < 0 ? 0 : payload.DurationMinutes,
                     payload.Period,
                     payload.TimeInPeriod,
                     Notes = (string?)null,
@@ -943,6 +961,36 @@ namespace NetFrontAPI.Functions
 
             await conn.ExecuteAsync(ensureSnapshotTableSql);
 
+            if (payload?.SuspensionNotes != null && payload.SuspensionNotes.Count > 0)
+            {
+                const string updatePenaltyNotesSql = @"
+                    UPDATE gp
+                    SET gp.Notes = @Notes
+                    FROM dbo.GamePenalties gp
+                    INNER JOIN dbo.GameEvents ge ON ge.Id = gp.EventId
+                    WHERE gp.GameId = @GameId
+                      AND ge.EventType = 'Penalty'
+                      AND ge.Details LIKE @ClientPattern;";
+
+                foreach (var noteEntry in payload.SuspensionNotes)
+                {
+                    var note = noteEntry?.Notes?.Trim();
+                    var eventRef = noteEntry?.EventRef?.Trim();
+                    if (string.IsNullOrWhiteSpace(note) || string.IsNullOrWhiteSpace(eventRef))
+                    {
+                        continue;
+                    }
+
+                    var pattern = $"%\"ClientEventId\":\"{eventRef.Replace("\"", "\"\"")}\"%";
+                    await conn.ExecuteAsync(updatePenaltyNotesSql, new
+                    {
+                        GameId = gameId,
+                        Notes = note,
+                        ClientPattern = pattern
+                    });
+                }
+            }
+
             var goalieSummaryJson = payload?.GoalieSummaries == null
                 ? null
                 : JsonSerializer.Serialize(payload.GoalieSummaries);
@@ -1144,6 +1192,29 @@ namespace NetFrontAPI.Functions
             };
         }
 
+        private static bool IsDisqualificationPenalty(string? penaltyType, string? infraction)
+        {
+            var type = (penaltyType ?? string.Empty).Trim().ToLowerInvariant();
+            var inf = (infraction ?? string.Empty).Trim().ToLowerInvariant();
+
+            if (type == "disqualification" || type == "dq" || type.Contains("ejection") || type.Contains("dq"))
+            {
+                return true;
+            }
+
+            return inf == "disqualification" || inf == "dq";
+        }
+
+        private static string ToPenaltyDurationDisplayLabel(string? penaltyType, string? infraction, int durationMinutes)
+        {
+            if (IsDisqualificationPenalty(penaltyType, infraction))
+            {
+                return "DQ";
+            }
+
+            return $"{Math.Max(0, durationMinutes)} Min";
+        }
+
         private class MobileTeamDto
         {
             public Guid TeamId { get; set; }
@@ -1203,6 +1274,7 @@ namespace NetFrontAPI.Functions
             public string? PenaltyType { get; set; }
             public string TeamName { get; set; } = string.Empty;
             public string PlayerName { get; set; } = string.Empty;
+            public string? Notes { get; set; }
         }
 
         private class MobileRosterPlayerDto
@@ -1289,9 +1361,16 @@ namespace NetFrontAPI.Functions
         private class MobileCompleteGameRequest
         {
             public string? Notes { get; set; }
+            public List<MobileSuspensionNoteRequest>? SuspensionNotes { get; set; }
             public MobileShotSummaryRequest? ShotSummary { get; set; }
             public List<MobileGoalieSummaryRequest>? GoalieSummaries { get; set; }
             public MobileEmailDispatchRequest? EmailDispatch { get; set; }
+        }
+
+        private class MobileSuspensionNoteRequest
+        {
+            public string? EventRef { get; set; }
+            public string? Notes { get; set; }
         }
 
         private class MobileShotSummaryRequest

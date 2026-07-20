@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -30,6 +32,7 @@ namespace NetFrontAPI.Functions
             if (denied != null) return denied;
 
             var settings = await _emailService.GetSettingsAsync(includeSecret: false);
+            var mediaOutlets = await _emailService.GetMediaOutletsAsync();
 
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(new
@@ -41,7 +44,8 @@ namespace NetFrontAPI.Functions
                 settings.Username,
                 hasPassword = settings.HasPassword,
                 settings.FromAddress,
-                settings.FromName
+                settings.FromName,
+                MediaOutlets = mediaOutlets
             });
             return response;
         }
@@ -59,6 +63,16 @@ namespace NetFrontAPI.Functions
                 return await AuthorizationHelper.BadRequestResponse(req, "Missing settings payload.");
             }
 
+            var mediaOutlets = payload.MediaOutlets
+                ?.Where(item => item != null)
+                .Select(item => new MediaOutletRecipient
+                {
+                    Name = (item.Name ?? string.Empty).Trim(),
+                    Email = (item.Email ?? string.Empty).Trim()
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item.Email) && IsValidEmail(item.Email))
+                .ToList();
+
             var saved = await _emailService.SaveSettingsAsync(new EmailServerSettings
             {
                 Enabled = payload.Enabled,
@@ -71,6 +85,16 @@ namespace NetFrontAPI.Functions
                 FromName = payload.FromName ?? "",
             });
 
+            IReadOnlyList<MediaOutletRecipient> savedMediaOutlets;
+            if (mediaOutlets == null)
+            {
+                savedMediaOutlets = await _emailService.GetMediaOutletsAsync();
+            }
+            else
+            {
+                savedMediaOutlets = await _emailService.SaveMediaOutletsAsync(mediaOutlets);
+            }
+
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(new
             {
@@ -81,8 +105,60 @@ namespace NetFrontAPI.Functions
                 saved.Username,
                 hasPassword = saved.HasPassword,
                 saved.FromAddress,
-                saved.FromName
+                saved.FromName,
+                MediaOutlets = savedMediaOutlets
             });
+            return response;
+        }
+
+        [Function("GetEmailMediaOutlets")]
+        public async Task<HttpResponseData> GetEmailMediaOutlets(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "email/media-outlets")] HttpRequestData req)
+        {
+            var denied = await ValidateAdminAccess(req);
+            if (denied != null) return denied;
+
+            var outlets = await _emailService.GetMediaOutletsAsync();
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(outlets);
+            return response;
+        }
+
+        [Function("UpdateEmailMediaOutlets")]
+        public async Task<HttpResponseData> UpdateEmailMediaOutlets(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "email/media-outlets")] HttpRequestData req)
+        {
+            var denied = await ValidateAdminAccess(req);
+            if (denied != null) return denied;
+
+            var payload = await req.ReadFromJsonAsync<UpdateMediaOutletsRequest>();
+            if (payload == null)
+            {
+                return await AuthorizationHelper.BadRequestResponse(req, "Missing media outlets payload.");
+            }
+
+            var normalizedMediaOutlets = (payload.MediaOutlets ?? new List<MediaOutletRequest>())
+                .Where(item => item != null)
+                .Select(item => new MediaOutletRecipient
+                {
+                    Name = (item.Name ?? string.Empty).Trim(),
+                    Email = (item.Email ?? string.Empty).Trim()
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item.Email))
+                .ToList();
+
+            var invalidOutlet = normalizedMediaOutlets
+                .FirstOrDefault(outlet => !IsValidEmail(outlet.Email));
+
+            if (invalidOutlet != null)
+            {
+                return await AuthorizationHelper.BadRequestResponse(req, $"Invalid media outlet email: {invalidOutlet.Email}");
+            }
+
+            var saved = await _emailService.SaveMediaOutletsAsync(normalizedMediaOutlets);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(saved);
             return response;
         }
 
@@ -146,6 +222,19 @@ namespace NetFrontAPI.Functions
             return null;
         }
 
+        private static bool IsValidEmail(string email)
+        {
+            try
+            {
+                _ = new MailAddress(email);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private class UpdateEmailSettingsRequest
         {
             public bool Enabled { get; set; }
@@ -156,6 +245,18 @@ namespace NetFrontAPI.Functions
             public string? Password { get; set; }
             public string? FromAddress { get; set; }
             public string? FromName { get; set; }
+            public List<MediaOutletRequest>? MediaOutlets { get; set; }
+        }
+
+        private class UpdateMediaOutletsRequest
+        {
+            public List<MediaOutletRequest>? MediaOutlets { get; set; }
+        }
+
+        private class MediaOutletRequest
+        {
+            public string? Name { get; set; }
+            public string? Email { get; set; }
         }
 
         private class SendTestEmailRequest

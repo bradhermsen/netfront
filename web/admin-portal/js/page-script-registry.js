@@ -14,4 +14,3 @@ window.PageScriptRegistry = {
   levels: ["../js/levels.js"],
 };
 
-console.log("🔥 page-script-registry.js LOADED");

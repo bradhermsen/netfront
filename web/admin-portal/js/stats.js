@@ -1,5 +1,3 @@
-console.log("stats.js loaded");
-
 (function checkPermission() {
   if (!Auth.hasRole(window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.TeamManager, window.ROLES.Coach, window.ROLES.Viewer)) {
     window.location.href = "./not-authorized.html";
@@ -11,7 +9,7 @@ function notifyStats(message, type = "info") {
     window.showMessage(message, type);
     return;
   }
-  console.log(`[${type}] ${message}`);
+  console[type === "error" ? "error" : "warn"](`[${type}] ${message}`);
 }
 
 const statsState = {

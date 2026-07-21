@@ -5,8 +5,7 @@
 
   // Do NOT guard the login and not-authorized pages
   if (currentPage === "login.html" || currentPage === "not-authorized.html") {
-    console.log("Guard bypassed on:", currentPage);
-    return;
+return;
   }
 
   // If not authenticated, redirect to login
@@ -17,9 +16,7 @@
 
   // Role-based page access control
   const role = Auth.getRole();
-  console.log("User role:", role);
-
-  // Define which roles can access which pages
+// Define which roles can access which pages
   const pageAccessMatrix = {
     "permissions.html": [window.ROLES.SuperAdmin],
     "users.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin],

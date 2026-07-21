@@ -1,5 +1,3 @@
-console.log("ROSTERS.JS LOADED");
-
 // Enforce Coach/TeamManager access with team assignment validation
 (function checkPermission() {
   if (!Auth.canManageRosters()) {
@@ -47,7 +45,6 @@ function restoreModalState(backup) {
   activeRosterModal = backup;
   backup.overlay.classList.add("active");
   backup.modal.classList.add("active");
-  console.log("✓ Restored modal state for:", backup.modal?.id);
 }
 
 // =========================================================
@@ -135,9 +132,7 @@ function showMessage(message, type = "info", duration = 3500) {
 async function initRostersPage() {
   if (!document.getElementById("teamsRosterGroupedList")) return;
 
-  console.log("ROSTERS: Initializing page…");
-
-  await loadTeamsList();
+await loadTeamsList();
   await loadPlayersList();
 
   populateRosterFilterDropdowns();
@@ -163,7 +158,6 @@ async function initRostersPage() {
     window.history.replaceState({}, document.title, cleanUrl);
   }
 
-  console.log("ROSTERS: Page initialized.");
 }
 
 document.addEventListener("layoutLoaded", initRostersPage);
@@ -557,18 +551,12 @@ function wireRostersPagination() {
 // OPEN ROSTER MANAGER (uses new modal system)
 // =========================================================
 async function openRosterManager(teamId) {
-  console.log("🔵 openRosterManager called with teamId:", teamId);
-  
-  window.currentRosterTeamId = teamId;
+window.currentRosterTeamId = teamId;
 
   openModal("rosterManagerOverlay", "rosterManagerModal");
   wireRosterCloseButtons();
-  console.log("✓ Modal opened");
-
-  const team = allTeams.find((t) => t.teamId === teamId);
-  console.log("✓ Found team:", team.name, team.levelName);
-
-  const rosterHeadingParts = [team?.name, team?.teamType, team?.levelName]
+const team = allTeams.find((t) => t.teamId === teamId);
+const rosterHeadingParts = [team?.name, team?.teamType, team?.levelName]
     .map((value) => (value || "").toString().trim())
     .filter((value) => value.length > 0);
   const rosterHeading = rosterHeadingParts.join(" ");
@@ -581,13 +569,10 @@ async function openRosterManager(teamId) {
   if (totalsEl) totalsEl.textContent = "";
 
   // Render cached roster immediately
-  console.log("Rendering from cache. Cache has entries:", rosterCache[teamId]?.length || 0);
-  renderRosterManagerTable(rosterCache[teamId] || []);
+renderRosterManagerTable(rosterCache[teamId] || []);
 
   // Fetch fresh roster
-  console.log("Fetching fresh roster...");
-  await fetchRosterFresh(teamId);
-  console.log("✅ openRosterManager completed");
+await fetchRosterFresh(teamId);
 }
 
 // =========================================================
@@ -595,36 +580,24 @@ async function openRosterManager(teamId) {
 // =========================================================
 async function fetchRosterFresh(teamId) {
   try {
-    console.log("🔄 fetchRosterFresh starting for teamId:", teamId);
-    
-    if (!teamId) {
+if (!teamId) {
       throw new Error("No teamId provided to fetchRosterFresh!");
     }
     
     const url = `/teams/${teamId}/roster`;
-    console.log("Fetching from:", url);
-    
-    const res = await authFetch(url);
-    console.log("Fetch response status:", res?.status);
-    
-    if (!res || !res.ok) {
+const res = await authFetch(url);
+if (!res || !res.ok) {
       throw new Error(`API returned ${res?.status ?? "no response"}`);
     }
     
     const fresh = await res.json();
-    console.log("✓ Raw API response:", fresh);
-    console.log("✓ Type of fresh:", typeof fresh);
-    console.log("✓ Is Array?:", Array.isArray(fresh));
-    console.log("✓ Got fresh roster data:", fresh.length, "entries");
-
-    // Handle both direct array and wrapped response
+// Handle both direct array and wrapped response
     const entries = Array.isArray(fresh) ? fresh : fresh.data || fresh.entries || [];
     
     rosterCache[teamId] = entries;
     renderRosterManagerTable(entries);
     
-    console.log("✅ fetchRosterFresh completed successfully");
-  } catch (err) {
+} catch (err) {
     console.error("❌ Roster refresh failed:", err);
     console.error("Error details:", err.message);
   }
@@ -633,12 +606,8 @@ async function fetchRosterFresh(teamId) {
 // ROSTER TABLE IN MODAL
 // =========================================================
 function renderRosterManagerTable(list) {
-  console.log("🎨 renderRosterManagerTable called with", list.length, "items");
-  
-  const body = document.getElementById("rm-roster-body");
-  console.log("✓ Found body element:", body ? "yes" : "NO");
-  
-  if (!Array.isArray(list)) list = [];
+const body = document.getElementById("rm-roster-body");
+if (!Array.isArray(list)) list = [];
 
   // --- TEAM TOTALS (based on full roster, not filtered view) ---
   const totalsEl = document.getElementById("rm-team-totals");
@@ -713,9 +682,7 @@ function renderRosterManagerTable(list) {
     });
   }
 
-  console.log("After filtering/sorting:", filtered.length, "items");
-  
-  // --- RENDER ---
+// --- RENDER ---
   const html = filtered
     .map((r) => {
       const fullName =
@@ -750,8 +717,7 @@ function renderRosterManagerTable(list) {
 
   if (body) {
     body.innerHTML = html;
-    console.log("✓ Rendered", filtered.length, "rows into table");
-  } else {
+} else {
     console.error("❌ body element not found!");
   }
 
@@ -879,25 +845,15 @@ function closeModal(overlayId, modalId) {
 
 // Close currently active modal
 function closeActiveModal() {
-  console.log("🔴 closeActiveModal called");
-  console.log("   activeRosterModal:", activeRosterModal ? "HAS VALUE" : "NULL");
-  if (!activeRosterModal) {
-    console.log("   ❌ activeRosterModal is NULL - returning");
-    return;
+if (!activeRosterModal) {
+return;
   }
   
   const { overlay, modal } = activeRosterModal;
-  console.log("   Overlay ID:", overlay?.id);
-  console.log("   Modal ID:", modal?.id);
-  console.log("   Overlay has 'active' class:", overlay?.classList.contains("active"));
-  console.log("   Modal has 'active' class:", modal?.classList.contains("active"));
-  
-  overlay.classList.remove("active");
+overlay.classList.remove("active");
   modal.classList.remove("active");
   
-  console.log("   ✓ Removed 'active' class from both");
-  activeRosterModal = null;
-  console.log("   ✓ Set activeRosterModal to null");
+activeRosterModal = null;
 }
 
 // =========================================================
@@ -927,75 +883,47 @@ document.addEventListener("click", (e) => {
 // WIRE ALL CLOSE BUTTONS
 // =========================================================
 function wireRosterCloseButtons() {
-  console.log("🔧 wireRosterCloseButtons called");
-  const buttons = document.querySelectorAll(".rm-close, .modal-close");
-  console.log("   Found", buttons.length, "close buttons to wire");
-  
-  buttons.forEach((btn, idx) => {
+const buttons = document.querySelectorAll(".rm-close, .modal-close");
+buttons.forEach((btn, idx) => {
     const modalId = btn.closest(".nf-modal")?.id || "unknown";
-    console.log(`   [${idx}] Button in modal: ${modalId}`);
-    
-    btn.onclick = () => {
-      console.log(`🖱️  Close button clicked (from modal: ${modalId})`);
-      console.log(`   Current activeRosterModal:`, activeRosterModal ? activeRosterModal.modal?.id : "NULL");
-      
-      // Special handling for add/delete modal close - restore manager modal
+btn.onclick = () => {
+// Special handling for add/delete modal close - restore manager modal
       if ((modalId === "addPlayerModal" || modalId === "rosterDeleteModal" || modalId === "rosterModal") && window.managerModalBackup) {
-        console.log("   🔄 Special close - restoring manager modal...");
-        closeActiveModal();
+closeActiveModal();
         restoreModalState(window.managerModalBackup);
-        console.log("   ✓ Manager modal restored and visible");
-        wireRosterCloseButtons();
+wireRosterCloseButtons();
       } else {
         closeActiveModal();
       }
     };
   });
   
-  console.log("   ✓ All close buttons wired");
 }
 
 // =========================================================
 // ADD PLAYER — OPEN
 // =========================================================
 async function openAddRoster() {
-  console.log("🔵 openAddRoster called for teamId:", window.currentRosterTeamId);
-  
-  // Save the manager modal reference before opening add modal
+// Save the manager modal reference before opening add modal
   window.managerModalBackup = activeRosterModal;
-  console.log("✓ Saved manager modal reference (for add)");
-  console.log("  activeRosterModal is:", window.managerModalBackup ? "SET" : "NULL");
-
-  try {
+try {
     // Open the Add Player modal
     openModal("addPlayerModalOverlay", "addPlayerModal");
     wireRosterCloseButtons();
-    console.log("✓ Add Player modal opened");
-
-    // Fetch available players for this team
-    console.log("Fetching available players for team:", window.currentRosterTeamId);
-    const availablePlayers = await RosterApi.getAvailablePlayersForTeam(window.currentRosterTeamId);
-    console.log("✓ Got available players response:", availablePlayers);
-    console.log("✓ Type:", typeof availablePlayers);
-    console.log("✓ Is array?:", Array.isArray(availablePlayers));
-    console.log("✓ Length:", availablePlayers?.length);
-
-    if (!Array.isArray(availablePlayers)) {
+// Fetch available players for this team
+const availablePlayers = await RosterApi.getAvailablePlayersForTeam(window.currentRosterTeamId);
+if (!Array.isArray(availablePlayers)) {
       console.error("❌ Response is not an array!");
       throw new Error("API response is not an array");
     }
 
-    console.log("✓ Available players count:", availablePlayers.length);
-
-    // Render players list with checkboxes
+// Render players list with checkboxes
     const playersList = document.getElementById("addPlayersList");
     
     if (availablePlayers.length === 0) {
-      console.log("No available players to display");
-      playersList.innerHTML = '<p style="color: #999; text-align: center;">No available players</p>';
+playersList.innerHTML = '<p style="color: #999; text-align: center;">No available players</p>';
     } else {
-      console.log("Rendering", availablePlayers.length, "players...");
-      playersList.innerHTML = availablePlayers.map((player) => {
+playersList.innerHTML = availablePlayers.map((player) => {
         const fullName = player.fullName || `${player.firstName} ${player.lastName}`;
         const position = player.position || "—";
         const shoots = player.shoots || "—";
@@ -1015,12 +943,9 @@ async function openAddRoster() {
           </div>
         `;
       }).join("");
-      console.log("✓ Rendered all players");
-    }
+}
 
-    console.log("✅ openAddRoster completed successfully");
-
-  } catch (error) {
+} catch (error) {
     console.error("❌ Failed to open add roster modal:", error);
     console.error("Error details:", error.message, error.stack);
     showMessage("Failed to load available players. Please try again.", "error", 4000);
@@ -1050,9 +975,7 @@ async function saveSelectedPlayers() {
       return;
     }
 
-    console.log("saveSelectedPlayers: Adding", checkedBoxes.length, "players to teamId:", teamId);
-
-    saveBtn.textContent = "Adding...";
+saveBtn.textContent = "Adding...";
     saveBtn.disabled = true;
 
     let successCount = 0;
@@ -1073,19 +996,15 @@ async function saveSelectedPlayers() {
           isActive: true,
         };
 
-        console.log(`Creating roster entry for ${playerName}...`);
-        const response = await RosterApi.create(payload);
-        console.log(`✓ Created roster entry for ${playerName}`);
-        successCount++;
+const response = await RosterApi.create(payload);
+successCount++;
       } catch (err) {
         console.error(`❌ Failed to add ${playerName}:`, err);
         failureCount++;
       }
     }
 
-    console.log(`Add completed: ${successCount} success, ${failureCount} failures`);
-
-    // Close add modal
+// Close add modal
     closeActiveModal();
 
     // Restore manager modal visual state after closing add modal
@@ -1095,12 +1014,9 @@ async function saveSelectedPlayers() {
     }
 
     // Refresh roster
-    console.log("Fetching fresh roster...");
-    await fetchRosterFresh(teamId);
+await fetchRosterFresh(teamId);
 
-    console.log("Roster refreshed!");
-
-    // Reset button
+// Reset button
     saveBtn.textContent = originalText;
     saveBtn.disabled = false;
 
@@ -1703,58 +1619,35 @@ function openRosterCsvPicker() {
 // EDIT PLAYER — OPEN
 // =========================================================
 async function roster_openEdit(entryId) {
-  console.log("🔵 roster_openEdit called with entryId:", entryId);
-  
-  try {
+try {
     const entry = await RosterApi.getById(entryId);
     
-    console.log("=== ROSTER ENTRY API RESPONSE ===");
-    console.log("Full entry object:", entry);
-    console.log("jerseyNumber:", entry.jerseyNumber);
-    console.log("position:", entry.position);
-    console.log("gamedayStatus:", entry.gamedayStatus);
-    console.log("===================================");
-
-    // Set global state FIRST
+// Set global state FIRST
     window.currentRosterEntryId = entryId;
     window.currentRosterTeamId = entry.teamId;
-    console.log("✓ Set window.currentRosterEntryId:", window.currentRosterEntryId);
-    console.log("✓ Set window.currentRosterTeamId:", window.currentRosterTeamId);
-
-    // Save the manager modal reference before opening edit modal
+// Save the manager modal reference before opening edit modal
     window.managerModalBackup = activeRosterModal;
-    console.log("✓ Saved manager modal reference");
-
-    // Open modal
+// Open modal
     openModal("rosterModalOverlay", "rosterModal");
     wireRosterCloseButtons();
-    console.log("✓ Modal opened");
-
-    // Player name
+// Player name
     document.getElementById("editPlayerName").textContent =
       entry.fullName || `${entry.firstName ?? ""} ${entry.lastName ?? ""}`.trim();
 
     // Position (F/D/G) - null → empty string
     const posVal = entry.position;
     document.getElementById("editPosition").value = posVal ?? "";
-    console.log("Set editPosition to:", document.getElementById("editPosition").value, "(raw:", posVal, ")");
-
-    // Jersey # (null → empty string)
+// Jersey # (null → empty string)
     const jerseyNumVal = entry.jerseyNumber;
     document.getElementById("editJersey").value =
       jerseyNumVal == null || jerseyNumVal === "" ? "" : String(jerseyNumVal);
-    console.log("Set editJersey value to:", document.getElementById("editJersey").value, "(raw:", jerseyNumVal, ")");
-
-    // Game Day Status: prefer gamedayStatus, fall back to isActive
+// Game Day Status: prefer gamedayStatus, fall back to isActive
     const isActive =
       entry.gamedayStatus === "Active" ||
       (entry.gamedayStatus == null && entry.isActive === true);
 
     document.getElementById("editStatus").checked = isActive;
-    console.log("Set editStatus checkbox to:", isActive);
-    console.log("✅ roster_openEdit completed successfully");
-    
-  } catch (error) {
+} catch (error) {
     console.error("❌ Failed to open roster entry for edit:", error);
     console.error("Error stack:", error.stack);
     alert("Failed to load roster entry. Please try again.");
@@ -1782,9 +1675,7 @@ async function saveRosterEntry() {
     const entryId = window.currentRosterEntryId;
     const teamId = window.currentRosterTeamId;
     
-    console.log("Save starting. Entry ID:", entryId, "Team ID:", teamId);
-    
-    if (!entryId) {
+if (!entryId) {
       throw new Error("No entry ID set!");
     }
     
@@ -1798,35 +1689,21 @@ async function saveRosterEntry() {
       isActive: document.getElementById("editStatus").checked,
     };
 
-    console.log("Sending payload:", payload);
-    
-    saveBtn.textContent = "Saving...";
+saveBtn.textContent = "Saving...";
     saveBtn.disabled = true;
 
     const response = await RosterApi.update(entryId, payload);
-    console.log("Update response:", response);
-
-    console.log("Save successful! Closing edit modal...");
-    console.log("Before closeActiveModal - activeRosterModal:", activeRosterModal ? "HAS VALUE" : "NULL");
-    closeActiveModal();
-    console.log("After closeActiveModal - activeRosterModal:", activeRosterModal ? "HAS VALUE" : "NULL");
-    
-    // Restore manager modal visual state after closing edit modal
+closeActiveModal();
+// Restore manager modal visual state after closing edit modal
     if (window.managerModalBackup) {
-      console.log("Restoring manager modal...");
-      restoreModalState(window.managerModalBackup);
+restoreModalState(window.managerModalBackup);
       wireRosterCloseButtons();
-      console.log("✓ Re-wired close buttons for manager modal");
-    }
+}
     
-    console.log("Modal closed. Fetching fresh roster...");
-    await fetchRosterFresh(teamId);
+await fetchRosterFresh(teamId);
     
-    console.log("Roster refreshed!");
-    
-    // ✅ RESET BUTTON AFTER SUCCESS
-    console.log("Resetting button to original state...");
-    saveBtn.textContent = originalText;
+// ✅ RESET BUTTON AFTER SUCCESS
+saveBtn.textContent = originalText;
     saveBtn.disabled = false;
     saveBtn.style.backgroundColor = "";
     
@@ -1838,8 +1715,7 @@ async function saveRosterEntry() {
     saveBtn.style.backgroundColor = "#d32f2f";
     
     setTimeout(() => {
-      console.log("Resetting button after error...");
-      saveBtn.textContent = originalText;
+saveBtn.textContent = originalText;
       saveBtn.style.backgroundColor = "";
       saveBtn.disabled = false;
     }, 3000);
@@ -1861,42 +1737,29 @@ async function confirmDeleteRoster() {
   const entryId = window.currentRosterEntryId;
 
   try {
-    console.log("🔴 confirmDeleteRoster starting for entryId:", entryId, "teamId:", teamId);
-    
-    delBtn.textContent = "Deleting...";
+delBtn.textContent = "Deleting...";
     delBtn.disabled = true;
 
     await RosterApi.delete(entryId);
-    console.log("✓ Delete API call succeeded");
-
-    console.log("Closing delete modal...");
-    closeActiveModal();
+closeActiveModal();
     
     // Restore manager modal visual state after closing delete modal
     if (window.managerModalBackup) {
-      console.log("Restoring manager modal...");
-      restoreModalState(window.managerModalBackup);
+restoreModalState(window.managerModalBackup);
       wireRosterCloseButtons();
-      console.log("✓ Re-wired close buttons");
-    } else {
+} else {
       console.error("❌ managerModalBackup is NULL!");
     }
     
-    console.log("Fetching fresh roster...");
-    await fetchRosterFresh(teamId);
-    console.log("✓ Roster refreshed after delete");
-    
-    // ✅ RESET BUTTON AFTER SUCCESS
-    console.log("Resetting delete button to original state...");
-    delBtn.textContent = originalText;
+await fetchRosterFresh(teamId);
+// ✅ RESET BUTTON AFTER SUCCESS
+delBtn.textContent = originalText;
     delBtn.disabled = false;
     delBtn.style.backgroundColor = "";
     
     // Clear entry ID only (keep team ID for Add Player button to work)
     window.currentRosterEntryId = null;
-    console.log("✓ Cleared entry ID");
-    
-  } catch (error) {
+} catch (error) {
     console.error("❌ Delete failed:", error);
     delBtn.textContent = "Delete Failed - Try Again";
     delBtn.style.backgroundColor = "#d32f2f";

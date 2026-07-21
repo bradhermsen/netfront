@@ -1,11 +1,19 @@
-console.log("🔥 layout-loader.js loaded");
-
 // =========================================================
 // SHARED LAYOUT LOADER
 // =========================================================
 
 window.loadLayout = async function (pageKey) {
   try {
+    const faviconHref = new URL("../assets/favicon.ico", window.location.href).href;
+    let faviconEl = document.querySelector('head link[rel="icon"]');
+    if (!faviconEl) {
+      faviconEl = document.createElement("link");
+      faviconEl.setAttribute("rel", "icon");
+      faviconEl.setAttribute("type", "image/x-icon");
+      document.head.appendChild(faviconEl);
+    }
+    faviconEl.setAttribute("href", faviconHref);
+
     // =====================================================
     // 🔐 AUTH CHECK — BLOCK ALL PAGES EXCEPT LOGIN
     // =====================================================
@@ -94,7 +102,6 @@ document.addEventListener("click", (e) => {
   const logoutLink = e.target.closest("#sidebar-logout");
   if (logoutLink) {
     e.preventDefault();
-    console.log("🔓 Logout clicked");
-    logout();
+logout();
   }
 });

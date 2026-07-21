@@ -253,9 +253,7 @@ window.AdminPage = {
       }
 
       const payload = this.config.collectFormData();
-      console.log("🔥 Payload being sent to API:", payload);
-
-      if (this.editingId) {
+if (this.editingId) {
         await this.config.api.update(this.editingId, payload);
       } else {
         await this.config.api.create(payload);

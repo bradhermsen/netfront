@@ -10,7 +10,7 @@ const ipInput = document.getElementById("detail-ip");
 
 // Load audit logs
 async function loadAuditLogs() {
-    const res = await fetch("http://localhost:7071/api/audit");
+    const res = await fetch(`${window.apiBase || ""}/audit`);
     const logs = await res.json();
 
     tbody.innerHTML = "";
@@ -39,7 +39,7 @@ async function loadAuditLogs() {
 }
 
 async function openDetailModal(id) {
-    const res = await fetch(`http://localhost:7071/api/audit/${id}`);
+    const res = await fetch(`${window.apiBase || ""}/audit/${id}`);
     const log = await res.json();
 
     timeInput.value = log.timestamp;

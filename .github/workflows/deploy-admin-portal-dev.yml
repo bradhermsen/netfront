@@ -17,9 +17,21 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     name: Deploy Admin Portal to Storage
+    env:
+      STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME_ADMIN_DEV }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate deploy settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${STORAGE_ACCOUNT_NAME:-}" ]; then
+            echo "Missing required secret: AZURE_STORAGE_ACCOUNT_NAME_ADMIN_DEV"
+            exit 1
+          fi
+          echo "Using storage account: ${STORAGE_ACCOUNT_NAME}"
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -28,13 +40,22 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Show Azure context
+        shell: bash
+        run: |
+          set -euo pipefail
+          az account show --query "{subscription:id, tenant:tenantId, user:user.name}" -o table
+          az storage account show --name "${STORAGE_ACCOUNT_NAME}" --query "{name:name, resourceGroup:resourceGroup, location:primaryLocation}" -o table
+
       - name: Install Azure CLI storage preview extension
         run: az extension add --name storage-preview --upgrade
 
       - name: Sync Admin Portal to Storage static website
+        shell: bash
         run: |
+          set -euo pipefail
           az storage blob sync \
-            --account-name "${{ secrets.AZURE_STORAGE_ACCOUNT_NAME_ADMIN_DEV }}" \
+            --account-name "${STORAGE_ACCOUNT_NAME}" \
             --container '$web' \
             --source 'web/admin-portal' \
             --delete-destination true \

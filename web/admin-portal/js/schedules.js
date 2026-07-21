@@ -22,6 +22,8 @@ let allOfficials = [];
 let allGames = [];
 
 let currentGameId = null;
+let gameDatePicker = null;
+let gameTimePicker = null;
 
 const PERIOD_LENGTH_PRESETS = [12, 15, 17, 20];
 
@@ -130,8 +132,42 @@ function getTeamsForOrganization(organizationId) {
   return allTeams.filter((team) => team.organizationId === organizationId);
 }
 
-function populateScheduleDropdowns() {
-  const sorted = [...allTeams].sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
+function getTeamsForModalTypeFilter(teamType) {
+  if (!teamType) {
+    return [...allTeams];
+  }
+
+  return allTeams.filter((team) => {
+    const normalized = normalizeTeamTypeValue(team.teamType) || normalizeTeamTypeValue(team.gender);
+    return normalized === teamType;
+  });
+}
+
+function populateGameTeamTypeFilter(selectedTeamType = "") {
+  const teamTypeSelect = document.getElementById("game-team-type");
+  if (!teamTypeSelect) return;
+
+  const typeOptions = new Set(
+    allTeams
+      .map((team) => normalizeTeamTypeValue(team.teamType) || normalizeTeamTypeValue(team.gender))
+      .filter(Boolean),
+  );
+
+  teamTypeSelect.innerHTML = `<option value="">All Team Types</option>`;
+  [...typeOptions]
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((teamType) => {
+      teamTypeSelect.innerHTML += `<option value="${teamType}">${teamType}</option>`;
+    });
+
+  if (selectedTeamType && typeOptions.has(selectedTeamType)) {
+    teamTypeSelect.value = selectedTeamType;
+  }
+}
+
+function populateGameTeamDropdowns({ selectedTeamType = "", selectedHomeTeamId = "", selectedAwayTeamId = "" } = {}) {
+  const sorted = getTeamsForModalTypeFilter(selectedTeamType)
+    .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
 
   ["game-home-team", "game-away-team"].forEach((id) => {
     const el = document.getElementById(id);
@@ -139,7 +175,39 @@ function populateScheduleDropdowns() {
     sorted.forEach((t) => {
       el.innerHTML += `<option value="${t.teamId}">${teamLabel(t)}</option>`;
     });
+
+    if (id === "game-home-team" && selectedHomeTeamId && sorted.some((team) => team.teamId === selectedHomeTeamId)) {
+      el.value = selectedHomeTeamId;
+    }
+
+    if (id === "game-away-team" && selectedAwayTeamId && sorted.some((team) => team.teamId === selectedAwayTeamId)) {
+      el.value = selectedAwayTeamId;
+    }
   });
+}
+
+function wireGameTeamTypeModalFilter() {
+  const teamTypeSelect = document.getElementById("game-team-type");
+  if (!teamTypeSelect) return;
+
+  teamTypeSelect.onchange = () => {
+    const selectedHomeTeamId = document.getElementById("game-home-team")?.value || "";
+    const selectedAwayTeamId = document.getElementById("game-away-team")?.value || "";
+
+    populateGameTeamDropdowns({
+      selectedTeamType: teamTypeSelect.value,
+      selectedHomeTeamId,
+      selectedAwayTeamId,
+    });
+
+    autoDefaultPeriodLengthFromHomeTeam();
+  };
+}
+
+function populateScheduleDropdowns({ selectedTeamType = "", selectedHomeTeamId = "", selectedAwayTeamId = "" } = {}) {
+  populateGameTeamTypeFilter(selectedTeamType);
+  populateGameTeamDropdowns({ selectedTeamType, selectedHomeTeamId, selectedAwayTeamId });
+  wireGameTeamTypeModalFilter();
 
   fillSelect("game-type", allGameTypes, "gameTypeId", "name");
   fillSelect("game-round", allGameRounds, "gameRoundId", "roundName", true);
@@ -264,6 +332,154 @@ function wirePeriodLengthControls() {
       customWrap.style.display = "none";
     }
   };
+}
+
+function lockPickerWheelScroll(instance) {
+  const picker = instance?.calendarContainer;
+  if (!picker || picker.dataset.wheelLocked === "1") return;
+
+  const blockWheel = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  picker.addEventListener("wheel", blockWheel, { passive: false });
+  picker.dataset.wheelLocked = "1";
+}
+
+function setGameModalBackgroundScrollLock(isLocked) {
+  document.body.classList.toggle("nf-modal-open", !!isLocked);
+}
+
+function initDateTimePickers() {
+  const dateInput = document.getElementById("game-date");
+  const timeInput = document.getElementById("game-time");
+  if (!dateInput || !timeInput) return;
+
+  if (typeof window.flatpickr !== "function") {
+    // Fallback: use native controls so pickers still open if CDN/lib is unavailable.
+    dateInput.type = "date";
+    timeInput.type = "time";
+    dateInput.classList.add("nf-input");
+    timeInput.classList.add("nf-input");
+    dateInput.placeholder = "";
+    timeInput.placeholder = "";
+    console.warn("flatpickr not available; falling back to native date/time pickers.");
+    return;
+  }
+
+  dateInput.type = "text";
+  timeInput.type = "text";
+
+  if (!gameDatePicker) {
+    gameDatePicker = window.flatpickr(dateInput, {
+      dateFormat: "m/d/Y",
+      allowInput: false,
+      disableMobile: true,
+      clickOpens: true,
+      positionElement: dateInput,
+      position: "below left",
+      onOpen: [(_, __, instance) => lockPickerWheelScroll(instance)],
+    });
+  }
+
+  if (!gameTimePicker) {
+    gameTimePicker = window.flatpickr(timeInput, {
+      enableTime: true,
+      noCalendar: true,
+      dateFormat: "h:i K",
+      allowInput: false,
+      disableMobile: true,
+      minuteIncrement: 5,
+      time_24hr: false,
+      clickOpens: true,
+      positionElement: timeInput,
+      position: "below left",
+      onOpen: [(_, __, instance) => lockPickerWheelScroll(instance)],
+    });
+  }
+}
+
+function setGameDateInputValue(value) {
+  const input = document.getElementById("game-date");
+  if (!input) return;
+
+  if (gameDatePicker) {
+    if (value) {
+      gameDatePicker.setDate(value, true, "Y-m-d");
+    } else {
+      gameDatePicker.clear();
+    }
+    return;
+  }
+
+  input.value = value || "";
+}
+
+function setGameTimeInputValue(value) {
+  const input = document.getElementById("game-time");
+  if (!input) return;
+
+  if (gameTimePicker) {
+    if (value) {
+      gameTimePicker.setDate(value, true, "H:i");
+    } else {
+      gameTimePicker.clear();
+    }
+    return;
+  }
+
+  input.value = value || "";
+}
+
+function getGameDateInputValue() {
+  if (gameDatePicker?.selectedDates?.[0] && typeof window.flatpickr?.formatDate === "function") {
+    return window.flatpickr.formatDate(gameDatePicker.selectedDates[0], "Y-m-d");
+  }
+
+  const raw = (document.getElementById("game-date")?.value || "").trim();
+  if (!raw) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const month = match[1].padStart(2, "0");
+    const day = match[2].padStart(2, "0");
+    const year = match[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  return "";
+}
+
+function getGameTimeInputValue() {
+  if (gameTimePicker?.selectedDates?.[0] && typeof window.flatpickr?.formatDate === "function") {
+    return window.flatpickr.formatDate(gameTimePicker.selectedDates[0], "H:i");
+  }
+
+  const raw = (document.getElementById("game-time")?.value || "").trim();
+  if (!raw) return "";
+
+  if (/^\d{2}:\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const match = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match) {
+    let hour = Number(match[1]);
+    const minute = match[2];
+    const meridiem = match[3].toUpperCase();
+
+    if (meridiem === "PM" && hour < 12) hour += 12;
+    if (meridiem === "AM" && hour === 12) hour = 0;
+
+    return `${String(hour).padStart(2, "0")}:${minute}`;
+  }
+
+  return "";
 }
 
 function autoDefaultPeriodLengthFromHomeTeam() {
@@ -709,6 +925,33 @@ function wireGameRowButtons() {
   });
 }
 
+function getScheduleDeepLinkOptions() {
+  const params = new URLSearchParams(window.location.search);
+  const action = (params.get("action") || "").toLowerCase();
+  const teamId = params.get("teamId") || "";
+
+  if (action !== "add-game") {
+    return null;
+  }
+
+  const team = allTeams.find((item) => item.teamId === teamId);
+  if (!team) {
+    return null;
+  }
+
+  const selectedTeamType = normalizeTeamTypeValue(team.teamType) || normalizeTeamTypeValue(team.gender);
+  return {
+    selectedTeamType,
+    selectedHomeTeamId: team.teamId,
+  };
+}
+
+function clearScheduleDeepLinkQuery() {
+  if (!window.location.search) return;
+  const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
+
 async function downloadFinalPdf(gameId) {
   if (!gameId) return;
 
@@ -736,17 +979,19 @@ async function downloadFinalPdf(gameId) {
 // =========================================================
 // MODALS: OPEN ADD / EDIT
 // =========================================================
-function openAddGame() {
+function openAddGame(options = {}) {
   currentGameId = null;
 
-  populateScheduleDropdowns();
+  initDateTimePickers();
+  populateScheduleDropdowns(options);
 
   document.getElementById("gameModalTitle").textContent = "Add Game";
 
+  document.getElementById("game-team-type").value = options.selectedTeamType || "";
   document.getElementById("game-home-team").value = "";
   document.getElementById("game-away-team").value = "";
-  document.getElementById("game-date").value = "";
-  document.getElementById("game-time").value = "";
+  setGameDateInputValue("");
+  setGameTimeInputValue("");
   document.getElementById("game-arena-select").value = "";
   document.getElementById("game-arena-custom").value = "";
   document.getElementById("game-rink-select").value = "";
@@ -761,17 +1006,28 @@ function openAddGame() {
   document.getElementById("game-notes").value = "";
   document.getElementById("game-status").value = "Scheduled";
 
+  if (options.selectedHomeTeamId) {
+    document.getElementById("game-home-team").value = options.selectedHomeTeamId;
+  }
+
+  if (options.selectedAwayTeamId) {
+    document.getElementById("game-away-team").value = options.selectedAwayTeamId;
+  }
+
   wirePeriodLengthControls();
   document.getElementById("game-home-team").onchange = autoDefaultPeriodLengthFromHomeTeam;
   autoDefaultPeriodLengthFromHomeTeam();
 
+  setGameModalBackgroundScrollLock(true);
   document.getElementById("gameModalOverlay").classList.add("active");
 }
 
 async function openEditGame(id) {
   currentGameId = id;
+  initDateTimePickers();
   populateScheduleDropdowns();
   document.getElementById("gameModalTitle").textContent = "Edit Game";
+  setGameModalBackgroundScrollLock(true);
   document.getElementById("gameModalOverlay").classList.add("active");
 
   try {
@@ -784,8 +1040,8 @@ async function openEditGame(id) {
 
     document.getElementById("game-home-team").value = g.homeTeamId;
     document.getElementById("game-away-team").value = g.awayTeamId;
-    document.getElementById("game-date").value = formatInputDate(g.gameDateTime);
-    document.getElementById("game-time").value = formatInputTime(g.gameDateTime);
+    setGameDateInputValue(formatInputDate(g.gameDateTime));
+    setGameTimeInputValue(formatInputTime(g.gameDateTime));
 
     document.getElementById("game-arena-select").value = g.arenaName;
     document.getElementById("game-arena-custom").value = "";
@@ -814,8 +1070,8 @@ async function openEditGame(id) {
 // SAVE GAME
 // =========================================================
 async function saveGame() {
-  const date = document.getElementById("game-date").value;
-  const time = document.getElementById("game-time").value;
+  const date = getGameDateInputValue();
+  const time = getGameTimeInputValue();
   const gameDateTime = `${date}T${time}:00`;
 
   if (!date || !time) {
@@ -901,6 +1157,9 @@ async function confirmDeleteGame() {
 // CLOSE MODALS
 // =========================================================
 function closeGameModal() {
+  if (gameDatePicker?.isOpen) gameDatePicker.close();
+  if (gameTimePicker?.isOpen) gameTimePicker.close();
+  setGameModalBackgroundScrollLock(false);
   document.getElementById("gameModalOverlay").classList.remove("active");
 }
 
@@ -926,10 +1185,18 @@ async function initSchedulesPage() {
   document.getElementById("gameDeleteConfirm").onclick = confirmDeleteGame;
   document.getElementById("gameDeleteCancel").onclick = closeDeleteGameModal;
 
+  initDateTimePickers();
+
   await loadScheduleLookups();
   populateScheduleFilters();
   wireGameFilters();
   loadGames();
+
+  const deepLinkOptions = getScheduleDeepLinkOptions();
+  if (deepLinkOptions) {
+    openAddGame(deepLinkOptions);
+    clearScheduleDeepLinkQuery();
+  }
 }
 
 document.addEventListener("layoutLoaded", initSchedulesPage);

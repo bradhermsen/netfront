@@ -459,7 +459,6 @@ window.PageContentRegistry.settings = () => `
         <h1 class="page-header">Settings</h1>
         <p class="page-subtext">System configuration and outbound email delivery</p>
       </div>
-      <button id="settings-save" class="nf-btn nf-btn-primary">Save Settings</button>
     </div>
   </div>
 
@@ -513,6 +512,42 @@ window.PageContentRegistry.settings = () => `
       </label>
       <span id="smtp-password-status" class="settings-password-status"></span>
     </div>
+
+    <div class="settings-actions mt-3">
+      <button id="settings-save-email" class="nf-btn nf-btn-primary" type="button">Save Email Server Settings</button>
+    </div>
+    <div id="settings-email-save-status" class="settings-save-status" aria-live="polite"></div>
+  </div>
+
+  <div class="nf-card settings-card mt-4">
+    <h3 class="section-header">Media Outlet Recipients</h3>
+    <p class="settings-helper-text">
+      Add media contacts that should appear in the Game Manager Send Scoresheet recipient list.
+    </p>
+
+    <div class="settings-grid settings-grid-media-input">
+      <label class="settings-field">
+        <span>Outlet Name</span>
+        <input id="media-outlet-name" class="nf-input" type="text" placeholder="Local Sports Network" />
+      </label>
+
+      <label class="settings-field">
+        <span>Outlet Email</span>
+        <input id="media-outlet-email" class="nf-input" type="email" placeholder="sportsdesk@example.com" />
+      </label>
+
+      <div class="settings-media-add-wrap">
+        <button id="media-outlet-add" class="nf-btn nf-btn-secondary" type="button">Add Outlet</button>
+      </div>
+    </div>
+
+    <div id="media-outlet-list" class="settings-media-list mt-3"></div>
+
+    <div class="settings-actions mt-3">
+      <button id="settings-save-media" class="nf-btn nf-btn-primary" type="button">Save Media Recipients</button>
+    </div>
+    <div id="settings-media-save-status" class="settings-save-status" aria-live="polite"></div>
+    <div id="settings-media-debug" class="settings-debug-banner" aria-live="polite"></div>
   </div>
 
   <div class="nf-card settings-card mt-4">
@@ -1280,7 +1315,7 @@ window.PageContentRegistry.schedulesModals = () => `
       <!-- HEADER -->
       <div class="nf-modal-header">
         <h2 id="gameModalTitle">Add Game</h2>
-        <button class="modal-close" onclick="AdminPage.closeModal()">×</button>
+        <button class="modal-close" onclick="closeGameModal()">×</button>
       </div>
 
       <!-- BODY -->
@@ -1289,6 +1324,15 @@ window.PageContentRegistry.schedulesModals = () => `
         <!-- TEAMS -->
         <div class="full-width-section">
           <h3 class="section-header">Teams</h3>
+
+          <div class="two-col">
+            <div>
+              <label>Team Type</label>
+              <select id="game-team-type" class="nf-input">
+                <option value="">All Team Types</option>
+              </select>
+            </div>
+          </div>
 
           <div class="two-col">
             <div>
@@ -1312,12 +1356,12 @@ window.PageContentRegistry.schedulesModals = () => `
           <div class="two-col">
             <div>
               <label>Date</label>
-              <input id="game-date" type="date" class="nf-input" />
+              <input id="game-date" type="text" class="nf-input" placeholder="Select date" autocomplete="off" />
             </div>
 
             <div>
               <label>Time</label>
-              <input id="game-time" type="time" class="nf-input" />
+              <input id="game-time" type="text" class="nf-input" placeholder="Select time" autocomplete="off" />
             </div>
           </div>
         </div>

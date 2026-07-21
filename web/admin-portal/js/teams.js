@@ -43,6 +43,17 @@ const allowedTeamTypes = new Map([
 const TEAMS_GROUP_PAGE_SIZE = 10;
 const teamsGroupPaginationState = {};
 
+function getOrgIdFromTeamsQuery() {
+  const params = new URLSearchParams(window.location.search || "");
+  return params.get("orgId") || "";
+}
+
+function clearTeamsDeepLinkQuery() {
+  if (!window.location.search) return;
+  const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
+
 function resetTeamsGroupPagination() {
   Object.keys(teamsGroupPaginationState).forEach((k) => delete teamsGroupPaginationState[k]);
 }
@@ -80,6 +91,30 @@ function isExternalOrganizationById(orgId) {
     orgName === "external team" ||
     orgName.includes("external team")
   );
+}
+
+function updateAccessCodeGeneratorState() {
+  const btn = document.getElementById("btnGenerateCodes");
+  if (!btn) return;
+
+  const selectedOrgId = document.getElementById("team-org")?.value || "";
+  const isExternalOrg = selectedOrgId ? isExternalOrganizationById(selectedOrgId) : false;
+  const hasPermission = Auth.canGenerateAccessCodes();
+
+  if (!hasPermission) {
+    btn.disabled = true;
+    btn.title = "Only Team Manager or OrgAdmin can generate access codes";
+    return;
+  }
+
+  if (isExternalOrg) {
+    btn.disabled = true;
+    btn.title = "Access code generation is disabled for teams in External organization";
+    return;
+  }
+
+  btn.disabled = false;
+  btn.title = "Generate Access Codes";
 }
 
 function applyTeamMascotRules() {
@@ -554,6 +589,16 @@ function isExternalTeamRow(team) {
   return organizationName === "external team" || organizationName === "external";
 }
 
+function navigateToRosterEditor(teamId) {
+  if (!teamId) return;
+  window.location.href = `./rosters.html?teamId=${encodeURIComponent(teamId)}`;
+}
+
+function navigateToScheduleAddGame(teamId) {
+  if (!teamId) return;
+  window.location.href = `./schedules.html?action=add-game&teamId=${encodeURIComponent(teamId)}`;
+}
+
 function getFilteredTeams() {
   const source = Array.isArray(AdminPage?.allItems) ? AdminPage.allItems : [];
 
@@ -655,8 +700,9 @@ function renderTeamsGrouped(teams) {
                     <div class="code-badge sm-code">SM-${smCode}</div>
                   </div>
                   <div class="nf-item-card-actions">
-                    <button class="nf-btn-icon view team-view-btn" data-id="${team.teamId}" title="View Team"><i class="fa-solid fa-users"></i></button>
+                    <button class="nf-btn-icon view team-view-btn" data-id="${team.teamId}" title="Edit Roster"><i class="fa-solid fa-users"></i></button>
                     <button class="nf-btn-icon edit team-edit-btn" data-id="${team.teamId}" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button class="nf-btn-icon schedule team-schedule-btn" data-id="${team.teamId}" title="Add Game"><i class="fa-solid fa-calendar-days"></i></button>
                     <button class="nf-btn-icon delete team-delete-btn" data-id="${team.teamId}" title="Delete"><i class="fa-solid fa-trash"></i></button>
                   </div>
                 </article>
@@ -703,11 +749,15 @@ function renderTeamsGrouped(teams) {
 
 function wireTeamCardActions() {
   document.querySelectorAll(".team-view-btn").forEach((btn) => {
-    btn.onclick = () => openEditTeam(btn.dataset.id);
+    btn.onclick = () => navigateToRosterEditor(btn.dataset.id);
   });
 
   document.querySelectorAll(".team-edit-btn").forEach((btn) => {
     btn.onclick = () => openEditTeam(btn.dataset.id);
+  });
+
+  document.querySelectorAll(".team-schedule-btn").forEach((btn) => {
+    btn.onclick = () => navigateToScheduleAddGame(btn.dataset.id);
   });
 
   document.querySelectorAll(".team-delete-btn").forEach((btn) => {
@@ -736,6 +786,8 @@ function wireTeamPagination() {
 // =========================================================
 function initTeamsPage() {
   if (!document.getElementById("teamsGroupedList")) return;
+
+  window.orgIdFromUrl = getOrgIdFromTeamsQuery();
 
   AdminPage.init({
     tableBodyId: "teamsGroupedList",
@@ -776,6 +828,7 @@ function initTeamsPage() {
         if (orgFilter) {
           orgFilter.value = window.orgIdFromUrl;
           applyTeamFiltersAndSearch();
+          clearTeamsDeepLinkQuery();
         }
       }
     },
@@ -793,7 +846,8 @@ function initTeamsPage() {
       // Keep a copy for abbreviation duplicate detection
       window.loadedTeams = teams || [];
       populateTeamTypeFilterFromTeams(teams);
-      renderTeamsGrouped(teams);
+      resetTeamsGroupPagination();
+      applyTeamFiltersAndSearch();
     },
 
     // -------------------------------------------------------
@@ -1019,8 +1073,13 @@ function initTeamsPage() {
 
   const teamOrg = document.getElementById("team-org");
   if (teamOrg) {
-    teamOrg.addEventListener("change", applyTeamMascotRules);
+    teamOrg.addEventListener("change", () => {
+      applyTeamMascotRules();
+      updateAccessCodeGeneratorState();
+    });
   }
+
+  updateAccessCodeGeneratorState();
 }
 
 // =========================================================
@@ -1138,6 +1197,7 @@ async function openAddTeam() {
   document.getElementById("teamModalOverlay").classList.add("active");
 
   wireAssistantCoachLoginToggles();
+  updateAccessCodeGeneratorState();
 }
 
 // =========================================================
@@ -1158,6 +1218,7 @@ async function openEditTeam(id) {
 
     document.getElementById("teamModalTitle").textContent = "Edit Team";
     document.getElementById("teamModalOverlay").classList.add("active");
+    updateAccessCodeGeneratorState();
   } catch (err) {
     console.error("Failed to load team:", err);
     alert("Unable to load team details.");
@@ -1301,9 +1362,17 @@ function wireTeamFilterEvents() {
 document.addEventListener("click", async (e) => {
   const btn = e.target?.closest?.("#btnGenerateCodes");
   if (btn) {
+    const selectedOrgId = document.getElementById("team-org")?.value || "";
+
     // Check role permission
     if (!Auth.canGenerateAccessCodes()) {
       notify("Only Team Manager or OrgAdmin can generate access codes", "error");
+      return;
+    }
+
+    if (selectedOrgId && isExternalOrganizationById(selectedOrgId)) {
+      notify("Access code generation is disabled for teams in External organization", "warning");
+      updateAccessCodeGeneratorState();
       return;
     }
 
@@ -1345,8 +1414,8 @@ document.addEventListener("click", async (e) => {
       console.error("Error generating codes:", err);
       notify("Error generating codes: " + err.message, "error");
     } finally {
-      btn.disabled = false;
       btn.textContent = "Generate Access Codes";
+      updateAccessCodeGeneratorState();
     }
   }
 });

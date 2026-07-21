@@ -183,6 +183,17 @@ type PenaltyModalState = {
   penaltyType: PenaltyType;
 };
 
+type PenaltyAdjustModalState = {
+  visible: boolean;
+  penaltyId: string;
+  teamName: string;
+  playerName: string;
+  infraction: string;
+  currentSeconds: number;
+  durationMinutes: number;
+  deltaSeconds: number;
+};
+
 type PeriodFlowState = "NOT_STARTED" | "IN_PROGRESS" | "INTERMISSION";
 
 type PeriodController = {
@@ -626,7 +637,7 @@ const PENALTY_RULES: Record<PenaltyType, PenaltyRule> = {
 const INFRACTION_RULES: Record<string, PenaltyType[]> = {
   boarding: ["Minor", "Major"],
   charging: ["Minor", "Major"],
-  roughing: ["Minor", "Major"],
+  roughing: ["Minor", "Disqualification"],
   slashing: ["Minor", "Major"],
   crosschecking: ["Minor", "Major"],
   highsticking: ["Minor", "Double Minor", "Major"],
@@ -828,6 +839,8 @@ function normalizePenaltyType(value?: string | null): PenaltyType {
     case "match":
       return "Match";
     case "disqualification":
+    case "ejection dq":
+    case "ejection":
     case "game dq":
     case "dq":
       return "Disqualification";
@@ -1226,6 +1239,8 @@ export default function App() {
   const [showClockModal, setShowClockModal] = useState(false);
   const [clockModalMinutes, setClockModalMinutes] = useState(0);
   const [clockModalSeconds, setClockModalSeconds] = useState(0);
+  const [penaltyAdjustModal, setPenaltyAdjustModal] =
+    useState<PenaltyAdjustModalState | null>(null);
   const [periodController, setPeriodController] = useState<PeriodController>({
     state: "NOT_STARTED",
     isOvertime: false,
@@ -1262,6 +1277,9 @@ export default function App() {
   >({});
   const [customEmailInput, setCustomEmailInput] = useState("");
   const [customEmails, setCustomEmails] = useState<string[]>([]);
+  const [mediaOutletRecipients, setMediaOutletRecipients] = useState<
+    EmailRecipientOption[]
+  >([]);
   const [sendScoresheetError, setSendScoresheetError] = useState("");
   const [emailDeliveryStatus, setEmailDeliveryStatus] = useState<
     "idle" | "sent" | "failed"
@@ -1322,6 +1340,7 @@ export default function App() {
     eventDeleteConfirmModal?.visible,
   );
   const isEventEditModalOpen = Boolean(eventEditModal?.visible);
+  const isPenaltyAdjustModalOpen = Boolean(penaltyAdjustModal?.visible);
   const isAnyModalOpen =
     isGoalModalOpen ||
     isPenaltyModalOpen ||
@@ -1329,6 +1348,7 @@ export default function App() {
     isEventActionModalOpen ||
     isEventDeleteConfirmModalOpen ||
     isEventEditModalOpen ||
+    isPenaltyAdjustModalOpen ||
     showPeriodOverVerify ||
     showResumeVerify ||
     showEndOfRegulation;
@@ -1379,17 +1399,33 @@ export default function App() {
       : {};
 
   const homeActivePenalties = safeActivePenalties
-    .filter((penalty) => penalty.teamId === homeTeamId)
+    .filter(
+      (penalty) =>
+        penalty.teamId === homeTeamId &&
+        Number.isFinite(penalty.remainingSeconds) &&
+        penalty.remainingSeconds > 0,
+    )
     .slice(0, 5);
   const awayActivePenalties = safeActivePenalties
-    .filter((penalty) => penalty.teamId === awayTeamId)
+    .filter(
+      (penalty) =>
+        penalty.teamId === awayTeamId &&
+        Number.isFinite(penalty.remainingSeconds) &&
+        penalty.remainingSeconds > 0,
+    )
     .slice(0, 5);
 
   const homeManpowerPenalties = safeActivePenalties.filter(
-    (penalty) => penalty.teamId === homeTeamId && penalty.affectsManpower,
+    (penalty) =>
+      penalty.teamId === homeTeamId &&
+      penalty.affectsManpower &&
+      penalty.remainingSeconds > 0,
   ).length;
   const awayManpowerPenalties = safeActivePenalties.filter(
-    (penalty) => penalty.teamId === awayTeamId && penalty.affectsManpower,
+    (penalty) =>
+      penalty.teamId === awayTeamId &&
+      penalty.affectsManpower &&
+      penalty.remainingSeconds > 0,
   ).length;
 
   const homeSkatersOnIce = Math.max(3, 5 - homeManpowerPenalties);
@@ -1769,13 +1805,13 @@ export default function App() {
     );
   }, [coachesByTeam, homeTeamId, awayTeamId, session]);
 
-  const refereeEmailRecipients = useMemo<EmailRecipientOption[]>(() => {
+  const officialEmailRecipients = useMemo<EmailRecipientOption[]>(() => {
     return officials
-      .filter((official) => /referee/i.test(official.role || ""))
+      .filter((official) => (official.officialEmail ?? "").trim().length > 0)
       .map((official, index) => {
         const email = (official.officialEmail ?? "").trim();
         return {
-          key: `referee:${official.officialId ?? official.role ?? index}:${email.toLowerCase()}`,
+          key: `official:${official.officialId ?? official.role ?? index}:${email.toLowerCase()}`,
           recipientName: official.officialName || toOfficialRoleLabel(official.role),
           recipientMeta: `${toOfficialRoleLabel(official.role)} • ${email || "No email on file"}`,
           email,
@@ -1839,12 +1875,16 @@ export default function App() {
 
       setActivePenalties((prev) => {
         if (periodController.state !== "IN_PROGRESS") return prev;
-        return prev
-          .map((penalty) => ({
+        return prev.map((penalty) => {
+          const rewindBufferSeconds = Math.max(0, penalty.durationMinutes * 60);
+          return {
             ...penalty,
-            remainingSeconds: Math.max(0, penalty.remainingSeconds - 1),
-          }))
-          .filter((penalty) => penalty.remainingSeconds > 0);
+            remainingSeconds: Math.max(
+              -rewindBufferSeconds,
+              penalty.remainingSeconds - 1,
+            ),
+          };
+        });
       });
     }, 1000);
 
@@ -2785,6 +2825,7 @@ export default function App() {
 
   function openSetEditClockModal() {
     if (!session || !canControlGame(session.role)) return;
+    if (isClockRunning) return;
 
     setClockModalMinutes(Math.floor(parseClockToSeconds(session.clock) / 60));
     setClockModalSeconds(parseClockToSeconds(session.clock) % 60);
@@ -2809,9 +2850,95 @@ export default function App() {
     setClockModalSeconds(nextTotal % 60);
   }
 
+  function shiftPenaltyTimersForClockAdjustment(deltaSeconds: number) {
+    if (!deltaSeconds) return;
+
+    setActivePenalties((prev) =>
+      prev.map((penalty) => {
+        const maxSeconds = Math.max(0, penalty.durationMinutes * 60);
+        return {
+          ...penalty,
+          remainingSeconds: Math.max(
+            -maxSeconds,
+            Math.min(maxSeconds, penalty.remainingSeconds + deltaSeconds),
+          ),
+        };
+      }),
+    );
+  }
+
+  function adjustPenaltyRemainingTime(penaltyId: string, deltaSeconds: number) {
+    if (!session || !canControlGame(session.role) || !deltaSeconds) return;
+
+    setActivePenalties((prev) =>
+      prev.map((penalty) => {
+        if (penalty.id !== penaltyId) return penalty;
+
+        const maxSeconds = Math.max(0, penalty.durationMinutes * 60);
+        return {
+          ...penalty,
+          remainingSeconds: Math.max(
+            -maxSeconds,
+            Math.min(maxSeconds, penalty.remainingSeconds + deltaSeconds),
+          ),
+        };
+      }),
+    );
+  }
+
+  function openPenaltyAdjustModal(penalty: ActivePenalty) {
+    if (!session || !canControlGame(session.role) || isClockRunning) return;
+
+    setPenaltyAdjustModal({
+      visible: true,
+      penaltyId: penalty.id,
+      teamName: penalty.teamName,
+      playerName: penalty.playerName,
+      infraction: penalty.infraction,
+      currentSeconds: penalty.remainingSeconds,
+      durationMinutes: penalty.durationMinutes,
+      deltaSeconds: 0,
+    });
+  }
+
+  function closePenaltyAdjustModal() {
+    setPenaltyAdjustModal(null);
+  }
+
+  function shiftPenaltyAdjustPreview(deltaSeconds: number) {
+    setPenaltyAdjustModal((prev) => {
+      if (!prev) return prev;
+
+      const maxSeconds = Math.max(0, prev.durationMinutes * 60);
+      const nextDelta = prev.deltaSeconds + deltaSeconds;
+      const previewSeconds = Math.max(
+        -maxSeconds,
+        Math.min(maxSeconds, prev.currentSeconds + nextDelta),
+      );
+
+      return {
+        ...prev,
+        deltaSeconds: previewSeconds - prev.currentSeconds,
+      };
+    });
+  }
+
+  function applyPenaltyAdjustModal() {
+    if (!penaltyAdjustModal || !session || !canControlGame(session.role)) return;
+
+    adjustPenaltyRemainingTime(
+      penaltyAdjustModal.penaltyId,
+      penaltyAdjustModal.deltaSeconds,
+    );
+    closePenaltyAdjustModal();
+  }
+
   function applyManualClockAdjustment() {
     if (!session) return;
+    const currentSeconds = parseClockToSeconds(session.clock);
     const nextSeconds = Math.max(0, clockModalMinutes * 60 + clockModalSeconds);
+    const deltaSeconds = nextSeconds - currentSeconds;
+    shiftPenaltyTimersForClockAdjustment(deltaSeconds);
     updateSession({ clock: formatSecondsToClock(nextSeconds) });
     setShowClockModal(false);
   }
@@ -3587,6 +3714,63 @@ export default function App() {
     });
   }
 
+  async function handleRefreshOfficials() {
+    if (!nextGame?.gameId) return;
+
+    setIsOfficialsLoading(true);
+    setOfficialsError("");
+
+    try {
+      const loaded = await fetchOfficialsForGame(nextGame.gameId);
+      setOfficials(loaded);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setOfficialsError(message);
+      trace("officials.refresh.error", { message });
+    } finally {
+      setIsOfficialsLoading(false);
+    }
+  }
+
+  async function fetchMediaOutlets() {
+    const url = `${activeApiBase}/email/media-outlets-mobile`;
+    trace("media-outlets.fetch.start", { url });
+
+    const response = await fetch(url);
+    trace("media-outlets.fetch.response", {
+      status: response.status,
+      ok: response.ok,
+    });
+
+    const payload = await response.json();
+    trace("media-outlets.fetch.payload", summarizePayload(payload));
+
+    if (!response.ok || !Array.isArray(payload)) {
+      return [];
+    }
+
+    return payload
+      .map((entry, index) => {
+        const row = entry as Record<string, unknown>;
+        const email =
+          (typeof row.email === "string" && row.email.trim()) ||
+          (typeof row.Email === "string" && row.Email.trim()) ||
+          "";
+        const name =
+          (typeof row.name === "string" && row.name.trim()) ||
+          (typeof row.Name === "string" && row.Name.trim()) ||
+          "Media Outlet";
+
+        return {
+          key: `media:${index}:${email.toLowerCase()}`,
+          recipientName: name,
+          recipientMeta: `Media Outlet • ${email}`,
+          email,
+        } as EmailRecipientOption;
+      })
+      .filter((recipient) => recipient.email.length > 0);
+  }
+
   async function saveOfficialsForGame(
     gameId: string,
     rows: OfficialVerification[],
@@ -3658,12 +3842,13 @@ export default function App() {
     setRosterError("");
 
     try {
-      const [homeRoster, awayRoster, homeCoaches, awayCoaches] =
+      const [homeRoster, awayRoster, homeCoaches, awayCoaches, mediaRecipients] =
         await Promise.all([
           fetchRosterForTeam(homeId),
           fetchRosterForTeam(awayId),
           fetchCoachesForTeam(homeId),
           fetchCoachesForTeam(awayId),
+          fetchMediaOutlets().catch(() => []),
         ]);
 
       setRostersByTeam({
@@ -3675,6 +3860,8 @@ export default function App() {
         [homeId]: homeCoaches,
         [awayId]: awayCoaches,
       });
+
+      setMediaOutletRecipients(mediaRecipients);
 
       setStartersByTeam({
         [homeId]: [],
@@ -3717,12 +3904,13 @@ export default function App() {
     setRosterError("");
 
     try {
-      const [homeRoster, awayRoster, homeCoaches, awayCoaches] =
+      const [homeRoster, awayRoster, homeCoaches, awayCoaches, mediaRecipients] =
         await Promise.all([
           fetchRosterForTeam(homeId),
           fetchRosterForTeam(awayId),
           fetchCoachesForTeam(homeId),
           fetchCoachesForTeam(awayId),
+          fetchMediaOutlets().catch(() => []),
         ]);
 
       const preserveStarterSelections = (
@@ -3763,6 +3951,8 @@ export default function App() {
         [homeId]: homeCoaches,
         [awayId]: awayCoaches,
       }));
+
+      setMediaOutletRecipients(mediaRecipients);
 
       setCurrentGoalieByTeam((prev) => ({
         ...prev,
@@ -4135,6 +4325,7 @@ export default function App() {
     setSendRecipientSelection({});
     setCustomEmailInput("");
     setCustomEmails([]);
+    setMediaOutletRecipients([]);
     setSendScoresheetError("");
     setEmailDeliveryStatus("idle");
     setEmailDeliveryMessage("");
@@ -4227,6 +4418,10 @@ export default function App() {
 
   function openSendScoresheet() {
     setSendScoresheetError("");
+    const isVarsityGame = isVarsityLevelName(
+      nextGame?.levelName || session?.level || "",
+    );
+
     const defaults = coachEmailRecipients.reduce<Record<string, boolean>>(
       (acc, recipient) => {
         acc[recipient.key] = true;
@@ -4239,8 +4434,12 @@ export default function App() {
       defaults[recipient.key] = true;
     }
 
+    for (const recipient of mediaOutletRecipients) {
+      defaults[recipient.key] = isVarsityGame;
+    }
+
     if (gameDqPenaltyEvents.length > 0) {
-      for (const recipient of refereeEmailRecipients) {
+      for (const recipient of officialEmailRecipients) {
         defaults[recipient.key] = true;
       }
     }
@@ -4266,7 +4465,8 @@ export default function App() {
       ...coachEmailRecipients.map((recipient) =>
         (recipient.coachEmail ?? "").toLowerCase(),
       ),
-      ...refereeEmailRecipients.map((recipient) => recipient.email.toLowerCase()),
+      ...officialEmailRecipients.map((recipient) => recipient.email.toLowerCase()),
+      ...mediaOutletRecipients.map((recipient) => recipient.email.toLowerCase()),
       ...customEmails.map((recipient) => recipient.toLowerCase()),
     ].includes(normalized);
 
@@ -4298,7 +4498,11 @@ export default function App() {
       Boolean(sendRecipientSelection[recipient.key]),
     );
 
-    const selectedRefereeRecipients = refereeEmailRecipients.filter((recipient) =>
+    const selectedOfficialRecipients = officialEmailRecipients.filter((recipient) =>
+      Boolean(sendRecipientSelection[recipient.key]),
+    );
+
+    const selectedMediaRecipients = mediaOutletRecipients.filter((recipient) =>
       Boolean(sendRecipientSelection[recipient.key]),
     );
 
@@ -4308,11 +4512,11 @@ export default function App() {
 
     if (
       gameDqPenaltyEvents.length > 0 &&
-      selectedRefereeRecipients.length === 0 &&
+      selectedOfficialRecipients.length === 0 &&
       selectedCustomRecipients.length === 0
     ) {
       throw new Error(
-        "A DQ requires at least one referee email recipient. Add referee emails in Officials Admin or add one in this screen.",
+        "A DQ requires at least one official email recipient. Add official emails in Admin Officials or add one in this screen.",
       );
     }
 
@@ -4320,7 +4524,10 @@ export default function App() {
       ...selectedCoachRecipients
         .map((recipient) => recipient.coachEmail)
         .filter((email): email is string => Boolean(email && email.trim())),
-      ...selectedRefereeRecipients
+      ...selectedOfficialRecipients
+        .map((recipient) => recipient.email)
+        .filter((email): email is string => Boolean(email && email.trim())),
+      ...selectedMediaRecipients
         .map((recipient) => recipient.email)
         .filter((email): email is string => Boolean(email && email.trim())),
       ...selectedCustomRecipients
@@ -4332,7 +4539,10 @@ export default function App() {
       ...selectedCoachRecipients.map(
         (recipient) => `${recipient.coachName} <${recipient.coachEmail}>`,
       ),
-      ...selectedRefereeRecipients.map(
+      ...selectedOfficialRecipients.map(
+        (recipient) => `${recipient.recipientName} <${recipient.email}>`,
+      ),
+      ...selectedMediaRecipients.map(
         (recipient) => `${recipient.recipientName} <${recipient.email}>`,
       ),
       ...selectedCustomRecipients.map((recipient) => recipient.email),
@@ -4345,6 +4555,25 @@ export default function App() {
         return `${event.teamName} ${event.playerName}: ${notes}`;
       })
       .filter((line): line is string => Boolean(line));
+
+    const suspensionNoteEntries = gameDqPenaltyEvents
+      .map((event) => {
+        const notes = (suspensionNotesByPenaltyId[event.localId] ?? "").trim();
+        if (!notes) return null;
+
+        return {
+          eventRef: event.localId,
+          notes,
+        };
+      })
+      .filter(
+        (
+          entry,
+        ): entry is {
+          eventRef: string;
+          notes: string;
+        } => Boolean(entry),
+      );
 
     const notesBlocks = [
       `Final: Away - ${buildTeamDisplayName(nextGame?.awayTeamName || session?.awayTeam, nextGame?.awayTeamMascot)} ${session?.awayScore ?? 0} - ${session?.homeScore ?? 0} Home - ${buildTeamDisplayName(nextGame?.homeTeamName || session?.homeTeam, nextGame?.homeTeamMascot)}`,
@@ -4411,6 +4640,7 @@ export default function App() {
 
     const completePayload = {
       notes: notesBlocks.join("\n"),
+      suspensionNotes: suspensionNoteEntries,
       shotSummary: {
         homeByPeriod: {
           p1: safeHomeShotsByPeriod[1],
@@ -4797,6 +5027,12 @@ export default function App() {
             <RefreshControl
               refreshing={isRefreshingNextGame}
               onRefresh={handleRefreshNextGame}
+              tintColor="#FF7B00"
+            />
+          ) : stage === "officialsVerify" && session ? (
+            <RefreshControl
+              refreshing={isOfficialsLoading}
+              onRefresh={handleRefreshOfficials}
               tintColor="#FF7B00"
             />
           ) : stage === "rosterVerify" && session ? (
@@ -5902,6 +6138,110 @@ export default function App() {
                     onPress={applyManualClockAdjustment}
                   >
                     <Text style={styles.primaryButtonText}>Apply Clock</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        ) : null}
+
+        {penaltyAdjustModal?.visible && session ? (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={closePenaltyAdjustModal}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
+                <Text style={styles.goalModalTitle}>Adjust Penalty Time</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  {penaltyAdjustModal.teamName} • {penaltyAdjustModal.playerName}
+                </Text>
+                <Text style={styles.goalModalSubtitle}>
+                  {penaltyAdjustModal.infraction}
+                </Text>
+
+                <View style={styles.penaltyAdjustModalSummary}>
+                  <View style={styles.penaltyAdjustSummaryCol}>
+                    <Text style={styles.penaltyAdjustSummaryLabel}>Current</Text>
+                    <Text style={styles.penaltyAdjustSummaryValue}>
+                      {formatSecondsToClock(penaltyAdjustModal.currentSeconds)}
+                    </Text>
+                  </View>
+                  <View style={styles.penaltyAdjustSummaryCol}>
+                    <Text style={styles.penaltyAdjustSummaryLabel}>New</Text>
+                    <Text style={styles.penaltyAdjustSummaryValue}>
+                      {formatSecondsToClock(
+                        penaltyAdjustModal.currentSeconds +
+                          penaltyAdjustModal.deltaSeconds,
+                      )}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.penaltyAdjustLayoutRow}>
+                  <View style={styles.penaltyAdjustColumn}>
+                    <View style={styles.penaltyAdjustPairRow}>
+                      <Pressable
+                        style={styles.penaltyAdjustModalBtn}
+                        onPress={() => shiftPenaltyAdjustPreview(-1)}
+                      >
+                        <Text style={styles.penaltyAdjustModalBtnText}>-1s</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.penaltyAdjustModalBtn}
+                        onPress={() => shiftPenaltyAdjustPreview(-5)}
+                      >
+                        <Text style={styles.penaltyAdjustModalBtnText}>-5s</Text>
+                      </Pressable>
+                    </View>
+                    <Pressable
+                      style={styles.penaltyAdjustModalBtnWide}
+                      onPress={() => shiftPenaltyAdjustPreview(-15)}
+                    >
+                      <Text style={styles.penaltyAdjustModalBtnText}>-15s</Text>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.penaltyAdjustColumn}>
+                    <View style={styles.penaltyAdjustPairRow}>
+                      <Pressable
+                        style={styles.penaltyAdjustModalBtn}
+                        onPress={() => shiftPenaltyAdjustPreview(1)}
+                      >
+                        <Text style={styles.penaltyAdjustModalBtnText}>+1s</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.penaltyAdjustModalBtn}
+                        onPress={() => shiftPenaltyAdjustPreview(5)}
+                      >
+                        <Text style={styles.penaltyAdjustModalBtnText}>+5s</Text>
+                      </Pressable>
+                    </View>
+                    <Pressable
+                      style={styles.penaltyAdjustModalBtnWide}
+                      onPress={() => shiftPenaltyAdjustPreview(15)}
+                    >
+                      <Text style={styles.penaltyAdjustModalBtnText}>+15s</Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={closePenaltyAdjustModal}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={applyPenaltyAdjustModal}
+                  >
+                    <Text style={styles.primaryButtonText}>Set</Text>
                   </Pressable>
                 </View>
               </View>
@@ -7127,10 +7467,10 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.scoreboardActionGoal,
-                      (!canControlGame(session.role) || isAnyModalOpen) &&
+                      (!canControlGame(session.role) || isAnyModalOpen || isClockRunning) &&
                         styles.disabledButton,
                     ]}
-                    disabled={!canControlGame(session.role) || isAnyModalOpen}
+                    disabled={!canControlGame(session.role) || isAnyModalOpen || isClockRunning}
                     onPress={() =>
                       homeTeamId && handleGoalButtonPress(homeTeamId)
                     }
@@ -7140,10 +7480,10 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.scoreboardActionPenalty,
-                      (!canControlGame(session.role) || isAnyModalOpen) &&
+                      (!canControlGame(session.role) || isAnyModalOpen || isClockRunning) &&
                         styles.disabledButton,
                     ]}
-                    disabled={!canControlGame(session.role) || isAnyModalOpen}
+                    disabled={!canControlGame(session.role) || isAnyModalOpen || isClockRunning}
                     onPress={() =>
                       homeTeamId && handlePenaltyButtonPress(homeTeamId)
                     }
@@ -7212,10 +7552,10 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.scoreboardActionGoal,
-                      (!canControlGame(session.role) || isAnyModalOpen) &&
+                      (!canControlGame(session.role) || isAnyModalOpen || isClockRunning) &&
                         styles.disabledButton,
                     ]}
-                    disabled={!canControlGame(session.role) || isAnyModalOpen}
+                    disabled={!canControlGame(session.role) || isAnyModalOpen || isClockRunning}
                     onPress={() =>
                       awayTeamId && handleGoalButtonPress(awayTeamId)
                     }
@@ -7225,10 +7565,10 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.scoreboardActionPenalty,
-                      (!canControlGame(session.role) || isAnyModalOpen) &&
+                      (!canControlGame(session.role) || isAnyModalOpen || isClockRunning) &&
                         styles.disabledButton,
                     ]}
-                    disabled={!canControlGame(session.role) || isAnyModalOpen}
+                    disabled={!canControlGame(session.role) || isAnyModalOpen || isClockRunning}
                     onPress={() =>
                       awayTeamId && handlePenaltyButtonPress(awayTeamId)
                     }
@@ -7271,6 +7611,21 @@ export default function App() {
                         <Text style={styles.penaltyClockText}>
                           {formatSecondsToClock(penalty.remainingSeconds)}
                         </Text>
+                        <View style={styles.penaltyAdjustRow}>
+                          <Pressable
+                            style={[
+                              styles.penaltyAdjustBtn,
+                              (!canControlGame(session.role) || isClockRunning) &&
+                                styles.disabledButton,
+                            ]}
+                            disabled={!canControlGame(session.role) || isClockRunning}
+                            onPress={() => openPenaltyAdjustModal(penalty)}
+                          >
+                            <Text style={styles.penaltyAdjustBtnText}>
+                              Adjust Time
+                            </Text>
+                          </Pressable>
+                        </View>
                       </View>
                     ))
                   )}
@@ -7336,9 +7691,9 @@ export default function App() {
                       style={[
                         styles.clockSecondaryBtn,
                         styles.clockSingleWidthBtn,
-                        isAnyModalOpen && styles.disabledButton,
+                        (isAnyModalOpen || isClockRunning) && styles.disabledButton,
                       ]}
-                      disabled={isAnyModalOpen}
+                      disabled={isAnyModalOpen || isClockRunning}
                       onPress={openSetEditClockModal}
                     >
                       <Text style={styles.clockSecondaryText}>
@@ -7399,6 +7754,21 @@ export default function App() {
                         <Text style={styles.penaltyClockText}>
                           {formatSecondsToClock(penalty.remainingSeconds)}
                         </Text>
+                        <View style={styles.penaltyAdjustRow}>
+                          <Pressable
+                            style={[
+                              styles.penaltyAdjustBtn,
+                              (!canControlGame(session.role) || isClockRunning) &&
+                                styles.disabledButton,
+                            ]}
+                            disabled={!canControlGame(session.role) || isClockRunning}
+                            onPress={() => openPenaltyAdjustModal(penalty)}
+                          >
+                            <Text style={styles.penaltyAdjustBtnText}>
+                              Adjust Time
+                            </Text>
+                          </Pressable>
+                        </View>
                       </View>
                     ))
                   )}
@@ -8250,45 +8620,81 @@ export default function App() {
                 ))
               )}
 
-              {gameDqPenaltyEvents.length > 0 ? (
-                <>
-                  <Text style={styles.sectionLabel}>REFEREE RECIPIENTS</Text>
-                  {refereeEmailRecipients.length === 0 ? (
-                    <Text style={styles.error}>
-                      DQ detected. No referee emails are on file. Add them in
-                      Admin Officials or add one below.
-                    </Text>
-                  ) : (
-                    refereeEmailRecipients.map((recipient) => (
-                      <View key={recipient.key} style={styles.recipientRow}>
-                        <View style={styles.recipientTextWrap}>
-                          <Text style={styles.recipientName}>
-                            {recipient.recipientName}
-                          </Text>
-                          <Text style={styles.recipientMeta}>
-                            {recipient.recipientMeta}
-                          </Text>
-                        </View>
-                        <Switch
-                          value={Boolean(sendRecipientSelection[recipient.key])}
-                          onValueChange={(value) =>
-                            setSendRecipientSelection((prev) => ({
-                              ...prev,
-                              [recipient.key]: value,
-                            }))
-                          }
-                          trackColor={{ false: "#516273", true: "#FF7B00" }}
-                          thumbColor={
-                            sendRecipientSelection[recipient.key]
-                              ? "#FFE0BF"
-                              : "#d4dbe3"
-                          }
-                        />
-                      </View>
-                    ))
-                  )}
-                </>
-              ) : null}
+              <Text style={styles.sectionLabel}>OFFICIAL RECIPIENTS</Text>
+              {officialEmailRecipients.length === 0 ? (
+                <Text
+                  style={
+                    gameDqPenaltyEvents.length > 0 ? styles.error : styles.footerHint
+                  }
+                >
+                  {gameDqPenaltyEvents.length > 0
+                    ? "DQ detected. No official emails are on file. Add them in Admin Officials or add one below."
+                    : "No official emails are on file for this game."}
+                </Text>
+              ) : (
+                officialEmailRecipients.map((recipient) => (
+                  <View key={recipient.key} style={styles.recipientRow}>
+                    <View style={styles.recipientTextWrap}>
+                      <Text style={styles.recipientName}>
+                        {recipient.recipientName}
+                      </Text>
+                      <Text style={styles.recipientMeta}>
+                        {recipient.recipientMeta}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={Boolean(sendRecipientSelection[recipient.key])}
+                      onValueChange={(value) =>
+                        setSendRecipientSelection((prev) => ({
+                          ...prev,
+                          [recipient.key]: value,
+                        }))
+                      }
+                      trackColor={{ false: "#516273", true: "#FF7B00" }}
+                      thumbColor={
+                        sendRecipientSelection[recipient.key]
+                          ? "#FFE0BF"
+                          : "#d4dbe3"
+                      }
+                    />
+                  </View>
+                ))
+              )}
+
+              <Text style={styles.sectionLabel}>MEDIA OUTLET RECIPIENTS</Text>
+              {mediaOutletRecipients.length === 0 ? (
+                <Text style={styles.footerHint}>
+                  No media outlet recipients are configured in Admin Settings.
+                </Text>
+              ) : (
+                mediaOutletRecipients.map((recipient) => (
+                  <View key={recipient.key} style={styles.recipientRow}>
+                    <View style={styles.recipientTextWrap}>
+                      <Text style={styles.recipientName}>
+                        {recipient.recipientName}
+                      </Text>
+                      <Text style={styles.recipientMeta}>
+                        {recipient.recipientMeta}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={Boolean(sendRecipientSelection[recipient.key])}
+                      onValueChange={(value) =>
+                        setSendRecipientSelection((prev) => ({
+                          ...prev,
+                          [recipient.key]: value,
+                        }))
+                      }
+                      trackColor={{ false: "#516273", true: "#FF7B00" }}
+                      thumbColor={
+                        sendRecipientSelection[recipient.key]
+                          ? "#FFE0BF"
+                          : "#d4dbe3"
+                      }
+                    />
+                  </View>
+                ))
+              )}
 
               <Text style={styles.sectionLabel}>ADDITIONAL EMAILS</Text>
               <View style={styles.addEmailRow}>
@@ -9652,6 +10058,95 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     textAlign: "right",
+  },
+  penaltyAdjustRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 6,
+    marginTop: 2,
+  },
+  penaltyAdjustBtn: {
+    borderWidth: 1,
+    borderColor: "#2f4f79",
+    backgroundColor: "#1A2E4F",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  penaltyAdjustBtnText: {
+    color: "#D7E6FF",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  penaltyAdjustModalSummary: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 14,
+  },
+  penaltyAdjustSummaryCol: {
+    flex: 1,
+    backgroundColor: "#132540",
+    borderWidth: 1,
+    borderColor: "rgba(255,123,0,0.25)",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  penaltyAdjustSummaryLabel: {
+    color: "#7A8FA8",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  penaltyAdjustSummaryValue: {
+    color: "#E8EDF5",
+    fontSize: 20,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  penaltyAdjustLayoutRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  penaltyAdjustColumn: {
+    flex: 1,
+    gap: 8,
+  },
+  penaltyAdjustPairRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  penaltyAdjustButtonsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  penaltyAdjustModalBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2f4f79",
+    backgroundColor: "#1A2E4F",
+  },
+  penaltyAdjustModalBtnWide: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2f4f79",
+    backgroundColor: "#1A2E4F",
+  },
+  penaltyAdjustModalBtnText: {
+    color: "#D7E6FF",
+    fontSize: 12,
+    fontWeight: "900",
   },
   gameClockCenter: {
     flex: 1,

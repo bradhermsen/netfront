@@ -75,6 +75,8 @@ namespace NetFrontAPI.Services
         public string PlayerName { get; set; } = string.Empty;
         public string Infraction { get; set; } = string.Empty;
         public int DurationMinutes { get; set; }
+        public string? PenaltyType { get; set; }
+        public string? Notes { get; set; }
     }
 
     public class GoalieSummaryLine

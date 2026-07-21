@@ -10,22 +10,32 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-    name: Build and Deploy Admin Portal
+    name: Deploy Admin Portal to Storage
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to Azure Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ADMIN_DEV }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: upload
-          app_location: web/admin-portal
-          output_location: ""
-          skip_app_build: true
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Azure CLI storage preview extension
+        run: az extension add --name storage-preview --upgrade
+
+      - name: Sync Admin Portal to Storage static website
+        run: |
+          az storage blob sync \
+            --account-name "${{ secrets.AZURE_STORAGE_ACCOUNT_NAME_ADMIN_DEV }}" \
+            --container '$web' \
+            --source 'web/admin-portal' \
+            --delete-destination true \
+            --auth-mode login

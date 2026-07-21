@@ -1,16 +1,12 @@
 // dashboard.js — Role-specific dashboard logic
 
-console.log("Dashboard.js loaded");
-
 // =========================================================
 // ROLE-BASED DASHBOARD INITIALIZATION
 // =========================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
   const userRole = Auth.getRole();
-  console.log("Initializing dashboard for role:", userRole);
-
-  // Initialize role-specific dashboard
+// Initialize role-specific dashboard
   if (userRole === window.ROLES.TeamManager) {
     await initializeTeamManagerDashboard();
   } else if (userRole === window.ROLES.SuperAdmin || userRole === window.ROLES.OrgAdmin) {
@@ -24,9 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 // TEAM MANAGER DASHBOARD
 // =========================================================
 async function initializeTeamManagerDashboard() {
-  console.log("Initializing Team Manager dashboard");
-
-  try {
+try {
     // Load assigned teams
     const assignedTeams = await loadAssignedTeamsForManager();
     displayTeamManagerOptions(assignedTeams);
@@ -52,8 +46,7 @@ async function loadAssignedTeamsForManager() {
     }
 
     const teams = await res.json();
-    console.log("Assigned teams:", teams);
-    return teams;
+return teams;
   } catch (err) {
     console.error("Failed to load assigned teams:", err);
     return [];
@@ -154,9 +147,7 @@ function displayTeamManagerOptions(assignedTeams) {
 // ADMIN DASHBOARD (Super Admin / Org Admin)
 // =========================================================
 async function initializeAdminDashboard() {
-  console.log("Initializing Admin dashboard");
-
-  try {
+try {
     displayAdminOptions();
   } catch (err) {
     console.error("Failed to initialize Admin dashboard:", err);
@@ -264,9 +255,7 @@ function displayAdminOptions() {
 // COACH DASHBOARD
 // =========================================================
 async function initializeCoachDashboard() {
-  console.log("Initializing Coach dashboard");
-
-  try {
+try {
     displayCoachOptions();
   } catch (err) {
     console.error("Failed to initialize Coach dashboard:", err);

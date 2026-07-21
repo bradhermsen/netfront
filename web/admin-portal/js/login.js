@@ -1,12 +1,6 @@
-console.log("login.js loaded");
-
 const btn = document.getElementById("btnLogin");
-console.log("btnLogin =", btn);
-
 btn.addEventListener("click", async () => {
-  console.log("Login button clicked");
-
-  const email = document.getElementById("login-email").value.trim();
+const email = document.getElementById("login-email").value.trim();
   const password = document.getElementById("login-password").value.trim();
   const errorDiv = document.getElementById("login-error");
 
@@ -29,9 +23,7 @@ btn.addEventListener("click", async () => {
       body: JSON.stringify({ email, password }),
     });
 
-    console.log("Response status:", res.status);
-
-    if (!res.ok) {
+if (!res.ok) {
       // Better error messages based on status code
       if (res.status === 401) {
         errorDiv.textContent = "Invalid email or password.";
@@ -46,9 +38,7 @@ btn.addEventListener("click", async () => {
     }
 
     const data = await res.json();
-    console.log("Login success:", data);
-
-    // Validate response contains required token and role
+// Validate response contains required token and role
     if (!data.token || !data.role) {
       errorDiv.textContent = "Invalid server response. Missing token or role.";
       console.error("Invalid login response:", data);

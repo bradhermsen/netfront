@@ -46,9 +46,7 @@ const TeamApi = {
       sectionRegionId: payload?.sectionRegionId || null,
     };
 
-    console.log(">>> TeamApi.create() payload:", payloadWithConference);
-
-    const res = await authFetch("/teams", {
+const res = await authFetch("/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payloadWithConference),

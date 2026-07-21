@@ -547,7 +547,6 @@ window.PageContentRegistry.settings = () => `
       <button id="settings-save-media" class="nf-btn nf-btn-primary" type="button">Save Media Recipients</button>
     </div>
     <div id="settings-media-save-status" class="settings-save-status" aria-live="polite"></div>
-    <div id="settings-media-debug" class="settings-debug-banner" aria-live="polite"></div>
   </div>
 
   <div class="nf-card settings-card mt-4">

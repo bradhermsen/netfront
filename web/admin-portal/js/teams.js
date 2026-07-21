@@ -1,5 +1,3 @@
-console.log("Teams.js loaded");
-
 // =========================================================
 // TEAMS PAGE — MODERNIZED + MATCHED DESIGN
 // =========================================================
@@ -9,7 +7,7 @@ const notify = (message, type = "info") => {
     window.showMessage(message, type);
     return;
   }
-  console[type === "error" ? "error" : "log"](message);
+  console[type === "error" ? "error" : "warn"](message);
 };
 
 function getAccessCodeSuffix(value) {
@@ -430,9 +428,7 @@ async function loadTeamLevels() {
 // ------------------------------
 async function loadTeamSeasons() {
   try {
-    console.log("loadTeamSeasons() fired");
-
-    const res = await authFetch(`/seasons`);
+const res = await authFetch(`/seasons`);
     
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
@@ -446,15 +442,11 @@ async function loadTeamSeasons() {
     const display = document.getElementById("team-season-display");
     if (!display) return;
 
-    console.log("Seasons:", seasons);
-
-    const activeSeason = seasons.find(
+const activeSeason = seasons.find(
       (s) => s.isActive === true || s.isActive === "true",
     );
 
-    console.log("Active season:", activeSeason);
-
-    // Store globally for new teams
+// Store globally for new teams
     window.activeSeasonId = activeSeason?.seasonId || null;
 
     if (activeSeason) {
@@ -1118,27 +1110,20 @@ function generatePassword() {
 }
 
 async function ensureCoachUser(name, email, orgId, teamId) {
-  console.log(">>> ensureCoachUser() START");
-
-  if (!email || email.trim() === "") {
-    console.log(">>> No email provided — skipping coach user creation");
-    return;
+if (!email || email.trim() === "") {
+return;
   }
 
   const parts = (name || "").trim().split(" ");
   const firstName = parts[0] || "";
   const lastName = parts.slice(1).join(" ") || "";
 
-  console.log(">>> Parsed coach name:", { firstName, lastName });
-
-  let user = null;
+let user = null;
 
   try {
     user = await UsersAPI.getByEmail(email);
-    console.log(">>> Existing user found:", user);
-  } catch {
-    console.log(">>> No existing user found — will create new one");
-  }
+} catch {
+}
 
   if (!user) {
     const password = generatePassword();
@@ -1153,27 +1138,21 @@ async function ensureCoachUser(name, email, orgId, teamId) {
       isActive: true,
     };
 
-    console.log(">>> Creating NEW coach user:", payload);
-
-    try {
+try {
       user = await UsersAPI.create(payload);
-      console.log(">>> Coach user created:", user);
-    } catch (err) {
+} catch (err) {
       console.error("❌ Failed to create coach user:", err);
       throw err;
     }
   }
 
   try {
-    console.log(`>>> Assigning coach ${user.id} to team ${teamId}`);
-    await CoachTeamsApi.assign(user.id, teamId);
-    console.log(">>> Coach assigned successfully");
-  } catch (err) {
+await CoachTeamsApi.assign(user.id, teamId);
+} catch (err) {
     console.error("❌ Failed to assign coach to team:", err);
     throw err;
   }
 
-  console.log(">>> ensureCoachUser() COMPLETE");
 }
 
 // =========================================================
@@ -1237,41 +1216,29 @@ function openDeleteTeam(id) {
 // SAVE TEAM (AUTO-CREATE COACH USERS)
 // =========================================================
 async function saveTeam() {
-  console.log(">>> saveTeam() START");
-  console.log(">>> saveTeam() FIRED");
-
-  const payload = AdminPage.config.collectFormData();
+const payload = AdminPage.config.collectFormData();
   if (!payload.teamType) {
     notify("Team type is required.", "error");
     return;
   }
 
-  console.log(">>> PAYLOAD:", payload);
-
-  let teamId;
+let teamId;
   const orgId = payload.organizationId;
 
   try {
     if (AdminPage.editingId) {
-      console.log(">>> Updating existing team:", AdminPage.editingId);
-      await TeamApi.update(AdminPage.editingId, payload);
+await TeamApi.update(AdminPage.editingId, payload);
       teamId = AdminPage.editingId;
     } else {
-      console.log(">>> Creating NEW team...");
-      teamId = await TeamApi.create(payload);
-      console.log(">>> Team created with ID:", teamId);
-    }
+teamId = await TeamApi.create(payload);
+}
   } catch (err) {
     const message = err?.message || "Failed to save team.";
     notify(message, "error");
     throw err;
   }
 
-  console.log(">>> Processing HEAD COACH");
-  console.log(">>> Head coach name:", payload.headCoachName);
-  console.log(">>> Head coach email:", payload.headCoachEmail);
-
-  await ensureCoachUser(
+await ensureCoachUser(
     payload.headCoachName,
     payload.headCoachEmail,
     orgId,
@@ -1301,22 +1268,14 @@ async function saveTeam() {
     },
   ];
 
-  console.log(">>> Assistant coaches payload:", assistants);
-
-  for (const ac of assistants) {
-    console.log(">>> Checking assistant:", ac);
-
-    if (ac.hasLogin && ac.email) {
-      console.log(">>> Calling ensureCoachUser for assistant:", ac.email);
-      await ensureCoachUser(ac.name, ac.email, orgId, teamId);
+for (const ac of assistants) {
+if (ac.hasLogin && ac.email) {
+await ensureCoachUser(ac.name, ac.email, orgId, teamId);
     } else {
-      console.log(">>> Skipping assistant (no login or no email):", ac.email);
-    }
+}
   }
 
-  console.log(">>> saveTeam() COMPLETE — closing modal and reloading data");
-
-  AdminPage.closeModal();
+AdminPage.closeModal();
   AdminPage.loadData();
 }
 

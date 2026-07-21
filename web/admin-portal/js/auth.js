@@ -14,7 +14,7 @@ window.ROLES = {
 // Global notification fallback so pages can safely call showMessage.
 if (typeof window.showMessage !== "function") {
   window.showMessage = function (message, type = "info") {
-    const level = type === "error" ? "error" : "log";
+    const level = type === "error" ? "error" : "warn";
     console[level](`[${type}] ${message}`);
   };
 }
@@ -185,8 +185,7 @@ window.Auth = {
 };
 // GLOBAL logout function
 window.logout = function () {
-  console.log("🔥 logout() called");
-  localStorage.removeItem("nf_token");
+localStorage.removeItem("nf_token");
   localStorage.removeItem("nf_role");
 
   // Show toast if available

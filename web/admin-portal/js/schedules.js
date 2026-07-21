@@ -1,5 +1,3 @@
-console.log("🔥 schedules.js LOADED");
-
 // =========================================================
 // GAME SCHEDULES MODULE (UNIFIED MODAL SYSTEM)
 // Matches Org / Teams / Rosters / Players patterns
@@ -1175,9 +1173,7 @@ async function initSchedulesPage() {
   if (!document.getElementById("gamesGroupedList")) return;
 
   window.__schedulesPageInitialized = true;
-  console.log("schedules.js initialized");
-
-  document.getElementById("btnAddGame").onclick = openAddGame;
+document.getElementById("btnAddGame").onclick = openAddGame;
 
   document.getElementById("gameSave").onclick = saveGame;
   document.getElementById("gameCancel").onclick = closeGameModal;

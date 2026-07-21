@@ -1,5 +1,3 @@
-console.log("🔥 layout-loader.js loaded");
-
 // =========================================================
 // SHARED LAYOUT LOADER
 // =========================================================
@@ -94,7 +92,6 @@ document.addEventListener("click", (e) => {
   const logoutLink = e.target.closest("#sidebar-logout");
   if (logoutLink) {
     e.preventDefault();
-    console.log("🔓 Logout clicked");
-    logout();
+logout();
   }
 });

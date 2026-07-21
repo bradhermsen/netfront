@@ -81,22 +81,6 @@
   color: #ffd27a;
 }
 
-.settings-debug-banner {
-  margin-top: 8px;
-  padding: 10px 12px;
-  border: 1px dashed var(--nf-border-light);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--nf-text-muted);
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.settings-debug-banner.is-empty {
-  display: none;
-}
-
 .settings-media-add-wrap {
   display: flex;
   align-items: flex-end;

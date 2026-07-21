@@ -22,8 +22,7 @@ window.configReady = (async function loadConfig() {
     }
 
     window.apiBase = resolvedApiBase;
-    console.log("apiBase loaded:", window.apiBase);
-  } catch (err) {
+} catch (err) {
     console.error("Failed to load config.json", err);
   }
 })();

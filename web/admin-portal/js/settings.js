@@ -1,5 +1,3 @@
-console.log("settings.js loaded");
-
 let mediaOutletsState = [];
 
 (function checkPermission() {
@@ -13,7 +11,7 @@ function notifySettings(message, type = "info") {
     window.showMessage(message, type);
     return;
   }
-  console.log(`[${type}] ${message}`);
+  console[type === "error" ? "error" : "warn"](`[${type}] ${message}`);
 }
 
 async function initSettingsPage() {
@@ -89,15 +87,6 @@ function setSectionSaveStatus(section, message = "", state = "idle") {
   if (state === "success") el.classList.add("is-success");
   if (state === "error") el.classList.add("is-error");
   if (state === "working") el.classList.add("is-working");
-}
-
-function setMediaDebugBanner(message) {
-  const el = document.getElementById("settings-media-debug");
-  if (!el) return;
-
-  const text = String(message || "").trim();
-  el.textContent = text;
-  el.classList.toggle("is-empty", !text);
 }
 
 function isValidEmail(email) {
@@ -243,9 +232,6 @@ async function loadEmailSettings() {
       }
     }
     renderMediaOutlets();
-    setMediaDebugBanner(
-      `Loaded from /email/settings: ${JSON.stringify(mediaOutletsState, null, 2)}`,
-    );
 
     const passwordStatus = document.getElementById("smtp-password-status");
     if (passwordStatus) {
@@ -330,9 +316,6 @@ async function saveMediaOutletsSettings() {
     renderMediaOutlets();
     notifySettings("Media outlet recipients saved", "success");
     setSectionSaveStatus("media", "Media outlet recipients saved.", "success");
-    setMediaDebugBanner(
-      `Save response from media endpoint:\n${JSON.stringify(saved, null, 2)}`,
-    );
 
     try {
       await loadEmailSettings();

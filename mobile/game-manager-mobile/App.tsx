@@ -75,6 +75,41 @@ type NextGameLookupResult = {
 
 type DebugPayload = Record<string, unknown>;
 
+type SyncState = "up_to_date" | "syncing" | "queued" | "error";
+
+type CompleteGamePayload = {
+  notes: string;
+  suspensionNotes: Array<{
+    eventRef: string;
+    notes: string;
+  }>;
+  shotSummary: {
+    homeByPeriod: { p1: number; p2: number; p3: number; ot: number };
+    awayByPeriod: { p1: number; p2: number; p3: number; ot: number };
+    homeTotal: number;
+    awayTotal: number;
+  };
+  goalieSummaries: Array<Record<string, unknown>>;
+  emailDispatch: {
+    to: string[];
+    subject: string;
+  };
+};
+
+type CompletionResponse = {
+  emailRequested?: boolean;
+  emailSent?: boolean;
+  emailError?: string | null;
+};
+
+type PendingFinalizeRequest = {
+  gameId: string;
+  payload: CompleteGamePayload;
+  queuedAtIso: string;
+  attempts: number;
+  lastError?: string;
+};
+
 type RosterPlayer = {
   playerId: string;
   fullName: string;
@@ -194,6 +229,17 @@ type PenaltyAdjustModalState = {
   deltaSeconds: number;
 };
 
+type TimeoutModalState = {
+  visible: boolean;
+  teamSide: "home" | "away";
+  durationSeconds: number;
+  remainingSeconds: number;
+  isRunning: boolean;
+  period: number;
+  clockRemaining: string;
+  timeInPeriod: string;
+};
+
 type PeriodFlowState = "NOT_STARTED" | "IN_PROGRESS" | "INTERMISSION";
 
 type PeriodController = {
@@ -278,7 +324,7 @@ type ThemedDropdownState = {
 type GameFeedEvent = {
   localId: string;
   gameId: string;
-  eventType: "Goal" | "Penalty" | "Goalie";
+  eventType: "Goal" | "Penalty" | "Goalie" | "Timeout";
   teamId: string;
   teamName: string;
   playerId?: string;
@@ -296,6 +342,7 @@ type GameFeedEvent = {
   goalieOldName?: string;
   goalieNewName?: string;
   goalieChangeKind?: "change" | "pulled" | "returned";
+  timeoutDurationSeconds?: number;
   coincidental?: boolean;
   period: number;
   timeInPeriod: string;
@@ -388,7 +435,7 @@ type ActiveGameResume = {
   timestampIso: string;
 };
 
-const DEFAULT_LOCAL_API_BASE = "http://localhost:7071/api";
+const DEFAULT_PUBLIC_API_BASE = "https://api-dev.netfrontscoring.com/api";
 
 function getDefaultLanApiBase() {
   const hostUri =
@@ -412,6 +459,7 @@ const DEFAULT_LAN_API_BASE = getDefaultLanApiBase();
 const GOAL_OFFLINE_QUEUE_KEY = "netfront.goalOfflineQueue";
 const PENALTY_OFFLINE_QUEUE_KEY = "netfront.penaltyOfflineQueue";
 const GOALIE_OFFLINE_QUEUE_KEY = "netfront.goalieOfflineQueue";
+const FINALIZE_OFFLINE_QUEUE_KEY = "netfront.finalizeOfflineQueue";
 const ACTIVE_GAME_SNAPSHOT_KEY = "netfront.activeGameSnapshot";
 const ACTIVE_GAME_RESUME_KEY = "netfront.activeGameResume";
 const ACTIVE_GAME_MARKER_KEY = "netfront.activeGameMarker";
@@ -1176,7 +1224,7 @@ export default function App() {
   const [isClosedGameNotice, setIsClosedGameNotice] = useState(false);
   const [debugTrace, setDebugTrace] = useState<string[]>([]);
 
-  const [useLanApi, setUseLanApi] = useState(Platform.OS === "android");
+  const [useLanApi, setUseLanApi] = useState(false);
   const [lanApiBase, setLanApiBase] = useState(DEFAULT_LAN_API_BASE);
   const [activeRosterTeam, setActiveRosterTeam] = useState<"home" | "away">(
     "home",
@@ -1219,7 +1267,6 @@ export default function App() {
   const [goalModal, setGoalModal] = useState<GoalModalState | null>(null);
   const [resumeClockAfterGoalModal, setResumeClockAfterGoalModal] =
     useState(false);
-  const [isSavingGoal, setIsSavingGoal] = useState(false);
   const [goalModalError, setGoalModalError] = useState("");
   const [eventFeed, setEventFeed] = useState<GameFeedEvent[]>([]);
   const [playerStatsById, setPlayerStatsById] = useState<
@@ -1234,11 +1281,13 @@ export default function App() {
   );
   const [resumeClockAfterPenaltyModal, setResumeClockAfterPenaltyModal] =
     useState(false);
-  const [isSavingPenalty, setIsSavingPenalty] = useState(false);
   const [penaltyModalError, setPenaltyModalError] = useState("");
   const [showClockModal, setShowClockModal] = useState(false);
   const [clockModalMinutes, setClockModalMinutes] = useState(0);
   const [clockModalSeconds, setClockModalSeconds] = useState(0);
+  const [timeoutModal, setTimeoutModal] = useState<TimeoutModalState | null>(
+    null,
+  );
   const [penaltyAdjustModal, setPenaltyAdjustModal] =
     useState<PenaltyAdjustModalState | null>(null);
   const [periodController, setPeriodController] = useState<PeriodController>({
@@ -1282,7 +1331,7 @@ export default function App() {
   >([]);
   const [sendScoresheetError, setSendScoresheetError] = useState("");
   const [emailDeliveryStatus, setEmailDeliveryStatus] = useState<
-    "idle" | "sent" | "failed"
+    "idle" | "sent" | "failed" | "queued"
   >("idle");
   const [emailDeliveryMessage, setEmailDeliveryMessage] = useState("");
   const [isFinalizingGame, setIsFinalizingGame] = useState(false);
@@ -1291,13 +1340,45 @@ export default function App() {
   const [homeGoaliePulled, setHomeGoaliePulled] = useState(false);
   const [awayGoaliePulled, setAwayGoaliePulled] = useState(false);
   const [penaltyShotActive, setPenaltyShotActive] = useState(false);
+  const [syncState, setSyncState] = useState<SyncState>("up_to_date");
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const rosterScrollViewRef = useRef<ScrollView | null>(null);
   const rosterScrollOffsetRef = useRef(0);
+  const syncInFlightRef = useRef(false);
 
   const activeApiBase = useMemo(
-    () => (useLanApi ? lanApiBase : DEFAULT_LOCAL_API_BASE),
+    () => (useLanApi ? lanApiBase : DEFAULT_PUBLIC_API_BASE),
     [useLanApi, lanApiBase],
   );
+
+  const syncStatusText = useMemo(() => {
+    if (syncState === "syncing") {
+      return pendingSyncCount > 0
+        ? `Syncing (${pendingSyncCount} queued)`
+        : "Syncing";
+    }
+
+    if (syncState === "error") {
+      return pendingSyncCount > 0
+        ? `Sync Error (${pendingSyncCount} queued)`
+        : "Sync Error";
+    }
+
+    if (pendingSyncCount > 0 || syncState === "queued") {
+      return `Sync Queued (${pendingSyncCount})`;
+    }
+
+    return "Sync Up to Date";
+  }, [syncState, pendingSyncCount]);
+
+  const syncStatusStyle = useMemo(() => {
+    if (syncState === "syncing") return styles.scoreboardSyncInfo;
+    if (syncState === "error") return styles.scoreboardSyncError;
+    if (pendingSyncCount > 0 || syncState === "queued") {
+      return styles.scoreboardSyncQueued;
+    }
+    return styles.scoreboardSyncOk;
+  }, [syncState, pendingSyncCount]);
 
   const dashboardMatchupSummary = useMemo(() => {
     if (!session) return "";
@@ -1335,6 +1416,7 @@ export default function App() {
   const isGoalModalOpen = Boolean(goalModal?.visible);
   const isPenaltyModalOpen = Boolean(penaltyModal?.visible);
   const isGoalieModalOpen = Boolean(goalieModal?.visible);
+  const isTimeoutModalOpen = Boolean(timeoutModal?.visible);
   const isEventActionModalOpen = Boolean(eventActionModal?.visible);
   const isEventDeleteConfirmModalOpen = Boolean(
     eventDeleteConfirmModal?.visible,
@@ -1345,6 +1427,7 @@ export default function App() {
     isGoalModalOpen ||
     isPenaltyModalOpen ||
     isGoalieModalOpen ||
+    isTimeoutModalOpen ||
     isEventActionModalOpen ||
     isEventDeleteConfirmModalOpen ||
     isEventEditModalOpen ||
@@ -1486,6 +1569,16 @@ export default function App() {
         const rule = getPenaltyRule(event.penaltyType ?? "Minor");
         return rule.requiresRefereeNotes || rule.reviewRequired;
       }),
+    [penaltyEvents],
+  );
+
+  const dqEmailPenaltyEvents = useMemo(
+    () =>
+      penaltyEvents.filter(
+        (event) =>
+          normalizePenaltyType(event.penaltyType ?? "Minor") ===
+          "Disqualification",
+      ),
     [penaltyEvents],
   );
 
@@ -1899,10 +1992,20 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    if (stage !== "gameDashboard") return;
-    void flushOfflineGoalQueue();
-    void flushOfflinePenaltyQueue();
-    void flushOfflineGoalieQueue();
+    const allowBackgroundSync =
+      stage === "gameDashboard" ||
+      stage === "gameSummary" ||
+      stage === "sendScoresheet";
+    if (!allowBackgroundSync) return;
+
+    void refreshSyncStateFromQueue();
+    void flushAllOfflineQueues();
+
+    const syncTimer = setInterval(() => {
+      void flushAllOfflineQueues();
+    }, 7000);
+
+    return () => clearInterval(syncTimer);
   }, [stage, activeApiBase, nextGame?.gameId]);
 
   useEffect(() => {
@@ -2367,16 +2470,207 @@ export default function App() {
         : [];
       const next = [...existing, event];
       await storageSetItem(queueKey, JSON.stringify(next));
+      setSyncState("queued");
       trace(`${event.eventType.toLowerCase()}.offline.queued`, {
         localId: event.localId,
         queueLength: next.length,
       });
+      await refreshSyncStateFromQueue();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      setSyncState("error");
       trace(`${event.eventType.toLowerCase()}.offline.queue.error`, {
         message,
       });
     }
+  }
+
+  async function getQueuedEventsForKey(queueKey: string) {
+    const raw = await storageGetItem(queueKey);
+    if (!raw) return [] as GameFeedEvent[];
+
+    try {
+      const parsed = JSON.parse(raw) as GameFeedEvent[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async function getPendingFinalizeRequests() {
+    const raw = await storageGetItem(FINALIZE_OFFLINE_QUEUE_KEY);
+    if (!raw) return [] as PendingFinalizeRequest[];
+
+    try {
+      const parsed = JSON.parse(raw) as PendingFinalizeRequest[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async function savePendingFinalizeRequests(items: PendingFinalizeRequest[]) {
+    if (items.length === 0) {
+      await storageRemoveItem(FINALIZE_OFFLINE_QUEUE_KEY);
+      return;
+    }
+
+    await storageSetItem(FINALIZE_OFFLINE_QUEUE_KEY, JSON.stringify(items));
+  }
+
+  function isLikelyConnectivityError(message: string) {
+    return /network request failed|failed to fetch|networkerror|timed out/i.test(
+      message,
+    );
+  }
+
+  async function queuePendingFinalizeRequest(
+    gameId: string,
+    payload: CompleteGamePayload,
+    lastError: string,
+  ) {
+    const existing = await getPendingFinalizeRequests();
+    const withoutCurrent = existing.filter((item) => item.gameId !== gameId);
+
+    const previous = existing.find((item) => item.gameId === gameId);
+    const nextRecord: PendingFinalizeRequest = {
+      gameId,
+      payload,
+      queuedAtIso: previous?.queuedAtIso ?? new Date().toISOString(),
+      attempts: (previous?.attempts ?? 0) + 1,
+      lastError,
+    };
+
+    await savePendingFinalizeRequests([...withoutCurrent, nextRecord]);
+    setSyncState("queued");
+    await refreshSyncStateFromQueue();
+    trace("finalize.offline.queued", {
+      gameId,
+      attempts: nextRecord.attempts,
+    });
+  }
+
+  async function getPendingQueueCount() {
+    const [goalQueue, penaltyQueue, goalieQueue, finalizeQueue] =
+      await Promise.all([
+      getQueuedEventsForKey(GOAL_OFFLINE_QUEUE_KEY),
+      getQueuedEventsForKey(PENALTY_OFFLINE_QUEUE_KEY),
+      getQueuedEventsForKey(GOALIE_OFFLINE_QUEUE_KEY),
+      getPendingFinalizeRequests(),
+    ]);
+
+    return (
+      goalQueue.length +
+      penaltyQueue.length +
+      goalieQueue.length +
+      finalizeQueue.length
+    );
+  }
+
+  async function postCompletePayloadToBackend(
+    gameId: string,
+    completePayload: CompleteGamePayload,
+  ) {
+    const response = await fetch(`${activeApiBase}/games/${gameId}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(completePayload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to complete game (${response.status}).`);
+    }
+
+    return (await response.json()) as CompletionResponse;
+  }
+
+  async function flushPendingFinalizeQueue() {
+    try {
+      const queued = await getPendingFinalizeRequests();
+      if (queued.length === 0) return;
+
+      const unsent: PendingFinalizeRequest[] = [];
+      for (const request of queued) {
+        try {
+          const completion = await postCompletePayloadToBackend(
+            request.gameId,
+            request.payload,
+          );
+          if (completion?.emailRequested && !completion?.emailSent) {
+            unsent.push({
+              ...request,
+              attempts: request.attempts + 1,
+              lastError:
+                completion?.emailError ??
+                "Finalized but scoresheet email send failed.",
+            });
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          unsent.push({
+            ...request,
+            attempts: request.attempts + 1,
+            lastError: message,
+          });
+        }
+      }
+
+      await savePendingFinalizeRequests(unsent);
+      trace("finalize.offline.flush", {
+        attempted: queued.length,
+        remaining: unsent.length,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      trace("finalize.offline.flush.error", { message });
+      setSyncState("error");
+    }
+  }
+
+  async function refreshSyncStateFromQueue() {
+    try {
+      const totalPending = await getPendingQueueCount();
+      setPendingSyncCount(totalPending);
+
+      if (totalPending > 0) {
+        setSyncState("queued");
+        return;
+      }
+
+      setSyncState((prev) => (prev === "syncing" ? prev : "up_to_date"));
+    } catch {
+      setSyncState("error");
+    }
+  }
+
+  async function flushAllOfflineQueues() {
+    if (syncInFlightRef.current) return;
+    syncInFlightRef.current = true;
+
+    try {
+      const pendingBefore = await getPendingQueueCount();
+      setPendingSyncCount(pendingBefore);
+      if (pendingBefore === 0) {
+        setSyncState("up_to_date");
+        return;
+      }
+
+      setSyncState("syncing");
+      await flushOfflineGoalQueue();
+      await flushOfflinePenaltyQueue();
+      await flushOfflineGoalieQueue();
+      await flushPendingFinalizeQueue();
+      await refreshSyncStateFromQueue();
+    } catch {
+      setSyncState("error");
+    } finally {
+      syncInFlightRef.current = false;
+    }
+  }
+
+  async function handleManualSyncPress() {
+    await flushAllOfflineQueues();
+    await refreshSyncStateFromQueue();
   }
 
   async function postGoalToBackend(event: GameFeedEvent) {
@@ -2414,9 +2708,11 @@ export default function App() {
   }
 
   async function syncGoalEvent(event: GameFeedEvent) {
+    setSyncState("syncing");
     try {
       await postGoalToBackend(event);
       trace("goal.sync.success", { localId: event.localId });
+      await refreshSyncStateFromQueue();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       trace("goal.sync.failed", { localId: event.localId, message });
@@ -2562,9 +2858,11 @@ export default function App() {
   }
 
   async function syncPenaltyEvent(event: GameFeedEvent) {
+    setSyncState("syncing");
     try {
       await postPenaltyToBackend(event);
       trace("penalty.sync.success", { localId: event.localId });
+      await refreshSyncStateFromQueue();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       trace("penalty.sync.failed", { localId: event.localId, message });
@@ -2574,9 +2872,11 @@ export default function App() {
   }
 
   async function syncGoalieEvent(event: GameFeedEvent) {
+    setSyncState("syncing");
     try {
       await postGoalieToBackend(event);
       trace("goalie.sync.success", { localId: event.localId });
+      await refreshSyncStateFromQueue();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       trace("goalie.sync.failed", { localId: event.localId, message });
@@ -2766,11 +3066,9 @@ export default function App() {
       return next;
     });
 
-    setIsSavingGoal(true);
-    await syncGoalEvent(goalEvent);
-    setIsSavingGoal(false);
     setGoalModalError("");
     closeGoalModal();
+    void syncGoalEvent(goalEvent);
   }
 
   function getPenaltyDurationMinutes(penaltyType: string) {
@@ -2831,6 +3129,106 @@ export default function App() {
     setClockModalSeconds(parseClockToSeconds(session.clock) % 60);
     setShowClockModal(true);
   }
+
+  function openTimeoutModal() {
+    if (!session || !canControlGame(session.role)) return;
+    if (isClockRunning) return;
+
+    const periodLengthMinutes = getPeriodLengthMinutes(session.periodLength);
+    const elapsed = computeElapsedTime(periodLengthMinutes, session.clock);
+
+    setTimeoutModal({
+      visible: true,
+      teamSide: "home",
+      durationSeconds: 60,
+      remainingSeconds: 60,
+      isRunning: false,
+      period: session.period,
+      clockRemaining: session.clock,
+      timeInPeriod: elapsed,
+    });
+  }
+
+  function closeTimeoutModal() {
+    setTimeoutModal(null);
+  }
+
+  function adjustTimeoutDuration(deltaSeconds: number) {
+    setTimeoutModal((prev) => {
+      if (!prev) return prev;
+      if (prev.isRunning) return prev;
+      const next = Math.max(30, Math.min(600, prev.durationSeconds + deltaSeconds));
+      return {
+        ...prev,
+        durationSeconds: next,
+        remainingSeconds: next,
+      };
+    });
+  }
+
+  function startTimeoutCountdown() {
+    setTimeoutModal((prev) => {
+      if (!prev || prev.isRunning) return prev;
+      return {
+        ...prev,
+        isRunning: true,
+        remainingSeconds: prev.durationSeconds,
+      };
+    });
+  }
+
+  function saveTimeoutEvent() {
+    if (!timeoutModal || !nextGame?.gameId || !session) return;
+
+    const selectedTeamId = timeoutModal.teamSide === "home" ? homeTeamId : awayTeamId;
+    const selectedTeamName =
+      timeoutModal.teamSide === "home" ? session.homeTeam : session.awayTeam;
+
+    if (!selectedTeamId) {
+      closeTimeoutModal();
+      return;
+    }
+
+    const timeoutEvent: GameFeedEvent = {
+      localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      gameId: nextGame.gameId,
+      eventType: "Timeout",
+      teamId: selectedTeamId,
+      teamName: selectedTeamName,
+      timeoutDurationSeconds: timeoutModal.durationSeconds,
+      period: timeoutModal.period,
+      timeInPeriod: timeoutModal.timeInPeriod,
+      strength: "Even Strength",
+      createdAtIso: new Date().toISOString(),
+    };
+
+    addEventToFeed(timeoutEvent);
+    closeTimeoutModal();
+  }
+
+  useEffect(() => {
+    if (!timeoutModal?.visible || !timeoutModal.isRunning) return;
+    if (timeoutModal.remainingSeconds <= 0) return;
+
+    const timer = setTimeout(() => {
+      setTimeoutModal((prev) => {
+        if (!prev || !prev.visible || !prev.isRunning) return prev;
+        return {
+          ...prev,
+          remainingSeconds: Math.max(0, prev.remainingSeconds - 1),
+        };
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [timeoutModal?.visible, timeoutModal?.isRunning, timeoutModal?.remainingSeconds]);
+
+  useEffect(() => {
+    if (!timeoutModal?.visible || !timeoutModal.isRunning) return;
+    if (timeoutModal.remainingSeconds !== 0) return;
+
+    saveTimeoutEvent();
+  }, [timeoutModal?.visible, timeoutModal?.isRunning, timeoutModal?.remainingSeconds]);
 
   function applyScheduledPeriodLengthToClock() {
     if (!session) return;
@@ -3066,11 +3464,9 @@ export default function App() {
       ];
     });
 
-    setIsSavingPenalty(true);
-    await syncPenaltyEvent(penaltyEvent);
-    setIsSavingPenalty(false);
     setPenaltyModalError("");
     closePenaltyModal();
+    void syncPenaltyEvent(penaltyEvent);
   }
 
   function handleClockToggle() {
@@ -4307,12 +4703,11 @@ export default function App() {
     setShowEndOfRegulation(false);
     setGoalModal(null);
     setResumeClockAfterGoalModal(false);
-    setIsSavingGoal(false);
     setGoalModalError("");
     setPenaltyModal(null);
     setResumeClockAfterPenaltyModal(false);
-    setIsSavingPenalty(false);
     setPenaltyModalError("");
+    setTimeoutModal(null);
     setGoalieModal(null);
     setEventActionModal(null);
     setEventEditModal(null);
@@ -4331,6 +4726,8 @@ export default function App() {
     setEmailDeliveryMessage("");
     setIsFinalizingGame(false);
     setGameStartedAtIso(null);
+    setSyncState("up_to_date");
+    setPendingSyncCount(0);
     setEventFeed([]);
     setHomeShotsByPeriod({ 1: 0, 2: 0, 3: 0, OT: 0 });
     setAwayShotsByPeriod({ 1: 0, 2: 0, 3: 0, OT: 0 });
@@ -4438,7 +4835,7 @@ export default function App() {
       defaults[recipient.key] = isVarsityGame;
     }
 
-    if (gameDqPenaltyEvents.length > 0) {
+    if (dqEmailPenaltyEvents.length > 0) {
       for (const recipient of officialEmailRecipients) {
         defaults[recipient.key] = true;
       }
@@ -4493,7 +4890,7 @@ export default function App() {
     });
   }
 
-  async function completeGameInBackend(gameId: string) {
+  function buildCompleteGamePayload(): CompleteGamePayload {
     const selectedCoachRecipients = coachEmailRecipients.filter((recipient) =>
       Boolean(sendRecipientSelection[recipient.key]),
     );
@@ -4511,7 +4908,7 @@ export default function App() {
     );
 
     if (
-      gameDqPenaltyEvents.length > 0 &&
+      dqEmailPenaltyEvents.length > 0 &&
       selectedOfficialRecipients.length === 0 &&
       selectedCustomRecipients.length === 0
     ) {
@@ -4638,7 +5035,7 @@ export default function App() {
       };
     });
 
-    const completePayload = {
+    return {
       notes: notesBlocks.join("\n"),
       suspensionNotes: suspensionNoteEntries,
       shotSummary: {
@@ -4670,23 +5067,15 @@ export default function App() {
       },
     };
 
-    const response = await fetch(`${activeApiBase}/games/${gameId}/complete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(completePayload),
-    });
+  }
 
-    if (!response.ok) {
-      throw new Error(`Failed to complete game (${response.status}).`);
-    }
+  async function completeGameInBackend(
+    gameId: string,
+    payloadOverride?: CompleteGamePayload,
+  ) {
+    const completePayload = payloadOverride ?? buildCompleteGamePayload();
 
-    const completion = (await response.json()) as {
-      emailRequested?: boolean;
-      emailSent?: boolean;
-      emailError?: string | null;
-    };
-
-    return completion;
+    return await postCompletePayloadToBackend(gameId, completePayload);
   }
 
   async function handleSendScoresAndFinalize() {
@@ -4701,7 +5090,11 @@ export default function App() {
     setIsFinalizingGame(true);
 
     try {
-      const completion = await completeGameInBackend(nextGame.gameId);
+      const completePayload = buildCompleteGamePayload();
+      const completion = await completeGameInBackend(
+        nextGame.gameId,
+        completePayload,
+      );
 
       if (completion?.emailRequested && !completion?.emailSent) {
         const message =
@@ -4721,6 +5114,36 @@ export default function App() {
       }, 1300);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+
+      if (isLikelyConnectivityError(message)) {
+        try {
+          await queuePendingFinalizeRequest(
+            nextGame.gameId,
+            buildCompleteGamePayload(),
+            message,
+          );
+          setEmailDeliveryStatus("queued");
+          setEmailDeliveryMessage(
+            "Offline: finalization queued and will sync automatically when connection returns.",
+          );
+          setSendScoresheetError("");
+          setStage("gameSummary");
+          return;
+        } catch (queueErr) {
+          const queueMessage =
+            queueErr instanceof Error ? queueErr.message : String(queueErr);
+          setEmailDeliveryStatus("failed");
+          setEmailDeliveryMessage(
+            `Offline and unable to queue finalization: ${queueMessage}`,
+          );
+          setSendScoresheetError(
+            `Offline and unable to queue finalization: ${queueMessage}`,
+          );
+          trace("game.complete.queue.error", { message: queueMessage });
+          return;
+        }
+      }
+
       setEmailDeliveryStatus("failed");
       setEmailDeliveryMessage(message);
       setSendScoresheetError(message);
@@ -5093,7 +5516,7 @@ export default function App() {
                 onChangeText={(value) => {
                   if (useLanApi) setLanApiBase(value);
                 }}
-                placeholder="http://192.168.x.x:7071/api"
+                placeholder="https://api-dev.netfrontscoring.com/api"
                 placeholderTextColor="#7a8fa8"
               />
             </View>
@@ -6000,16 +6423,10 @@ export default function App() {
                     <Text style={styles.secondaryButtonText}>Cancel</Text>
                   </Pressable>
                   <Pressable
-                    style={[
-                      styles.primaryButton,
-                      isSavingGoal && styles.disabledButton,
-                    ]}
+                    style={styles.primaryButton}
                     onPress={saveGoalEvent}
-                    disabled={isSavingGoal}
                   >
-                    <Text style={styles.primaryButtonText}>
-                      {isSavingGoal ? "Saving..." : "Save Goal"}
-                    </Text>
+                    <Text style={styles.primaryButtonText}>Save Goal</Text>
                   </Pressable>
                 </View>
               </View>
@@ -6138,6 +6555,137 @@ export default function App() {
                     onPress={applyManualClockAdjustment}
                   >
                     <Text style={styles.primaryButtonText}>Apply Clock</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        ) : null}
+
+        {timeoutModal?.visible && session ? (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={closeTimeoutModal}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
+                <Text style={styles.goalModalTitle}>Team Timeout</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Capture timeout details and log to the selected team.
+                </Text>
+
+                <View style={styles.goalLockedGrid}>
+                  <View style={styles.goalLockedItem}>
+                    <Text style={styles.goalLockedLabel}>Period</Text>
+                    <Text style={styles.goalLockedValue}>{timeoutModal.period}</Text>
+                  </View>
+                  <View style={styles.goalLockedItem}>
+                    <Text style={styles.goalLockedLabel}>Time</Text>
+                    <Text style={styles.goalLockedValue}>{timeoutModal.timeInPeriod}</Text>
+                  </View>
+                  <View style={styles.goalLockedItem}>
+                    <Text style={styles.goalLockedLabel}>Clock Remaining</Text>
+                    <Text style={styles.goalLockedValue}>{timeoutModal.clockRemaining}</Text>
+                  </View>
+                  <View style={styles.goalLockedItem}>
+                    <Text style={styles.goalLockedLabel}>
+                      {timeoutModal.isRunning ? "Timeout Remaining" : "Timeout Length"}
+                    </Text>
+                    <Text style={styles.goalLockedValue}>
+                      {formatSecondsToClock(
+                        timeoutModal.isRunning
+                          ? timeoutModal.remainingSeconds
+                          : timeoutModal.durationSeconds,
+                      )}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.sectionLabel}>TEAM</Text>
+                <View style={styles.timeoutTeamRow}>
+                  <Pressable
+                    style={[
+                      styles.timeoutTeamBtn,
+                      timeoutModal.teamSide === "home" && styles.timeoutTeamBtnActive,
+                      timeoutModal.isRunning && styles.disabledButton,
+                    ]}
+                    disabled={timeoutModal.isRunning}
+                    onPress={() =>
+                      setTimeoutModal((prev) =>
+                        prev ? { ...prev, teamSide: "home" } : prev,
+                      )
+                    }
+                  >
+                    <Text style={styles.timeoutTeamBtnText}>{session.homeTeam}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.timeoutTeamBtn,
+                      timeoutModal.teamSide === "away" && styles.timeoutTeamBtnActive,
+                      timeoutModal.isRunning && styles.disabledButton,
+                    ]}
+                    disabled={timeoutModal.isRunning}
+                    onPress={() =>
+                      setTimeoutModal((prev) =>
+                        prev ? { ...prev, teamSide: "away" } : prev,
+                      )
+                    }
+                  >
+                    <Text style={styles.timeoutTeamBtnText}>{session.awayTeam}</Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.sectionLabel}>DURATION</Text>
+                <View style={styles.timeoutAdjustRow}>
+                  <Pressable
+                    style={[
+                      styles.penaltyAdjustModalBtnWide,
+                      timeoutModal.isRunning && styles.disabledButton,
+                    ]}
+                    disabled={timeoutModal.isRunning}
+                    onPress={() => adjustTimeoutDuration(-30)}
+                  >
+                    <Text style={styles.penaltyAdjustModalBtnText}>-30s</Text>
+                  </Pressable>
+                  <View style={styles.timeoutValueBox}>
+                    <Text style={styles.timeoutValueText}>
+                      {formatSecondsToClock(timeoutModal.durationSeconds)}
+                    </Text>
+                  </View>
+                  <Pressable
+                    style={[
+                      styles.penaltyAdjustModalBtnWide,
+                      timeoutModal.isRunning && styles.disabledButton,
+                    ]}
+                    disabled={timeoutModal.isRunning}
+                    onPress={() => adjustTimeoutDuration(30)}
+                  >
+                    <Text style={styles.penaltyAdjustModalBtnText}>+30s</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={closeTimeoutModal}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.primaryButton,
+                      timeoutModal.isRunning && styles.disabledButton,
+                    ]}
+                    disabled={timeoutModal.isRunning}
+                    onPress={startTimeoutCountdown}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {timeoutModal.isRunning ? "Timeout Running..." : "Start Timeout"}
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -6668,12 +7216,14 @@ export default function App() {
                 Edit or delete selected event.
               </Text>
               <View style={styles.rowButtons}>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={() => openEventEditModal(eventActionModal.event)}
-                >
-                  <Text style={styles.secondaryButtonText}>Edit Event</Text>
-                </Pressable>
+                {eventActionModal.event.eventType !== "Timeout" ? (
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={() => openEventEditModal(eventActionModal.event)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Edit Event</Text>
+                  </Pressable>
+                ) : null}
                 <Pressable
                   style={styles.secondaryButton}
                   onPress={requestDeleteSelectedEvent}
@@ -7386,16 +7936,10 @@ export default function App() {
                     <Text style={styles.secondaryButtonText}>Cancel</Text>
                   </Pressable>
                   <Pressable
-                    style={[
-                      styles.primaryButton,
-                      isSavingPenalty && styles.disabledButton,
-                    ]}
+                    style={styles.primaryButton}
                     onPress={savePenaltyEvent}
-                    disabled={isSavingPenalty}
                   >
-                    <Text style={styles.primaryButtonText}>
-                      {isSavingPenalty ? "Saving..." : "Save Penalty"}
-                    </Text>
+                    <Text style={styles.primaryButtonText}>Save Penalty</Text>
                   </Pressable>
                 </View>
               </View>
@@ -7582,9 +8126,26 @@ export default function App() {
                 <Text style={styles.scoreboardMeta}>
                   {session.gameTime} | {session.venue}
                 </Text>
-                <Text style={styles.scoreboardWarning}>
-                  Scoreboard Not Connected
-                </Text>
+                <View style={styles.scoreboardStatusBadges}>
+                  <Text style={styles.scoreboardWarning}>
+                    Scoreboard Not Connected
+                  </Text>
+                  <Text style={[styles.scoreboardSyncBadge, syncStatusStyle]}>
+                    {syncStatusText}
+                  </Text>
+                  <Pressable
+                    style={[
+                      styles.scoreboardSyncNowButton,
+                      syncState === "syncing" && styles.disabledButton,
+                    ]}
+                    onPress={() => void handleManualSyncPress()}
+                    disabled={syncState === "syncing"}
+                  >
+                    <Text style={styles.scoreboardSyncNowButtonText}>
+                      Sync Now
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
 
@@ -7690,7 +8251,7 @@ export default function App() {
                     <Pressable
                       style={[
                         styles.clockSecondaryBtn,
-                        styles.clockSingleWidthBtn,
+                        styles.clockHalfWidthBtn,
                         (isAnyModalOpen || isClockRunning) && styles.disabledButton,
                       ]}
                       disabled={isAnyModalOpen || isClockRunning}
@@ -7699,6 +8260,17 @@ export default function App() {
                       <Text style={styles.clockSecondaryText}>
                         Set/Edit Clock
                       </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.clockSecondaryBtn,
+                        styles.clockHalfWidthBtn,
+                        (isAnyModalOpen || isClockRunning) && styles.disabledButton,
+                      ]}
+                      disabled={isAnyModalOpen || isClockRunning}
+                      onPress={openTimeoutModal}
+                    >
+                      <Text style={styles.clockSecondaryText}>Timeout</Text>
                     </Pressable>
                   </View>
 
@@ -7892,63 +8464,78 @@ export default function App() {
                   No events yet. Tap + Goal or + Penalty to record one.
                 </Text>
               ) : (
-                safeEventFeed.slice(0, 10).map((event) => (
-                  <Pressable
-                    key={event.localId}
-                    style={styles.eventRow}
-                    onPress={() => openEventActions(event)}
-                  >
-                    <Text style={styles.eventTime}>
-                      P{event.period} {event.timeInPeriod}
-                    </Text>
-                    <View style={styles.eventBody}>
-                      {event.eventType === "Goal" ? (
-                        <>
-                          <Text style={styles.eventTitle}>
-                            {event.teamName} GOAL - {event.playerName}
-                          </Text>
-                          <Text style={styles.eventSubtitle}>
-                            {event.strength}
-                            {event.assist1Name
-                              ? ` • A1: ${event.assist1Name}`
-                              : ""}
-                            {event.assist2Name
-                              ? ` • A2: ${event.assist2Name}`
-                              : ""}
-                          </Text>
-                        </>
-                      ) : event.eventType === "Penalty" ? (
-                        <>
-                          <Text style={styles.eventTitle}>
-                            {event.teamName} PENALTY - {event.playerName}
-                          </Text>
-                          <Text style={styles.eventSubtitle}>
-                            {event.penaltyType} • {event.infraction} •{" "}
-                            {event.durationMinutes} min
-                          </Text>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={styles.eventTitle}>
-                            {event.teamName} GOALIE {" "}
-                            {event.goalieChangeKind === "returned"
-                              ? "RETURNED"
-                              : event.goalieChangeKind === "pulled"
-                                ? "PULLED"
-                                : event.goalieChangeKind?.toUpperCase()}
-                          </Text>
-                          <Text style={styles.eventSubtitle}>
-                            {event.goalieChangeKind === "pulled"
-                              ? `${event.goalieOldName ?? "-"} → Pulled`
-                              : event.goalieChangeKind === "returned"
-                                ? `Pulled → ${event.goalieNewName ?? "-"}`
-                                : `${event.goalieOldName ?? "-"} → ${event.goalieNewName ?? "-"}`}
-                          </Text>
-                        </>
-                      )}
-                    </View>
-                  </Pressable>
-                ))
+                <ScrollView
+                  style={styles.eventsListViewport}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                >
+                  {safeEventFeed.map((event) => (
+                    <Pressable
+                      key={event.localId}
+                      style={styles.eventRow}
+                      onPress={() => openEventActions(event)}
+                    >
+                      <Text style={styles.eventTime}>
+                        P{event.period} {event.timeInPeriod}
+                      </Text>
+                      <View style={styles.eventBody}>
+                        {event.eventType === "Goal" ? (
+                          <>
+                            <Text style={styles.eventTitle}>
+                              {event.teamName} GOAL - {event.playerName}
+                            </Text>
+                            <Text style={styles.eventSubtitle}>
+                              {event.strength}
+                              {event.assist1Name
+                                ? ` • A1: ${event.assist1Name}`
+                                : ""}
+                              {event.assist2Name
+                                ? ` • A2: ${event.assist2Name}`
+                                : ""}
+                            </Text>
+                          </>
+                        ) : event.eventType === "Penalty" ? (
+                          <>
+                            <Text style={styles.eventTitle}>
+                              {event.teamName} PENALTY - {event.playerName}
+                            </Text>
+                            <Text style={styles.eventSubtitle}>
+                              {event.penaltyType} • {event.infraction} •{" "}
+                              {event.durationMinutes} min
+                            </Text>
+                          </>
+                        ) : event.eventType === "Timeout" ? (
+                          <>
+                            <Text style={styles.eventTitle}>
+                              {event.teamName} TIMEOUT
+                            </Text>
+                            <Text style={styles.eventSubtitle}>
+                              Duration: {formatSecondsToClock(event.timeoutDurationSeconds ?? 60)}
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <Text style={styles.eventTitle}>
+                              {event.teamName} GOALIE {" "}
+                              {event.goalieChangeKind === "returned"
+                                ? "RETURNED"
+                                : event.goalieChangeKind === "pulled"
+                                  ? "PULLED"
+                                  : event.goalieChangeKind?.toUpperCase()}
+                            </Text>
+                            <Text style={styles.eventSubtitle}>
+                              {event.goalieChangeKind === "pulled"
+                                ? `${event.goalieOldName ?? "-"} → Pulled`
+                                : event.goalieChangeKind === "returned"
+                                  ? `Pulled → ${event.goalieNewName ?? "-"}`
+                                  : `${event.goalieOldName ?? "-"} → ${event.goalieNewName ?? "-"}`}
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
               )}
             </View>
 
@@ -8124,12 +8711,16 @@ export default function App() {
                   styles.emailStatusBadge,
                   emailDeliveryStatus === "sent"
                     ? styles.emailStatusBadgeSent
+                    : emailDeliveryStatus === "queued"
+                      ? styles.emailStatusBadgeQueued
                     : styles.emailStatusBadgeFailed,
                 ]}
               >
                 <Text style={styles.emailStatusBadgeTitle}>
                   {emailDeliveryStatus === "sent"
                     ? "Email Sent"
+                    : emailDeliveryStatus === "queued"
+                      ? "Finalize Queued"
                     : "Email Failed"}
                 </Text>
                 {emailDeliveryMessage ? (
@@ -8624,10 +9215,10 @@ export default function App() {
               {officialEmailRecipients.length === 0 ? (
                 <Text
                   style={
-                    gameDqPenaltyEvents.length > 0 ? styles.error : styles.footerHint
+                    dqEmailPenaltyEvents.length > 0 ? styles.error : styles.footerHint
                   }
                 >
-                  {gameDqPenaltyEvents.length > 0
+                  {dqEmailPenaltyEvents.length > 0
                     ? "DQ detected. No official emails are on file. Add them in Admin Officials or add one below."
                     : "No official emails are on file for this game."}
                 </Text>
@@ -9985,6 +10576,47 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 10,
   },
+  scoreboardStatusBadges: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  scoreboardSyncBadge: {
+    fontSize: 10,
+    fontWeight: "800",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  scoreboardSyncOk: {
+    backgroundColor: "#123c2a",
+    color: "#43d17d",
+  },
+  scoreboardSyncInfo: {
+    backgroundColor: "#11334f",
+    color: "#4eb4ff",
+  },
+  scoreboardSyncQueued: {
+    backgroundColor: "#4a3812",
+    color: "#ffbf47",
+  },
+  scoreboardSyncError: {
+    backgroundColor: "#4a1414",
+    color: "#ff6b6b",
+  },
+  scoreboardSyncNowButton: {
+    backgroundColor: "#193154",
+    borderWidth: 1,
+    borderColor: "#2f73c8",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  scoreboardSyncNowButtonText: {
+    color: "#9ed0ff",
+    fontSize: 10,
+    fontWeight: "800",
+  },
   gameClockShell: {
     borderWidth: 1,
     borderColor: "rgba(255,123,0,0.25)",
@@ -10308,6 +10940,49 @@ const styles = StyleSheet.create({
   clockHalfWidthBtn: {
     flex: 1,
   },
+  timeoutTeamRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  timeoutTeamBtn: {
+    flex: 1,
+    backgroundColor: "#1A2740",
+    borderWidth: 1,
+    borderColor: "rgba(255,123,0,0.2)",
+    borderRadius: 10,
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  timeoutTeamBtnActive: {
+    backgroundColor: "rgba(255,123,0,0.2)",
+    borderColor: "#FF7B00",
+  },
+  timeoutTeamBtnText: {
+    color: "#E8EDF5",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  timeoutAdjustRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  timeoutValueBox: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,123,0,0.25)",
+    backgroundColor: "#1A2740",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+  },
+  timeoutValueText: {
+    color: "#FF7B00",
+    fontSize: 18,
+    fontWeight: "800",
+  },
   clockSecondaryText: {
     color: "#E8EDF5",
     fontSize: 12,
@@ -10424,6 +11099,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#0B1424",
     paddingHorizontal: 10,
     paddingVertical: 12,
+  },
+  eventsListViewport: {
+    maxHeight: 330,
   },
   eventsHint: {
     color: "#7A8FA8",
@@ -11072,6 +11750,10 @@ const styles = StyleSheet.create({
   emailStatusBadgeFailed: {
     borderColor: "rgba(239,83,80,0.75)",
     backgroundColor: "rgba(239,83,80,0.16)",
+  },
+  emailStatusBadgeQueued: {
+    borderColor: "rgba(255,191,71,0.75)",
+    backgroundColor: "rgba(255,191,71,0.16)",
   },
   emailStatusBadgeTitle: {
     color: "#E8EDF5",

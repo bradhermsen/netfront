@@ -137,9 +137,36 @@ namespace NetFrontAPI.Functions
                 LEFT JOIN ConferenceDistricts cd ON t.ConferenceDistrictId = cd.Id
                 LEFT JOIN SectionRegions sr ON t.SectionRegionId = sr.Id
                 WHERE (g.HomeTeamId = @TeamId OR g.AwayTeamId = @TeamId)
-                  AND UPPER(ISNULL(g.Status, 'SCHEDULED')) NOT IN ('COMPLETED', 'CLOSED', 'FINAL')
-                  AND g.GameDateTime >= SYSUTCDATETIME()
-                ORDER BY g.GameDateTime ASC;";
+                                    AND UPPER(ISNULL(g.Status, 'SCHEDULED')) NOT IN (
+                                                'COMPLETED',
+                                                'CLOSED',
+                                                'FINAL',
+                                                'CANCELLED',
+                                                'CANCELED',
+                                                'POSTPONED',
+                                                'PPD'
+                                    )
+                                    AND (
+                                        CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date)
+                                        OR g.GameDateTime >= SYSUTCDATETIME()
+                                    )
+                                ORDER BY
+                                        CASE
+                                                WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date) THEN 0
+                                                ELSE 1
+                                        END,
+                                        CASE
+                                                WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date)
+                                                         AND g.GameDateTime >= SYSDATETIME() THEN 0
+                                                WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date) THEN 1
+                                                ELSE 0
+                                        END,
+                                        CASE
+                                                WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date)
+                                                        THEN ABS(DATEDIFF(MINUTE, SYSDATETIME(), g.GameDateTime))
+                                                ELSE DATEDIFF(MINUTE, SYSUTCDATETIME(), g.GameDateTime)
+                                        END,
+                                        g.GameDateTime ASC;";
 
             var nextGame = await conn.QueryFirstOrDefaultAsync<MobileNextGameDto>(sql, new { TeamId = teamId });
             if (nextGame == null)

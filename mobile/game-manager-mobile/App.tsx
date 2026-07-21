@@ -1219,7 +1219,7 @@ export default function App() {
   const [isNextGameLoading, setIsNextGameLoading] = useState(false);
   const [isRefreshingNextGame, setIsRefreshingNextGame] = useState(false);
   const [nextGameMessage, setNextGameMessage] = useState(
-    "No upcoming games scheduled.",
+    "No Scheduled Games Found",
   );
   const [isClosedGameNotice, setIsClosedGameNotice] = useState(false);
   const [debugTrace, setDebugTrace] = useState<string[]>([]);
@@ -4484,7 +4484,7 @@ export default function App() {
           setNextGameMessage(closedMessages[0]);
         } else {
           setIsClosedGameNotice(false);
-          setNextGameMessage("No upcoming games scheduled.");
+          setNextGameMessage("No Scheduled Games Found");
         }
         return;
       }
@@ -4536,7 +4536,7 @@ export default function App() {
       setNextGameMessage(
         isNetworkError
           ? `Unable to reach API at ${activeApiBase}. Verify API host/network settings.`
-          : "No upcoming games scheduled.",
+          : "No Scheduled Games Found",
       );
     } finally {
       trace("nextgame.load.complete", { refreshing });
@@ -4682,7 +4682,7 @@ export default function App() {
     setIsClosedGameNotice(false);
     setIsNextGameLoading(false);
     setIsRefreshingNextGame(false);
-    setNextGameMessage("No upcoming games scheduled.");
+    setNextGameMessage("No Scheduled Games Found");
     setIsRosterLoading(false);
     setRosterError("");
     setRostersByTeam({});

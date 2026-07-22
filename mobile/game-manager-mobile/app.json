@@ -7,12 +7,10 @@
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-
     "scheme": "netfront",
     "developmentClient": {
       "silentLaunch": false
     },
-
     "ios": {
       "supportsTablet": true
     },
@@ -28,6 +26,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3346e65f-4523-4dc2-bfae-88ddafc8674d"
+      }
     }
   }
 }

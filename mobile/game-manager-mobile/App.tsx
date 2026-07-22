@@ -790,10 +790,22 @@ function isGuid(value: string) {
 }
 
 function parseClockToSeconds(mmss: string): number {
-  const [mRaw, sRaw] = mmss.split(":");
-  const minutes = Number(mRaw ?? 0);
-  const seconds = Number(sRaw ?? 0);
-  return Math.max(0, minutes * 60 + seconds);
+  const value = (mmss ?? "").trim();
+  if (!value) return 0;
+
+  if (value.includes(":")) {
+    const [mRaw, sRaw] = value.split(":");
+    const minutes = Number(mRaw ?? 0);
+    const seconds = Number(sRaw ?? 0);
+    return Math.max(0, Math.floor(minutes * 60 + seconds));
+  }
+
+  const tenthsSeconds = Number(value);
+  if (Number.isFinite(tenthsSeconds)) {
+    return Math.max(0, Math.floor(tenthsSeconds));
+  }
+
+  return 0;
 }
 
 function formatSecondsToClock(totalSeconds: number): string {
@@ -801,6 +813,176 @@ function formatSecondsToClock(totalSeconds: number): string {
   const minutes = Math.floor(clamped / 60);
   const seconds = clamped % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatScoreboardClockFromMs(remainingTimeMs: number): string {
+  const clamped = Math.max(0, Math.floor(remainingTimeMs));
+
+  if (clamped > 60_000) {
+    const totalSeconds = Math.ceil(clamped / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  const seconds = Math.floor(clamped / 1000);
+  const tenths = Math.floor((clamped % 1000) / 100);
+  return `${String(seconds).padStart(2, "0")}.${tenths}`;
+}
+
+function clampMs(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, Math.floor(value)));
+}
+
+type HockeyGameClockOptions = {
+  initialPeriodDurationMs: number;
+  tickIntervalMs?: number;
+  onExpire?: () => void;
+};
+
+function useHockeyGameClock(options: HockeyGameClockOptions) {
+  const {
+    initialPeriodDurationMs,
+    tickIntervalMs = 250,
+    onExpire,
+  } = options;
+  const safeInitialDuration = Math.max(1000, Math.floor(initialPeriodDurationMs));
+
+  const [periodDurationMs, setPeriodDurationMs] = useState(safeInitialDuration);
+  const [pausedRemainingMs, setPausedRemainingMs] = useState(safeInitialDuration);
+  const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  const remainingTimeMs = useMemo(() => {
+    if (!isRunning || startTimestamp === null) {
+      return clampMs(pausedRemainingMs, 0, periodDurationMs);
+    }
+
+    const elapsed = now - startTimestamp;
+    return Math.max(0, periodDurationMs - elapsed);
+  }, [isRunning, startTimestamp, pausedRemainingMs, periodDurationMs, now]);
+
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, tickIntervalMs);
+
+    return () => clearInterval(timer);
+  }, [isRunning, tickIntervalMs]);
+
+  useEffect(() => {
+    if (!isRunning || remainingTimeMs > 0) return;
+
+    setIsRunning(false);
+    setStartTimestamp(null);
+    setPausedRemainingMs(0);
+    onExpire?.();
+  }, [isRunning, remainingTimeMs, onExpire]);
+
+  function setDuration(nextDurationMs: number) {
+    const safeDuration = Math.max(1000, Math.floor(nextDurationMs));
+    const nowTs = Date.now();
+
+    const currentRemaining =
+      isRunning && startTimestamp !== null
+        ? Math.max(0, periodDurationMs - (nowTs - startTimestamp))
+        : pausedRemainingMs;
+
+    const clampedRemaining = clampMs(currentRemaining, 0, safeDuration);
+
+    setPeriodDurationMs(safeDuration);
+    setPausedRemainingMs(clampedRemaining);
+
+    if (isRunning) {
+      setStartTimestamp(nowTs - (safeDuration - clampedRemaining));
+      setNow(nowTs);
+    }
+  }
+
+  function syncPausedRemaining(nextRemainingMs: number, nextDurationMs?: number) {
+    const safeDuration =
+      nextDurationMs == null
+        ? periodDurationMs
+        : Math.max(1000, Math.floor(nextDurationMs));
+    const clamped = clampMs(nextRemainingMs, 0, safeDuration);
+
+    if (nextDurationMs != null) {
+      setPeriodDurationMs(safeDuration);
+    }
+
+    setPausedRemainingMs(clamped);
+
+    if (isRunning) {
+      const nowTs = Date.now();
+      setStartTimestamp(nowTs - (safeDuration - clamped));
+      setNow(nowTs);
+    }
+  }
+
+  function pause() {
+    if (!isRunning) return;
+
+    const nowTs = Date.now();
+    const remaining =
+      startTimestamp === null
+        ? pausedRemainingMs
+        : Math.max(0, periodDurationMs - (nowTs - startTimestamp));
+
+    setPausedRemainingMs(clampMs(remaining, 0, periodDurationMs));
+    setStartTimestamp(null);
+    setIsRunning(false);
+    setNow(nowTs);
+  }
+
+  function resume() {
+    if (isRunning) return;
+
+    const safeRemaining = clampMs(pausedRemainingMs, 0, periodDurationMs);
+    const nowTs = Date.now();
+
+    // Resume by reconstructing elapsed time from the remaining value.
+    setStartTimestamp(nowTs - (periodDurationMs - safeRemaining));
+    setNow(nowTs);
+    setIsRunning(true);
+  }
+
+  function stop() {
+    setIsRunning(false);
+    setStartTimestamp(null);
+  }
+
+  function start(nextPeriodDurationMs: number, nextRemainingMs?: number) {
+    const safeDuration = Math.max(1000, Math.floor(nextPeriodDurationMs));
+    const safeRemaining = clampMs(
+      nextRemainingMs == null ? safeDuration : nextRemainingMs,
+      0,
+      safeDuration,
+    );
+    const nowTs = Date.now();
+
+    setPeriodDurationMs(safeDuration);
+    setPausedRemainingMs(safeRemaining);
+    setStartTimestamp(nowTs - (safeDuration - safeRemaining));
+    setNow(nowTs);
+    setIsRunning(true);
+  }
+
+  return {
+    isRunning,
+    periodDurationMs,
+    pausedRemainingMs,
+    remainingTimeMs,
+    displayTime: formatScoreboardClockFromMs(remainingTimeMs),
+    setDuration,
+    syncPausedRemaining,
+    pause,
+    resume,
+    stop,
+    start,
+  };
 }
 
 function getPeriodLengthMinutes(periodLengthLabel: string): number {
@@ -864,6 +1046,17 @@ function formatTimeOnly(value: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function shouldRefreshFarFutureNextGame(nextGame: NextGame | null | undefined) {
+  if (!nextGame?.startTime) return false;
+
+  const start = new Date(nextGame.startTime);
+  if (Number.isNaN(start.getTime())) return true;
+
+  const daysAhead =
+    (start.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  return daysAhead > 30;
 }
 
 function formatPlayerPickerLabel(player: RosterPlayer) {
@@ -1345,6 +1538,16 @@ export default function App() {
   const rosterScrollViewRef = useRef<ScrollView | null>(null);
   const rosterScrollOffsetRef = useRef(0);
   const syncInFlightRef = useRef(false);
+  const penaltyClockPrevRemainingMsRef = useRef<number | null>(null);
+
+  const gameClock = useHockeyGameClock({
+    initialPeriodDurationMs: 17 * 60 * 1000,
+    tickIntervalMs: 250,
+    onExpire: () => {
+      setIsClockRunning(false);
+      setShowPeriodOverVerify(true);
+    },
+  });
 
   const activeApiBase = useMemo(
     () => (useLanApi ? lanApiBase : DEFAULT_PUBLIC_API_BASE),
@@ -1940,55 +2143,110 @@ export default function App() {
 
       return () => clearInterval(timer);
     }
-
-    if (!isClockRunning || isAnyModalOpen) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setSession((prev) => {
-        if (!prev) return prev;
-        const remainingSeconds = parseClockToSeconds(prev.clock);
-        if (remainingSeconds <= 0) {
-          setIsClockRunning(false);
-          return prev;
-        }
-
-        const nextRemaining = remainingSeconds - 1;
-        if (nextRemaining <= 0) {
-          setIsClockRunning(false);
-          setShowPeriodOverVerify(true);
-        }
-
-        return {
-          ...prev,
-          clock: formatSecondsToClock(nextRemaining),
-        };
-      });
-
-      setActivePenalties((prev) => {
-        if (periodController.state !== "IN_PROGRESS") return prev;
-        return prev.map((penalty) => {
-          const rewindBufferSeconds = Math.max(0, penalty.durationMinutes * 60);
-          return {
-            ...penalty,
-            remainingSeconds: Math.max(
-              -rewindBufferSeconds,
-              penalty.remainingSeconds - 1,
-            ),
-          };
-        });
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
   }, [
     session,
     stage,
-    isClockRunning,
-    isAnyModalOpen,
     periodController.state,
     updateSession,
+  ]);
+
+  useEffect(() => {
+    if (
+      !session ||
+      stage !== "gameDashboard" ||
+      periodController.state === "INTERMISSION"
+    ) {
+      return;
+    }
+
+    if (session.clock !== gameClock.displayTime) {
+      updateSession({ clock: gameClock.displayTime });
+    }
+  }, [session, stage, periodController.state, gameClock.displayTime]);
+
+  useEffect(() => {
+    if (!session || stage !== "gameDashboard") return;
+
+    const periodDurationMs =
+      getPeriodLengthMinutes(session.periodLength) * 60 * 1000;
+    gameClock.setDuration(periodDurationMs);
+
+    if (!isClockRunning) {
+      const sessionRemainingMs = parseClockToSeconds(session.clock) * 1000;
+      gameClock.syncPausedRemaining(sessionRemainingMs, periodDurationMs);
+    }
+  }, [stage, session?.period, session?.periodLength]);
+
+  useEffect(() => {
+    if (stage !== "gameDashboard" || periodController.state !== "IN_PROGRESS") {
+      penaltyClockPrevRemainingMsRef.current = null;
+      return;
+    }
+
+    const currentRemainingMs = gameClock.remainingTimeMs;
+    const prevRemainingMs = penaltyClockPrevRemainingMsRef.current;
+    penaltyClockPrevRemainingMsRef.current = currentRemainingMs;
+
+    if (
+      !isClockRunning ||
+      !gameClock.isRunning ||
+      isAnyModalOpen ||
+      prevRemainingMs == null
+    ) {
+      return;
+    }
+
+    const elapsedWholeSeconds = Math.floor(
+      Math.max(0, prevRemainingMs - currentRemainingMs) / 1000,
+    );
+    if (elapsedWholeSeconds <= 0) return;
+
+    setActivePenalties((prev) => {
+      if (periodController.state !== "IN_PROGRESS") return prev;
+      return prev.map((penalty) => {
+        const rewindBufferSeconds = Math.max(0, penalty.durationMinutes * 60);
+        return {
+          ...penalty,
+          remainingSeconds: Math.max(
+            -rewindBufferSeconds,
+            penalty.remainingSeconds - elapsedWholeSeconds,
+          ),
+        };
+      });
+    });
+  }, [
+    stage,
+    periodController.state,
+    gameClock.remainingTimeMs,
+    gameClock.isRunning,
+    isClockRunning,
+    isAnyModalOpen,
+  ]);
+
+  useEffect(() => {
+    if (stage !== "gameDashboard" || periodController.state !== "IN_PROGRESS") {
+      return;
+    }
+
+    if (isClockRunning && isAnyModalOpen && gameClock.isRunning) {
+      gameClock.pause();
+      return;
+    }
+
+    if (isClockRunning && !isAnyModalOpen && !gameClock.isRunning) {
+      gameClock.resume();
+      return;
+    }
+
+    if (!isClockRunning && gameClock.isRunning) {
+      gameClock.pause();
+    }
+  }, [
+    stage,
+    periodController.state,
+    isClockRunning,
+    isAnyModalOpen,
+    gameClock.isRunning,
   ]);
 
   useEffect(() => {
@@ -3233,6 +3491,8 @@ export default function App() {
   function applyScheduledPeriodLengthToClock() {
     if (!session) return;
     const scheduledSeconds = getPeriodLengthMinutes(session.periodLength) * 60;
+    const scheduledMs = scheduledSeconds * 1000;
+    gameClock.syncPausedRemaining(scheduledMs, scheduledMs);
     updateSession({ clock: formatSecondsToClock(scheduledSeconds) });
     setClockModalMinutes(Math.floor(scheduledSeconds / 60));
     setClockModalSeconds(scheduledSeconds % 60);
@@ -3337,6 +3597,10 @@ export default function App() {
     const nextSeconds = Math.max(0, clockModalMinutes * 60 + clockModalSeconds);
     const deltaSeconds = nextSeconds - currentSeconds;
     shiftPenaltyTimersForClockAdjustment(deltaSeconds);
+    gameClock.syncPausedRemaining(
+      nextSeconds * 1000,
+      getPeriodLengthMinutes(session.periodLength) * 60 * 1000,
+    );
     updateSession({ clock: formatSecondsToClock(nextSeconds) });
     setShowClockModal(false);
   }
@@ -3476,11 +3740,25 @@ export default function App() {
       setPeriodController((prev) => ({ ...prev, state: "IN_PROGRESS" }));
     }
 
-    setIsClockRunning((prev) => !prev);
+    const periodDurationMs =
+      getPeriodLengthMinutes(session.periodLength) * 60 * 1000;
+
+    if (isClockRunning) {
+      gameClock.pause();
+      setIsClockRunning(false);
+      return;
+    }
+
+    gameClock.setDuration(periodDurationMs);
+    gameClock.syncPausedRemaining(parseClockToSeconds(session.clock) * 1000, periodDurationMs);
+    gameClock.resume();
+    setIsClockRunning(true);
   }
 
   function startIntermission() {
     setIsClockRunning(false);
+    gameClock.pause();
+    gameClock.syncPausedRemaining(0, gameClock.periodDurationMs);
     setIntermissionSeconds(0);
     setPeriodController((prev) => ({ ...prev, state: "INTERMISSION" }));
     updateSession({ clock: "00:00" });
@@ -3519,6 +3797,9 @@ export default function App() {
       period: nextPeriod,
       clock: resetClock,
     });
+    const resetMs = getPeriodLengthMinutes(session.periodLength) * 60 * 1000;
+    gameClock.syncPausedRemaining(resetMs, resetMs);
+    gameClock.pause();
     setPeriodController((prev) => ({ ...prev, state: "IN_PROGRESS" }));
     setIntermissionSeconds(0);
     setIsClockRunning(false);
@@ -3533,6 +3814,8 @@ export default function App() {
     });
     setIntermissionSeconds(0);
     setIsClockRunning(false);
+    gameClock.pause();
+    gameClock.syncPausedRemaining(0, gameClock.periodDurationMs);
     updateSession({ clock: "00:00" });
   }
 
@@ -4588,30 +4871,44 @@ export default function App() {
 
     const snapshot = await loadActiveGameSnapshot();
     if (snapshot && snapshot.stage === "gameDashboard") {
-      setRestoreStatus("restored-snapshot");
-      restoreActiveGameSnapshot(snapshot, accessCode);
-      return;
+      if (shouldRefreshFarFutureNextGame(snapshot.nextGame)) {
+        trace("activegame.snapshot.stale", {
+          startTime: snapshot.nextGame?.startTime ?? null,
+        });
+        await clearActiveGameSnapshot();
+      } else {
+        setRestoreStatus("restored-snapshot");
+        restoreActiveGameSnapshot(snapshot, accessCode);
+        return;
+      }
     }
 
     const resumeSnapshot = await loadActiveGameResume();
     if (resumeSnapshot) {
-      setRestoreStatus("restored-resume");
-      setSession({
-        ...resumeSnapshot.session,
-        code: accessCode,
-        apiBase: activeApiBase,
-      });
-      setGameStartedAtIso(resumeSnapshot.gameStartedAtIso ?? null);
-      setNextGame(resumeSnapshot.nextGame ?? null);
-      setGameHasEnded(false);
-      setStage("gameDashboard");
-      if (resumeSnapshot.nextGame) {
-        void loadRosterAndCoaches(resumeSnapshot.nextGame);
+      if (shouldRefreshFarFutureNextGame(resumeSnapshot.nextGame)) {
+        trace("activegame.resume.stale", {
+          startTime: resumeSnapshot.nextGame?.startTime ?? null,
+        });
+        await clearActiveGameSnapshot();
+      } else {
+        setRestoreStatus("restored-resume");
+        setSession({
+          ...resumeSnapshot.session,
+          code: accessCode,
+          apiBase: activeApiBase,
+        });
+        setGameStartedAtIso(resumeSnapshot.gameStartedAtIso ?? null);
+        setNextGame(resumeSnapshot.nextGame ?? null);
+        setGameHasEnded(false);
+        setStage("gameDashboard");
+        if (resumeSnapshot.nextGame) {
+          void loadRosterAndCoaches(resumeSnapshot.nextGame);
+        }
+        trace("activegame.resume.restored", {
+          gameId: resumeSnapshot.nextGame?.gameId ?? null,
+        });
+        return;
       }
-      trace("activegame.resume.restored", {
-        gameId: resumeSnapshot.nextGame?.gameId ?? null,
-      });
-      return;
     }
 
     const hasMarker = await hasActiveGameMarker();
@@ -4675,6 +4972,8 @@ export default function App() {
 
   async function logout() {
     await clearActiveGameSnapshot();
+    gameClock.stop();
+    gameClock.syncPausedRemaining(17 * 60 * 1000, 17 * 60 * 1000);
     setStage("login");
     setSession(null);
     setGameHasEnded(false);
@@ -4805,6 +5104,7 @@ export default function App() {
 
   function finalizeGameToSummary() {
     setIsClockRunning(false);
+    gameClock.pause();
     setPeriodController((prev) => ({ ...prev, state: "NOT_STARTED" }));
     setGameHasEnded(true);
     setEmailDeliveryStatus("idle");
@@ -5390,6 +5690,10 @@ export default function App() {
         ),
         period: 1,
       };
+      const startedPeriodMs =
+        getPeriodLengthMinutes(session.periodLength) * 60 * 1000;
+      gameClock.syncPausedRemaining(startedPeriodMs, startedPeriodMs);
+      gameClock.pause();
       setSession(startedSession);
       setPeriodController({ state: "NOT_STARTED", isOvertime: false });
       setIntermissionSeconds(0);

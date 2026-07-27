@@ -408,7 +408,7 @@ namespace NetFrontAPI.Services
                                 {
                                     foreach (var player in report.HomeRoster)
                                     {
-                                        homeCol.Item().Text($"- {FormatNumberAndName(player.JerseyNumber, player.PlayerName)}{(player.IsGoalie ? " (Goalie)" : string.Empty)}");
+                                        homeCol.Item().Text($"{FormatNumberAndName(player.JerseyNumber, player.PlayerName)}{(player.IsGoalie ? " (Goalie)" : string.Empty)}");
                                     }
                                 }
                             });
@@ -432,7 +432,7 @@ namespace NetFrontAPI.Services
                             });
                         });
 
-                        col.Item().PaddingTop(6).Text("Game Officials and Suspension Review").Bold().FontSize(11);
+                        col.Item().PaddingTop(6).Text("Game Officials and Infraction Review").Bold().FontSize(11);
                         col.Item().Text("Game Officials Names").Bold();
                         if (report.Officials.Count == 0)
                         {
@@ -446,11 +446,11 @@ namespace NetFrontAPI.Services
                             }
                         }
 
-                        col.Item().PaddingTop(2).Text("Suspension Review Flags and Notes").Bold();
+                        col.Item().PaddingTop(2).Text("Infraction Review Flags and Notes").Bold();
                         var renderedSuspensionLines = 0;
                         if (report.SuspensionReviews.Count == 0)
                         {
-                            col.Item().Text("No suspension review flags or notes.");
+                            col.Item().Text("No infraction review flags or notes.");
                         }
                         else
                         {
@@ -466,7 +466,7 @@ namespace NetFrontAPI.Services
 
                             if (renderedSuspensionLines == 0)
                             {
-                                col.Item().Text("No suspension review flags or notes.");
+                                col.Item().Text("No infraction review flags or notes.");
                             }
                         }
                     });
@@ -837,8 +837,8 @@ namespace NetFrontAPI.Services
                     Path.Combine(cwd, "..", "..", "web", "shared", "styles", "NF_Logo_Default.png"),
                     Path.Combine(baseDir, "web", "shared", "styles", "NF_Logo_Default.png"),
                     Path.Combine(baseDir, "..", "..", "..", "..", "web", "shared", "styles", "NF_Logo_Default.png"),
-                    Path.Combine(baseDir, "Assets", "netfront-logo.png"),
-                    Path.Combine(Directory.GetCurrentDirectory(), "Assets", "netfront-logo.png")
+                    Path.Combine(baseDir, "Assets", "NF_Logo_Default.png"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "Assets", "NF_Logo_Default.png")
                 };
 
                 var file = candidates.FirstOrDefault(File.Exists);

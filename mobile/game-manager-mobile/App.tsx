@@ -563,6 +563,7 @@ const QUICK_PICK_INFRACTIONS = [
   "Interference",
   "Cross-Checking",
   "High-Sticking",
+  "Body Checking",
   "Checking from Behind",
 ] as const;
 
@@ -581,7 +582,6 @@ const ALL_HOCKEY_INFRACTIONS = [
   "Unsportsmanlike Conduct",
   "Abuse of Officials",
   "Attempt to Injure",
-  "Body Checking",
   "Butt-Ending",
   "Clearing the Bench",
   "Deliberate Injury",
@@ -589,6 +589,20 @@ const ALL_HOCKEY_INFRACTIONS = [
   "Illegal Equipment",
   "Leaving the Bench",
   "Spearing",
+  "Throwing the Stick",
+  "Holding the Stick",
+  "Playing with a Broken Stick",
+  "Faceoff Violation",
+  "Illegal Hand Pass",
+  "Participating in Play While Off the Ice",
+  "Failure to Wear Required Equipment",
+  "Wearing Non-Certified Equipment",
+  "Obscene Gestures",
+  "Profanity",
+  "Taunting",
+  "Verbal Abuse",
+  "Continuing an Altercation",
+  "Interference by Spectators",
 ];
 
 const ALL_HOCKEY_INFRACTIONS_SORTED = [...new Set(ALL_HOCKEY_INFRACTIONS)].sort(
@@ -841,15 +855,15 @@ type HockeyGameClockOptions = {
 };
 
 function useHockeyGameClock(options: HockeyGameClockOptions) {
-  const {
-    initialPeriodDurationMs,
-    tickIntervalMs = 250,
-    onExpire,
-  } = options;
-  const safeInitialDuration = Math.max(1000, Math.floor(initialPeriodDurationMs));
+  const { initialPeriodDurationMs, tickIntervalMs = 250, onExpire } = options;
+  const safeInitialDuration = Math.max(
+    1000,
+    Math.floor(initialPeriodDurationMs),
+  );
 
   const [periodDurationMs, setPeriodDurationMs] = useState(safeInitialDuration);
-  const [pausedRemainingMs, setPausedRemainingMs] = useState(safeInitialDuration);
+  const [pausedRemainingMs, setPausedRemainingMs] =
+    useState(safeInitialDuration);
   const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -902,7 +916,10 @@ function useHockeyGameClock(options: HockeyGameClockOptions) {
     }
   }
 
-  function syncPausedRemaining(nextRemainingMs: number, nextDurationMs?: number) {
+  function syncPausedRemaining(
+    nextRemainingMs: number,
+    nextDurationMs?: number,
+  ) {
     const safeDuration =
       nextDurationMs == null
         ? periodDurationMs
@@ -1054,8 +1071,7 @@ function shouldRefreshFarFutureNextGame(nextGame: NextGame | null | undefined) {
   const start = new Date(nextGame.startTime);
   if (Number.isNaN(start.getTime())) return true;
 
-  const daysAhead =
-    (start.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  const daysAhead = (start.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
   return daysAhead > 30;
 }
 
@@ -2108,7 +2124,8 @@ export default function App() {
         const email = (official.officialEmail ?? "").trim();
         return {
           key: `official:${official.officialId ?? official.role ?? index}:${email.toLowerCase()}`,
-          recipientName: official.officialName || toOfficialRoleLabel(official.role),
+          recipientName:
+            official.officialName || toOfficialRoleLabel(official.role),
           recipientMeta: `${toOfficialRoleLabel(official.role)} • ${email || "No email on file"}`,
           email,
         };
@@ -2143,12 +2160,7 @@ export default function App() {
 
       return () => clearInterval(timer);
     }
-  }, [
-    session,
-    stage,
-    periodController.state,
-    updateSession,
-  ]);
+  }, [session, stage, periodController.state, updateSession]);
 
   useEffect(() => {
     if (
@@ -2680,7 +2692,8 @@ export default function App() {
   function autoReturnPulledGoalieIfNeeded(scoringTeamId: string) {
     if (!session) return;
 
-    const defendingTeamId = scoringTeamId === homeTeamId ? awayTeamId : homeTeamId;
+    const defendingTeamId =
+      scoringTeamId === homeTeamId ? awayTeamId : homeTeamId;
     const defendingTeamName =
       scoringTeamId === homeTeamId ? session.awayTeam : session.homeTeam;
     const defendingGoaliePulled =
@@ -2811,11 +2824,11 @@ export default function App() {
   async function getPendingQueueCount() {
     const [goalQueue, penaltyQueue, goalieQueue, finalizeQueue] =
       await Promise.all([
-      getQueuedEventsForKey(GOAL_OFFLINE_QUEUE_KEY),
-      getQueuedEventsForKey(PENALTY_OFFLINE_QUEUE_KEY),
-      getQueuedEventsForKey(GOALIE_OFFLINE_QUEUE_KEY),
-      getPendingFinalizeRequests(),
-    ]);
+        getQueuedEventsForKey(GOAL_OFFLINE_QUEUE_KEY),
+        getQueuedEventsForKey(PENALTY_OFFLINE_QUEUE_KEY),
+        getQueuedEventsForKey(GOALIE_OFFLINE_QUEUE_KEY),
+        getPendingFinalizeRequests(),
+      ]);
 
     return (
       goalQueue.length +
@@ -3415,7 +3428,10 @@ export default function App() {
     setTimeoutModal((prev) => {
       if (!prev) return prev;
       if (prev.isRunning) return prev;
-      const next = Math.max(30, Math.min(600, prev.durationSeconds + deltaSeconds));
+      const next = Math.max(
+        30,
+        Math.min(600, prev.durationSeconds + deltaSeconds),
+      );
       return {
         ...prev,
         durationSeconds: next,
@@ -3438,7 +3454,8 @@ export default function App() {
   function saveTimeoutEvent() {
     if (!timeoutModal || !nextGame?.gameId || !session) return;
 
-    const selectedTeamId = timeoutModal.teamSide === "home" ? homeTeamId : awayTeamId;
+    const selectedTeamId =
+      timeoutModal.teamSide === "home" ? homeTeamId : awayTeamId;
     const selectedTeamName =
       timeoutModal.teamSide === "home" ? session.homeTeam : session.awayTeam;
 
@@ -3479,14 +3496,22 @@ export default function App() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [timeoutModal?.visible, timeoutModal?.isRunning, timeoutModal?.remainingSeconds]);
+  }, [
+    timeoutModal?.visible,
+    timeoutModal?.isRunning,
+    timeoutModal?.remainingSeconds,
+  ]);
 
   useEffect(() => {
     if (!timeoutModal?.visible || !timeoutModal.isRunning) return;
     if (timeoutModal.remainingSeconds !== 0) return;
 
     saveTimeoutEvent();
-  }, [timeoutModal?.visible, timeoutModal?.isRunning, timeoutModal?.remainingSeconds]);
+  }, [
+    timeoutModal?.visible,
+    timeoutModal?.isRunning,
+    timeoutModal?.remainingSeconds,
+  ]);
 
   function applyScheduledPeriodLengthToClock() {
     if (!session) return;
@@ -3582,7 +3607,8 @@ export default function App() {
   }
 
   function applyPenaltyAdjustModal() {
-    if (!penaltyAdjustModal || !session || !canControlGame(session.role)) return;
+    if (!penaltyAdjustModal || !session || !canControlGame(session.role))
+      return;
 
     adjustPenaltyRemainingTime(
       penaltyAdjustModal.penaltyId,
@@ -3750,7 +3776,10 @@ export default function App() {
     }
 
     gameClock.setDuration(periodDurationMs);
-    gameClock.syncPausedRemaining(parseClockToSeconds(session.clock) * 1000, periodDurationMs);
+    gameClock.syncPausedRemaining(
+      parseClockToSeconds(session.clock) * 1000,
+      periodDurationMs,
+    );
     gameClock.resume();
     setIsClockRunning(true);
   }
@@ -4500,9 +4529,12 @@ export default function App() {
   }
 
   async function markGameInProgress(gameId: string) {
-    const response = await fetch(`${activeApiBase}/games/${gameId}/start-mobile`, {
-      method: "POST",
-    });
+    const response = await fetch(
+      `${activeApiBase}/games/${gameId}/start-mobile`,
+      {
+        method: "POST",
+      },
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to mark game in progress (${response.status}).`);
@@ -4521,14 +4553,19 @@ export default function App() {
     setRosterError("");
 
     try {
-      const [homeRoster, awayRoster, homeCoaches, awayCoaches, mediaRecipients] =
-        await Promise.all([
-          fetchRosterForTeam(homeId),
-          fetchRosterForTeam(awayId),
-          fetchCoachesForTeam(homeId),
-          fetchCoachesForTeam(awayId),
-          fetchMediaOutlets().catch(() => []),
-        ]);
+      const [
+        homeRoster,
+        awayRoster,
+        homeCoaches,
+        awayCoaches,
+        mediaRecipients,
+      ] = await Promise.all([
+        fetchRosterForTeam(homeId),
+        fetchRosterForTeam(awayId),
+        fetchCoachesForTeam(homeId),
+        fetchCoachesForTeam(awayId),
+        fetchMediaOutlets().catch(() => []),
+      ]);
 
       setRostersByTeam({
         [homeId]: homeRoster,
@@ -4583,14 +4620,19 @@ export default function App() {
     setRosterError("");
 
     try {
-      const [homeRoster, awayRoster, homeCoaches, awayCoaches, mediaRecipients] =
-        await Promise.all([
-          fetchRosterForTeam(homeId),
-          fetchRosterForTeam(awayId),
-          fetchCoachesForTeam(homeId),
-          fetchCoachesForTeam(awayId),
-          fetchMediaOutlets().catch(() => []),
-        ]);
+      const [
+        homeRoster,
+        awayRoster,
+        homeCoaches,
+        awayCoaches,
+        mediaRecipients,
+      ] = await Promise.all([
+        fetchRosterForTeam(homeId),
+        fetchRosterForTeam(awayId),
+        fetchCoachesForTeam(homeId),
+        fetchCoachesForTeam(awayId),
+        fetchMediaOutlets().catch(() => []),
+      ]);
 
       const preserveStarterSelections = (
         teamId: string,
@@ -4637,10 +4679,14 @@ export default function App() {
         ...prev,
         [homeId]:
           homeRoster.find((player) => player.isGoalie && player.isActive)
-            ?.playerId ?? prev[homeId] ?? null,
+            ?.playerId ??
+          prev[homeId] ??
+          null,
         [awayId]:
           awayRoster.find((player) => player.isGoalie && player.isActive)
-            ?.playerId ?? prev[awayId] ?? null,
+            ?.playerId ??
+          prev[awayId] ??
+          null,
       }));
 
       preserveStarterSelections(homeId, homeRoster);
@@ -5148,7 +5194,9 @@ export default function App() {
   function addCustomEmailRecipient() {
     const email = customEmailInput.trim();
     if (!email) {
-      setSendScoresheetError("Enter an email address before tapping Add Email.");
+      setSendScoresheetError(
+        "Enter an email address before tapping Add Email.",
+      );
       return;
     }
 
@@ -5162,8 +5210,12 @@ export default function App() {
       ...coachEmailRecipients.map((recipient) =>
         (recipient.coachEmail ?? "").toLowerCase(),
       ),
-      ...officialEmailRecipients.map((recipient) => recipient.email.toLowerCase()),
-      ...mediaOutletRecipients.map((recipient) => recipient.email.toLowerCase()),
+      ...officialEmailRecipients.map((recipient) =>
+        recipient.email.toLowerCase(),
+      ),
+      ...mediaOutletRecipients.map((recipient) =>
+        recipient.email.toLowerCase(),
+      ),
       ...customEmails.map((recipient) => recipient.toLowerCase()),
     ].includes(normalized);
 
@@ -5195,8 +5247,8 @@ export default function App() {
       Boolean(sendRecipientSelection[recipient.key]),
     );
 
-    const selectedOfficialRecipients = officialEmailRecipients.filter((recipient) =>
-      Boolean(sendRecipientSelection[recipient.key]),
+    const selectedOfficialRecipients = officialEmailRecipients.filter(
+      (recipient) => Boolean(sendRecipientSelection[recipient.key]),
     );
 
     const selectedMediaRecipients = mediaOutletRecipients.filter((recipient) =>
@@ -5285,8 +5337,8 @@ export default function App() {
     const goalieSummaries = shotsByGoalie.map((goalie) => {
       const teamGoalsAgainst =
         goalie.goalieTeamId === homeTeamId
-          ? session?.awayScore ?? 0
-          : session?.homeScore ?? 0;
+          ? (session?.awayScore ?? 0)
+          : (session?.homeScore ?? 0);
 
       const teamGoalieRows = shotsByGoalie.filter(
         (row) => row.goalieTeamId === goalie.goalieTeamId,
@@ -5366,7 +5418,6 @@ export default function App() {
         subject: `Scoresheet: ${session?.homeTeam ?? "Home"} vs ${session?.awayTeam ?? "Away"}`,
       },
     };
-
   }
 
   async function completeGameInBackend(
@@ -5750,7 +5801,7 @@ export default function App() {
         }}
         scrollEventThrottle={16}
         refreshControl={
-            stage === "verifyGame" && session ? (
+          stage === "verifyGame" && session ? (
             <RefreshControl
               refreshing={isRefreshingNextGame}
               onRefresh={handleRefreshNextGame}
@@ -5890,7 +5941,9 @@ export default function App() {
             <View style={styles.twoColRow}>
               <View style={styles.twoColCell}>
                 <Text style={styles.cellLabel}>TEAM TYPE</Text>
-                <Text style={styles.cellValue}>{nextGame?.teamType ?? "-"}</Text>
+                <Text style={styles.cellValue}>
+                  {nextGame?.teamType ?? "-"}
+                </Text>
               </View>
               <View style={styles.twoColCell}>
                 <Text style={styles.cellLabel}>STATUS</Text>
@@ -6411,48 +6464,48 @@ export default function App() {
           >
             <View style={styles.confirmOverlay}>
               <View style={styles.confirmModal}>
-              <View style={styles.confirmHeader}>
-                <Text style={styles.confirmIcon}>⚠</Text>
-                <Text style={styles.confirmTitle}>
-                  Ready to Start the Game?
-                </Text>
-                <Text style={styles.confirmSubtitle}>
-                  Please read the following carefully before proceeding.
-                </Text>
-              </View>
-
-              <View style={styles.confirmBody}>
-                <View style={styles.confirmWarningCard}>
-                  <Text style={styles.confirmWarningIcon}>🔒</Text>
-                  <View style={styles.confirmWarningTextWrap}>
-                    <Text style={styles.confirmWarningTitle}>
-                      Rosters are locked at game start
-                    </Text>
-                    <Text style={styles.confirmWarningText}>
-                      No players can be added, removed, or modified on either
-                      team's roster once the game has started.
-                    </Text>
-                  </View>
+                <View style={styles.confirmHeader}>
+                  <Text style={styles.confirmIcon}>⚠</Text>
+                  <Text style={styles.confirmTitle}>
+                    Ready to Start the Game?
+                  </Text>
+                  <Text style={styles.confirmSubtitle}>
+                    Please read the following carefully before proceeding.
+                  </Text>
                 </View>
 
-                <View style={styles.confirmWarningCard}>
-                  <Text style={styles.confirmWarningIcon}>📋</Text>
-                  <View style={styles.confirmWarningTextWrap}>
-                    <Text style={styles.confirmWarningTitle}>
-                      Officials are locked at game start
-                    </Text>
-                    <Text style={styles.confirmWarningText}>
-                      Official assignments and signatures cannot be changed
-                      after the game begins.
-                    </Text>
+                <View style={styles.confirmBody}>
+                  <View style={styles.confirmWarningCard}>
+                    <Text style={styles.confirmWarningIcon}>🔒</Text>
+                    <View style={styles.confirmWarningTextWrap}>
+                      <Text style={styles.confirmWarningTitle}>
+                        Rosters are locked at game start
+                      </Text>
+                      <Text style={styles.confirmWarningText}>
+                        No players can be added, removed, or modified on either
+                        team's roster once the game has started.
+                      </Text>
+                    </View>
                   </View>
-                </View>
 
-                <Text style={styles.confirmFooterText}>
-                  By confirming, you acknowledge that all roster and official
-                  information is correct and final.
-                </Text>
-              </View>
+                  <View style={styles.confirmWarningCard}>
+                    <Text style={styles.confirmWarningIcon}>📋</Text>
+                    <View style={styles.confirmWarningTextWrap}>
+                      <Text style={styles.confirmWarningTitle}>
+                        Officials are locked at game start
+                      </Text>
+                      <Text style={styles.confirmWarningText}>
+                        Official assignments and signatures cannot be changed
+                        after the game begins.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.confirmFooterText}>
+                    By confirming, you acknowledge that all roster and official
+                    information is correct and final.
+                  </Text>
+                </View>
 
                 <View style={styles.confirmActions}>
                   <Pressable
@@ -6749,103 +6802,103 @@ export default function App() {
           >
             <View style={styles.confirmOverlay}>
               <View style={styles.goalModal}>
-              <Text style={styles.goalModalTitle}>Set / Edit Clock</Text>
-              <Text style={styles.goalModalSubtitle}>
-                Clock is stopped. Apply the scheduled period length or choose a
-                manual clock value.
-              </Text>
-
-              <Text style={styles.sectionLabel}>SCHEDULED PERIOD LENGTH</Text>
-              <Pressable
-                style={styles.clockPresetButton}
-                onPress={applyScheduledPeriodLengthToClock}
-              >
-                <Text style={styles.clockPresetButtonText}>
-                  Reset to{" "}
-                  {formatSecondsToClock(
-                    getPeriodLengthMinutes(session.periodLength) * 60,
-                  )}
+                <Text style={styles.goalModalTitle}>Set / Edit Clock</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Clock is stopped. Apply the scheduled period length or choose
+                  a manual clock value.
                 </Text>
-              </Pressable>
 
-              <Text style={styles.sectionLabel}>MANUAL ADJUSTMENT</Text>
-              <View style={styles.clockManualPanel}>
-                <View style={styles.clockManualHeaderRow}>
-                  <Text style={styles.clockManualHeaderText}>MIN</Text>
-                  <Text style={styles.clockManualHeaderText}>SEC</Text>
-                </View>
-
-                <View style={styles.clockManualAdjustRow}>
-                  <View style={styles.clockManualColumn}>
-                    <Pressable
-                      style={styles.clockArrowButton}
-                      onPress={() => adjustManualClock(60)}
-                    >
-                      <Text style={styles.clockArrowText}>▲</Text>
-                    </Pressable>
-                    <Text style={styles.clockGhostValue}>
-                      {String(Math.min(60, clockModalMinutes + 1)).padStart(
-                        2,
-                        "0",
-                      )}
-                    </Text>
-                    <View style={styles.clockValueBox}>
-                      <Text style={styles.clockValueText}>
-                        {String(clockModalMinutes).padStart(2, "0")}
-                      </Text>
-                    </View>
-                    <Text style={styles.clockGhostValue}>
-                      {String(Math.max(0, clockModalMinutes - 1)).padStart(
-                        2,
-                        "0",
-                      )}
-                    </Text>
-                    <Pressable
-                      style={styles.clockArrowButton}
-                      onPress={() => adjustManualClock(-60)}
-                    >
-                      <Text style={styles.clockArrowText}>▼</Text>
-                    </Pressable>
-                  </View>
-
-                  <Text style={styles.clockColon}>:</Text>
-
-                  <View style={styles.clockManualColumn}>
-                    <Pressable
-                      style={styles.clockArrowButton}
-                      onPress={() => adjustManualClock(1)}
-                    >
-                      <Text style={styles.clockArrowText}>▲</Text>
-                    </Pressable>
-                    <Text style={styles.clockGhostValue}>
-                      {String((clockModalSeconds + 1) % 60).padStart(2, "0")}
-                    </Text>
-                    <View style={styles.clockValueBox}>
-                      <Text style={styles.clockValueText}>
-                        {String(clockModalSeconds).padStart(2, "0")}
-                      </Text>
-                    </View>
-                    <Text style={styles.clockGhostValue}>
-                      {String((clockModalSeconds + 59) % 60).padStart(2, "0")}
-                    </Text>
-                    <Pressable
-                      style={styles.clockArrowButton}
-                      onPress={() => adjustManualClock(-1)}
-                    >
-                      <Text style={styles.clockArrowText}>▼</Text>
-                    </Pressable>
-                  </View>
-                </View>
-
-                <Text style={styles.clockManualFooter}>
-                  Clock will be set to{" "}
-                  <Text style={styles.clockManualFooterValue}>
+                <Text style={styles.sectionLabel}>SCHEDULED PERIOD LENGTH</Text>
+                <Pressable
+                  style={styles.clockPresetButton}
+                  onPress={applyScheduledPeriodLengthToClock}
+                >
+                  <Text style={styles.clockPresetButtonText}>
+                    Reset to{" "}
                     {formatSecondsToClock(
-                      clockModalMinutes * 60 + clockModalSeconds,
+                      getPeriodLengthMinutes(session.periodLength) * 60,
                     )}
                   </Text>
-                </Text>
-              </View>
+                </Pressable>
+
+                <Text style={styles.sectionLabel}>MANUAL ADJUSTMENT</Text>
+                <View style={styles.clockManualPanel}>
+                  <View style={styles.clockManualHeaderRow}>
+                    <Text style={styles.clockManualHeaderText}>MIN</Text>
+                    <Text style={styles.clockManualHeaderText}>SEC</Text>
+                  </View>
+
+                  <View style={styles.clockManualAdjustRow}>
+                    <View style={styles.clockManualColumn}>
+                      <Pressable
+                        style={styles.clockArrowButton}
+                        onPress={() => adjustManualClock(60)}
+                      >
+                        <Text style={styles.clockArrowText}>▲</Text>
+                      </Pressable>
+                      <Text style={styles.clockGhostValue}>
+                        {String(Math.min(60, clockModalMinutes + 1)).padStart(
+                          2,
+                          "0",
+                        )}
+                      </Text>
+                      <View style={styles.clockValueBox}>
+                        <Text style={styles.clockValueText}>
+                          {String(clockModalMinutes).padStart(2, "0")}
+                        </Text>
+                      </View>
+                      <Text style={styles.clockGhostValue}>
+                        {String(Math.max(0, clockModalMinutes - 1)).padStart(
+                          2,
+                          "0",
+                        )}
+                      </Text>
+                      <Pressable
+                        style={styles.clockArrowButton}
+                        onPress={() => adjustManualClock(-60)}
+                      >
+                        <Text style={styles.clockArrowText}>▼</Text>
+                      </Pressable>
+                    </View>
+
+                    <Text style={styles.clockColon}>:</Text>
+
+                    <View style={styles.clockManualColumn}>
+                      <Pressable
+                        style={styles.clockArrowButton}
+                        onPress={() => adjustManualClock(1)}
+                      >
+                        <Text style={styles.clockArrowText}>▲</Text>
+                      </Pressable>
+                      <Text style={styles.clockGhostValue}>
+                        {String((clockModalSeconds + 1) % 60).padStart(2, "0")}
+                      </Text>
+                      <View style={styles.clockValueBox}>
+                        <Text style={styles.clockValueText}>
+                          {String(clockModalSeconds).padStart(2, "0")}
+                        </Text>
+                      </View>
+                      <Text style={styles.clockGhostValue}>
+                        {String((clockModalSeconds + 59) % 60).padStart(2, "0")}
+                      </Text>
+                      <Pressable
+                        style={styles.clockArrowButton}
+                        onPress={() => adjustManualClock(-1)}
+                      >
+                        <Text style={styles.clockArrowText}>▼</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <Text style={styles.clockManualFooter}>
+                    Clock will be set to{" "}
+                    <Text style={styles.clockManualFooterValue}>
+                      {formatSecondsToClock(
+                        clockModalMinutes * 60 + clockModalSeconds,
+                      )}
+                    </Text>
+                  </Text>
+                </View>
 
                 <View style={styles.rowButtons}>
                   <Pressable
@@ -6885,19 +6938,27 @@ export default function App() {
                 <View style={styles.goalLockedGrid}>
                   <View style={styles.goalLockedItem}>
                     <Text style={styles.goalLockedLabel}>Period</Text>
-                    <Text style={styles.goalLockedValue}>{timeoutModal.period}</Text>
+                    <Text style={styles.goalLockedValue}>
+                      {timeoutModal.period}
+                    </Text>
                   </View>
                   <View style={styles.goalLockedItem}>
                     <Text style={styles.goalLockedLabel}>Time</Text>
-                    <Text style={styles.goalLockedValue}>{timeoutModal.timeInPeriod}</Text>
+                    <Text style={styles.goalLockedValue}>
+                      {timeoutModal.timeInPeriod}
+                    </Text>
                   </View>
                   <View style={styles.goalLockedItem}>
                     <Text style={styles.goalLockedLabel}>Clock Remaining</Text>
-                    <Text style={styles.goalLockedValue}>{timeoutModal.clockRemaining}</Text>
+                    <Text style={styles.goalLockedValue}>
+                      {timeoutModal.clockRemaining}
+                    </Text>
                   </View>
                   <View style={styles.goalLockedItem}>
                     <Text style={styles.goalLockedLabel}>
-                      {timeoutModal.isRunning ? "Timeout Remaining" : "Timeout Length"}
+                      {timeoutModal.isRunning
+                        ? "Timeout Remaining"
+                        : "Timeout Length"}
                     </Text>
                     <Text style={styles.goalLockedValue}>
                       {formatSecondsToClock(
@@ -6914,7 +6975,8 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.timeoutTeamBtn,
-                      timeoutModal.teamSide === "home" && styles.timeoutTeamBtnActive,
+                      timeoutModal.teamSide === "home" &&
+                        styles.timeoutTeamBtnActive,
                       timeoutModal.isRunning && styles.disabledButton,
                     ]}
                     disabled={timeoutModal.isRunning}
@@ -6924,12 +6986,15 @@ export default function App() {
                       )
                     }
                   >
-                    <Text style={styles.timeoutTeamBtnText}>{session.homeTeam}</Text>
+                    <Text style={styles.timeoutTeamBtnText}>
+                      {session.homeTeam}
+                    </Text>
                   </Pressable>
                   <Pressable
                     style={[
                       styles.timeoutTeamBtn,
-                      timeoutModal.teamSide === "away" && styles.timeoutTeamBtnActive,
+                      timeoutModal.teamSide === "away" &&
+                        styles.timeoutTeamBtnActive,
                       timeoutModal.isRunning && styles.disabledButton,
                     ]}
                     disabled={timeoutModal.isRunning}
@@ -6939,7 +7004,9 @@ export default function App() {
                       )
                     }
                   >
-                    <Text style={styles.timeoutTeamBtnText}>{session.awayTeam}</Text>
+                    <Text style={styles.timeoutTeamBtnText}>
+                      {session.awayTeam}
+                    </Text>
                   </Pressable>
                 </View>
 
@@ -6988,7 +7055,9 @@ export default function App() {
                     onPress={startTimeoutCountdown}
                   >
                     <Text style={styles.primaryButtonText}>
-                      {timeoutModal.isRunning ? "Timeout Running..." : "Start Timeout"}
+                      {timeoutModal.isRunning
+                        ? "Timeout Running..."
+                        : "Start Timeout"}
                     </Text>
                   </Pressable>
                 </View>
@@ -7010,7 +7079,8 @@ export default function App() {
               <View style={styles.goalModal}>
                 <Text style={styles.goalModalTitle}>Adjust Penalty Time</Text>
                 <Text style={styles.goalModalSubtitle}>
-                  {penaltyAdjustModal.teamName} • {penaltyAdjustModal.playerName}
+                  {penaltyAdjustModal.teamName} •{" "}
+                  {penaltyAdjustModal.playerName}
                 </Text>
                 <Text style={styles.goalModalSubtitle}>
                   {penaltyAdjustModal.infraction}
@@ -7018,7 +7088,9 @@ export default function App() {
 
                 <View style={styles.penaltyAdjustModalSummary}>
                   <View style={styles.penaltyAdjustSummaryCol}>
-                    <Text style={styles.penaltyAdjustSummaryLabel}>Current</Text>
+                    <Text style={styles.penaltyAdjustSummaryLabel}>
+                      Current
+                    </Text>
                     <Text style={styles.penaltyAdjustSummaryValue}>
                       {formatSecondsToClock(penaltyAdjustModal.currentSeconds)}
                     </Text>
@@ -7041,13 +7113,17 @@ export default function App() {
                         style={styles.penaltyAdjustModalBtn}
                         onPress={() => shiftPenaltyAdjustPreview(-1)}
                       >
-                        <Text style={styles.penaltyAdjustModalBtnText}>-1s</Text>
+                        <Text style={styles.penaltyAdjustModalBtnText}>
+                          -1s
+                        </Text>
                       </Pressable>
                       <Pressable
                         style={styles.penaltyAdjustModalBtn}
                         onPress={() => shiftPenaltyAdjustPreview(-5)}
                       >
-                        <Text style={styles.penaltyAdjustModalBtnText}>-5s</Text>
+                        <Text style={styles.penaltyAdjustModalBtnText}>
+                          -5s
+                        </Text>
                       </Pressable>
                     </View>
                     <Pressable
@@ -7064,13 +7140,17 @@ export default function App() {
                         style={styles.penaltyAdjustModalBtn}
                         onPress={() => shiftPenaltyAdjustPreview(1)}
                       >
-                        <Text style={styles.penaltyAdjustModalBtnText}>+1s</Text>
+                        <Text style={styles.penaltyAdjustModalBtnText}>
+                          +1s
+                        </Text>
                       </Pressable>
                       <Pressable
                         style={styles.penaltyAdjustModalBtn}
                         onPress={() => shiftPenaltyAdjustPreview(5)}
                       >
-                        <Text style={styles.penaltyAdjustModalBtnText}>+5s</Text>
+                        <Text style={styles.penaltyAdjustModalBtnText}>
+                          +5s
+                        </Text>
                       </Pressable>
                     </View>
                     <Pressable
@@ -7112,10 +7192,10 @@ export default function App() {
           >
             <View style={styles.confirmOverlay}>
               <View style={styles.goalModal}>
-              <Text style={styles.goalModalTitle}>Verify Period Over</Text>
-              <Text style={styles.goalModalSubtitle}>
-                Clock reached 0:00. Move to intermission?
-              </Text>
+                <Text style={styles.goalModalTitle}>Verify Period Over</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Clock reached 0:00. Move to intermission?
+                </Text>
                 <View style={styles.rowButtons}>
                   <Pressable
                     style={styles.secondaryButton}
@@ -7182,16 +7262,18 @@ export default function App() {
           >
             <View style={styles.confirmOverlay}>
               <View style={styles.goalModal}>
-              <Text style={styles.goalModalTitle}>End Of Regulation</Text>
-              <Text style={styles.goalModalSubtitle}>
-                Choose overtime or finalize the game.
-              </Text>
+                <Text style={styles.goalModalTitle}>End Of Regulation</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Choose overtime or finalize the game.
+                </Text>
                 <View style={styles.rowButtons}>
                   <Pressable
                     style={styles.secondaryButton}
                     onPress={handleGoToOvertime}
                   >
-                    <Text style={styles.secondaryButtonText}>Go To Overtime</Text>
+                    <Text style={styles.secondaryButtonText}>
+                      Go To Overtime
+                    </Text>
                   </Pressable>
                   <Pressable
                     style={styles.primaryButton}
@@ -7200,7 +7282,9 @@ export default function App() {
                       handleEndGame();
                     }}
                   >
-                    <Text style={styles.primaryButtonText}>End Game - Final</Text>
+                    <Text style={styles.primaryButtonText}>
+                      End Game - Final
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -7219,41 +7303,41 @@ export default function App() {
           >
             <View style={styles.confirmOverlay}>
               <View style={styles.goalModal}>
-              <Text style={styles.goalModalTitle}>Suspension Notes</Text>
-              <Text style={styles.goalModalSubtitle}>
-                Enter referee notes for DQ and suspension-related penalties.
-                These notes are stored with the game and included in review
-                reporting.
-              </Text>
-              {suspensionNotesError ? (
-                <Text style={styles.error}>{suspensionNotesError}</Text>
-              ) : null}
+                <Text style={styles.goalModalTitle}>Suspension Notes</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Enter referee notes for DQ and suspension-related penalties.
+                  These notes are stored with the game and included in review
+                  reporting.
+                </Text>
+                {suspensionNotesError ? (
+                  <Text style={styles.error}>{suspensionNotesError}</Text>
+                ) : null}
 
-              {gameDqPenaltyEvents.map((event) => (
-                <View key={event.localId} style={styles.dqNoteCard}>
-                  <Text style={styles.dqNoteTitle}>
-                    {event.teamName} - {event.playerName}
-                  </Text>
-                  <Text style={styles.dqNoteMeta}>
-                    {event.infraction} -{" "}
-                    {getPenaltyTypeLabel(event.penaltyType ?? "Minor")} • P
-                    {event.period} {event.timeInPeriod}
-                  </Text>
-                  <TextInput
-                    style={styles.dqNoteInput}
-                    multiline
-                    value={suspensionNotesByPenaltyId[event.localId] ?? ""}
-                    onChangeText={(value) =>
-                      setSuspensionNotesByPenaltyId((prev) => ({
-                        ...prev,
-                        [event.localId]: value,
-                      }))
-                    }
-                    placeholder="Enter referee notes"
-                    placeholderTextColor="#7a8fa8"
-                  />
-                </View>
-              ))}
+                {gameDqPenaltyEvents.map((event) => (
+                  <View key={event.localId} style={styles.dqNoteCard}>
+                    <Text style={styles.dqNoteTitle}>
+                      {event.teamName} - {event.playerName}
+                    </Text>
+                    <Text style={styles.dqNoteMeta}>
+                      {event.infraction} -{" "}
+                      {getPenaltyTypeLabel(event.penaltyType ?? "Minor")} • P
+                      {event.period} {event.timeInPeriod}
+                    </Text>
+                    <TextInput
+                      style={styles.dqNoteInput}
+                      multiline
+                      value={suspensionNotesByPenaltyId[event.localId] ?? ""}
+                      onChangeText={(value) =>
+                        setSuspensionNotesByPenaltyId((prev) => ({
+                          ...prev,
+                          [event.localId]: value,
+                        }))
+                      }
+                      placeholder="Enter referee notes"
+                      placeholderTextColor="#7a8fa8"
+                    />
+                  </View>
+                ))}
 
                 <View style={styles.rowButtons}>
                   <Pressable
@@ -7315,7 +7399,8 @@ export default function App() {
                           ) : null}
                         </View>
                         <Text style={styles.rosterPreviewMeta}>
-                          #{player.jerseyNumber ?? "-"} • Pos {player.position || "-"} • Grade {player.grade ?? "-"}
+                          #{player.jerseyNumber ?? "-"} • Pos{" "}
+                          {player.position || "-"} • Grade {player.grade ?? "-"}
                         </Text>
                       </View>
                     ))
@@ -7368,7 +7453,9 @@ export default function App() {
 
                 <ScrollView style={styles.rosterPreviewList}>
                   {officials.length === 0 ? (
-                    <Text style={styles.footerHint}>No officials assigned.</Text>
+                    <Text style={styles.footerHint}>
+                      No officials assigned.
+                    </Text>
                   ) : (
                     officials.map((official, index) => (
                       <View
@@ -7381,7 +7468,9 @@ export default function App() {
                           </Text>
                           {official.signatureImageBase64 ? (
                             <View style={styles.starterBadge}>
-                              <Text style={styles.starterBadgeText}>SIGNED</Text>
+                              <Text style={styles.starterBadgeText}>
+                                SIGNED
+                              </Text>
                             </View>
                           ) : null}
                         </View>
@@ -7515,26 +7604,26 @@ export default function App() {
           >
             <View style={styles.confirmOverlay}>
               <View style={styles.goalModal}>
-              <Text style={styles.goalModalTitle}>Event Options</Text>
-              <Text style={styles.goalModalSubtitle}>
-                Edit or delete selected event.
-              </Text>
-              <View style={styles.rowButtons}>
-                {eventActionModal.event.eventType !== "Timeout" ? (
+                <Text style={styles.goalModalTitle}>Event Options</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Edit or delete selected event.
+                </Text>
+                <View style={styles.rowButtons}>
+                  {eventActionModal.event.eventType !== "Timeout" ? (
+                    <Pressable
+                      style={styles.secondaryButton}
+                      onPress={() => openEventEditModal(eventActionModal.event)}
+                    >
+                      <Text style={styles.secondaryButtonText}>Edit Event</Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable
                     style={styles.secondaryButton}
-                    onPress={() => openEventEditModal(eventActionModal.event)}
+                    onPress={requestDeleteSelectedEvent}
                   >
-                    <Text style={styles.secondaryButtonText}>Edit Event</Text>
+                    <Text style={styles.secondaryButtonText}>Delete Event</Text>
                   </Pressable>
-                ) : null}
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={requestDeleteSelectedEvent}
-                >
-                  <Text style={styles.secondaryButtonText}>Delete Event</Text>
-                </Pressable>
-              </View>
+                </View>
                 <Pressable
                   style={styles.primaryButton}
                   onPress={closeEventActions}
@@ -7557,11 +7646,11 @@ export default function App() {
           >
             <View style={styles.confirmOverlay}>
               <View style={styles.goalModal}>
-              <Text style={styles.goalModalTitle}>Verify Delete</Text>
-              <Text style={styles.goalModalSubtitle}>
-                Are you sure you want to delete this{" "}
-                {eventDeleteConfirmModal.event.eventType.toLowerCase()} event?
-              </Text>
+                <Text style={styles.goalModalTitle}>Verify Delete</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Are you sure you want to delete this{" "}
+                  {eventDeleteConfirmModal.event.eventType.toLowerCase()} event?
+                </Text>
                 <View style={styles.rowButtons}>
                   <Pressable
                     style={styles.secondaryButton}
@@ -7607,376 +7696,395 @@ export default function App() {
                 >
                   {eventEditModal.event.eventType === "Goal" ? (
                     <>
-                  <View style={styles.goalLockedGrid}>
-                    <View style={styles.goalLockedItem}>
-                      <Text style={styles.goalLockedLabel}>Scoring Team</Text>
-                      <Text style={styles.goalLockedValue}>
-                        {eventEditModal.teamId === homeTeamId
-                          ? (session?.homeTeam ?? eventEditModal.event.teamName)
-                          : eventEditModal.teamId === awayTeamId
-                            ? (session?.awayTeam ??
-                              eventEditModal.event.teamName)
-                            : eventEditModal.event.teamName}
-                      </Text>
-                    </View>
-                    <View style={styles.goalLockedItem}>
-                      <Text style={styles.goalLockedLabel}>Period</Text>
-                      <Text style={styles.goalLockedValue}>
-                        {eventEditModal.period}
-                      </Text>
-                    </View>
-                    <View style={styles.goalLockedItem}>
-                      <Text style={styles.goalLockedLabel}>Time</Text>
-                      <Text style={styles.goalLockedValue}>
-                        {eventEditModal.timeInPeriod}
-                      </Text>
-                    </View>
-                    <View style={styles.goalLockedItem}>
-                      <Text style={styles.goalLockedLabel}>
-                        Strength Context
-                      </Text>
-                      <Text style={styles.goalLockedValue}>
-                        {eventEditSkaterStrength}
-                      </Text>
-                    </View>
-                  </View>
+                      <View style={styles.goalLockedGrid}>
+                        <View style={styles.goalLockedItem}>
+                          <Text style={styles.goalLockedLabel}>
+                            Scoring Team
+                          </Text>
+                          <Text style={styles.goalLockedValue}>
+                            {eventEditModal.teamId === homeTeamId
+                              ? (session?.homeTeam ??
+                                eventEditModal.event.teamName)
+                              : eventEditModal.teamId === awayTeamId
+                                ? (session?.awayTeam ??
+                                  eventEditModal.event.teamName)
+                                : eventEditModal.event.teamName}
+                          </Text>
+                        </View>
+                        <View style={styles.goalLockedItem}>
+                          <Text style={styles.goalLockedLabel}>Period</Text>
+                          <Text style={styles.goalLockedValue}>
+                            {eventEditModal.period}
+                          </Text>
+                        </View>
+                        <View style={styles.goalLockedItem}>
+                          <Text style={styles.goalLockedLabel}>Time</Text>
+                          <Text style={styles.goalLockedValue}>
+                            {eventEditModal.timeInPeriod}
+                          </Text>
+                        </View>
+                        <View style={styles.goalLockedItem}>
+                          <Text style={styles.goalLockedLabel}>
+                            Strength Context
+                          </Text>
+                          <Text style={styles.goalLockedValue}>
+                            {eventEditSkaterStrength}
+                          </Text>
+                        </View>
+                      </View>
 
-                  <Text style={styles.sectionLabel}>SCORER</Text>
-                  <View style={styles.pickerShell}>
-                    <Picker
-                      selectedValue={eventEditModal.playerId}
-                      onValueChange={(value) =>
-                        setEventEditModal((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                playerId: String(value),
-                                assist1Id:
-                                  prev.assist1Id === String(value)
-                                    ? ""
-                                    : prev.assist1Id,
-                                assist2Id:
-                                  prev.assist2Id === String(value)
-                                    ? ""
-                                    : prev.assist2Id,
-                              }
-                            : prev,
-                        )
-                      }
-                      dropdownIconColor="#FF7B00"
-                      style={styles.picker}
-                      itemStyle={styles.pickerItem}
-                    >
-                      <Picker.Item label="Select player..." value="" />
-                      {sortRosterPlayersForPicker(eventEditTeamRoster).map(
-                        (player) => (
-                          <Picker.Item
-                            key={`edit-goal-player-${player.playerId}`}
-                            label={formatPlayerPickerLabel(player)}
-                            value={player.playerId}
-                          />
-                        ),
-                      )}
-                    </Picker>
-                  </View>
-
-                  <Text style={styles.sectionLabel}>ASSIST 1</Text>
-                  <View style={styles.pickerShell}>
-                    <Picker
-                      selectedValue={eventEditModal.assist1Id}
-                      onValueChange={(value) =>
-                        setEventEditModal((prev) =>
-                          prev ? { ...prev, assist1Id: String(value) } : prev,
-                        )
-                      }
-                      dropdownIconColor="#FF7B00"
-                      style={styles.picker}
-                      itemStyle={styles.pickerItem}
-                    >
-                      <Picker.Item label="None" value="" />
-                      {sortRosterPlayersForPicker(
-                        eventEditAssistRoster.filter(
-                          (player) =>
-                            player.playerId !== eventEditModal.assist2Id,
-                        ),
-                      ).map((player) => (
-                        <Picker.Item
-                          key={`edit-goal-a1-${player.playerId}`}
-                          label={formatPlayerPickerLabel(player)}
-                          value={player.playerId}
-                        />
-                      ))}
-                    </Picker>
-                  </View>
-
-                  <Text style={styles.sectionLabel}>ASSIST 2</Text>
-                  <View style={styles.pickerShell}>
-                    <Picker
-                      selectedValue={eventEditModal.assist2Id}
-                      onValueChange={(value) =>
-                        setEventEditModal((prev) =>
-                          prev ? { ...prev, assist2Id: String(value) } : prev,
-                        )
-                      }
-                      dropdownIconColor="#FF7B00"
-                      style={styles.picker}
-                      itemStyle={styles.pickerItem}
-                    >
-                      <Picker.Item label="None" value="" />
-                      {sortRosterPlayersForPicker(
-                        eventEditAssistRoster.filter(
-                          (player) =>
-                            player.playerId !== eventEditModal.assist1Id,
-                        ),
-                      ).map((player) => (
-                        <Picker.Item
-                          key={`edit-goal-a2-${player.playerId}`}
-                          label={formatPlayerPickerLabel(player)}
-                          value={player.playerId}
-                        />
-                      ))}
-                    </Picker>
-                  </View>
-
-                  <Text style={styles.sectionLabel}>GOAL TYPE</Text>
-                  <View style={styles.goalTypeRow}>
-                    {(
-                      [
-                        "Even Strength",
-                        "Power Play",
-                        "Short-Handed",
-                        "Empty Net",
-                        "Penalty Shot",
-                      ] as GoalStrength[]
-                    ).map((type) => (
-                      <Pressable
-                        key={type}
-                        disabled={
-                          type === "Even Strength" &&
-                          shouldLockEventEditEvenStrength
-                        }
-                        style={[
-                          styles.goalTypeButton,
-                          eventEditModal.strength === type &&
-                            styles.goalTypeButtonActive,
-                          type === "Even Strength" &&
-                            shouldLockEventEditEvenStrength &&
-                            styles.goalTypeButtonDisabled,
-                        ]}
-                        onPress={() => {
-                          if (
-                            type === "Even Strength" &&
-                            shouldLockEventEditEvenStrength
-                          )
-                            return;
-                          setEventEditModal((prev) =>
-                            prev ? { ...prev, strength: type } : prev,
-                          );
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.goalTypeButtonText,
-                            eventEditModal.strength === type &&
-                              styles.goalTypeButtonTextActive,
-                            type === "Even Strength" &&
-                              shouldLockEventEditEvenStrength &&
-                              styles.goalTypeButtonTextDisabled,
-                          ]}
-                        >
-                          {type}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                  {eventEditSkaterStrength === "Power Play" ? (
-                    <Text style={styles.powerPlayIndicator}>PP Goal</Text>
-                  ) : null}
-                </>
-              ) : eventEditModal.event.eventType === "Penalty" ? (
-                <>
-                  <View style={styles.goalLockedGrid}>
-                    <View style={styles.goalLockedItem}>
-                      <Text style={styles.goalLockedLabel}>Penalized Team</Text>
-                      <Text style={styles.goalLockedValue}>
-                        {eventEditModal.teamId === homeTeamId
-                          ? (session?.homeTeam ?? eventEditModal.event.teamName)
-                          : eventEditModal.teamId === awayTeamId
-                            ? (session?.awayTeam ??
-                              eventEditModal.event.teamName)
-                            : eventEditModal.event.teamName}
-                      </Text>
-                    </View>
-                    <View style={styles.goalLockedItem}>
-                      <Text style={styles.goalLockedLabel}>Period</Text>
-                      <Text style={styles.goalLockedValue}>
-                        {eventEditModal.period}
-                      </Text>
-                    </View>
-                    <View style={styles.goalLockedItem}>
-                      <Text style={styles.goalLockedLabel}>Time</Text>
-                      <Text style={styles.goalLockedValue}>
-                        {eventEditModal.timeInPeriod}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.sectionLabel}>PENALIZED PLAYER</Text>
-                  <View style={styles.pickerShell}>
-                    <Picker
-                      selectedValue={eventEditModal.playerId}
-                      onValueChange={(value) =>
-                        setEventEditModal((prev) =>
-                          prev ? { ...prev, playerId: String(value) } : prev,
-                        )
-                      }
-                      dropdownIconColor="#FF7B00"
-                      style={styles.picker}
-                      itemStyle={styles.pickerItem}
-                    >
-                      <Picker.Item label="Select player..." value="" />
-                      {sortRosterPlayersForPicker(eventEditTeamRoster).map(
-                        (player) => (
-                          <Picker.Item
-                            key={`edit-penalty-player-${player.playerId}`}
-                            label={formatPlayerPickerLabel(player)}
-                            value={player.playerId}
-                          />
-                        ),
-                      )}
-                    </Picker>
-                  </View>
-
-                  <Text style={styles.sectionLabel}>QUICK PICK</Text>
-                  <View style={styles.quickPickRow}>
-                    {QUICK_PICK_INFRACTIONS.map((infraction) => (
-                      <Pressable
-                        key={`edit-quick-${infraction}`}
-                        style={[
-                          styles.quickPickPill,
-                          eventEditModal.infraction === infraction &&
-                            styles.quickPickPillActive,
-                        ]}
-                        onPress={() =>
-                          setEventEditModal((prev) =>
-                            prev
-                              ? {
-                                  ...prev,
-                                  infraction,
-                                  penaltyType: resolvePenaltyTypeForInfraction(
-                                    infraction,
-                                    prev.penaltyType,
-                                  ),
-                                  durationMinutes: getPenaltyDurationMinutes(
-                                    resolvePenaltyTypeForInfraction(
-                                      infraction,
-                                      prev.penaltyType,
-                                    ),
-                                  ),
-                                }
-                              : prev,
-                          )
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.quickPickPillText,
-                            eventEditModal.infraction === infraction &&
-                              styles.quickPickPillTextActive,
-                          ]}
-                        >
-                          {infraction}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-
-                  <Text style={styles.sectionLabel}>INFRACTION</Text>
-                  <View style={styles.pickerShell}>
-                    <Picker
-                      selectedValue={eventEditModal.infraction}
-                      onValueChange={(value) =>
-                        setEventEditModal((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                infraction: String(value),
-                                penaltyType: resolvePenaltyTypeForInfraction(
-                                  String(value),
-                                  prev.penaltyType,
-                                ),
-                                durationMinutes: getPenaltyDurationMinutes(
-                                  resolvePenaltyTypeForInfraction(
-                                    String(value),
-                                    prev.penaltyType,
-                                  ),
-                                ),
-                              }
-                            : prev,
-                        )
-                      }
-                      dropdownIconColor="#FF7B00"
-                      style={styles.picker}
-                    >
-                      {ALL_HOCKEY_INFRACTIONS_SORTED.map((infraction) => (
-                        <Picker.Item
-                          key={`edit-infraction-${infraction}`}
-                          label={infraction}
-                          value={infraction}
-                        />
-                      ))}
-                    </Picker>
-                  </View>
-
-                  <Text style={styles.sectionLabel}>PENALTY TYPE</Text>
-                  <View style={styles.goalTypeRow}>
-                    {PENALTY_TYPE_OPTIONS.map((option) => {
-                      const selected =
-                        normalizePenaltyType(eventEditModal.penaltyType) ===
-                        option.value;
-                      return (
-                        <Pressable
-                          key={`edit-ptype-${option.value}`}
-                          style={[
-                            styles.goalTypeButton,
-                            selected && styles.goalTypeButtonActive,
-                          ]}
-                          onPress={() =>
+                      <Text style={styles.sectionLabel}>SCORER</Text>
+                      <View style={styles.pickerShell}>
+                        <Picker
+                          selectedValue={eventEditModal.playerId}
+                          onValueChange={(value) =>
                             setEventEditModal((prev) =>
                               prev
                                 ? {
                                     ...prev,
-                                    penaltyType: option.value,
+                                    playerId: String(value),
+                                    assist1Id:
+                                      prev.assist1Id === String(value)
+                                        ? ""
+                                        : prev.assist1Id,
+                                    assist2Id:
+                                      prev.assist2Id === String(value)
+                                        ? ""
+                                        : prev.assist2Id,
+                                  }
+                                : prev,
+                            )
+                          }
+                          dropdownIconColor="#FF7B00"
+                          style={styles.picker}
+                          itemStyle={styles.pickerItem}
+                        >
+                          <Picker.Item label="Select player..." value="" />
+                          {sortRosterPlayersForPicker(eventEditTeamRoster).map(
+                            (player) => (
+                              <Picker.Item
+                                key={`edit-goal-player-${player.playerId}`}
+                                label={formatPlayerPickerLabel(player)}
+                                value={player.playerId}
+                              />
+                            ),
+                          )}
+                        </Picker>
+                      </View>
+
+                      <Text style={styles.sectionLabel}>ASSIST 1</Text>
+                      <View style={styles.pickerShell}>
+                        <Picker
+                          selectedValue={eventEditModal.assist1Id}
+                          onValueChange={(value) =>
+                            setEventEditModal((prev) =>
+                              prev
+                                ? { ...prev, assist1Id: String(value) }
+                                : prev,
+                            )
+                          }
+                          dropdownIconColor="#FF7B00"
+                          style={styles.picker}
+                          itemStyle={styles.pickerItem}
+                        >
+                          <Picker.Item label="None" value="" />
+                          {sortRosterPlayersForPicker(
+                            eventEditAssistRoster.filter(
+                              (player) =>
+                                player.playerId !== eventEditModal.assist2Id,
+                            ),
+                          ).map((player) => (
+                            <Picker.Item
+                              key={`edit-goal-a1-${player.playerId}`}
+                              label={formatPlayerPickerLabel(player)}
+                              value={player.playerId}
+                            />
+                          ))}
+                        </Picker>
+                      </View>
+
+                      <Text style={styles.sectionLabel}>ASSIST 2</Text>
+                      <View style={styles.pickerShell}>
+                        <Picker
+                          selectedValue={eventEditModal.assist2Id}
+                          onValueChange={(value) =>
+                            setEventEditModal((prev) =>
+                              prev
+                                ? { ...prev, assist2Id: String(value) }
+                                : prev,
+                            )
+                          }
+                          dropdownIconColor="#FF7B00"
+                          style={styles.picker}
+                          itemStyle={styles.pickerItem}
+                        >
+                          <Picker.Item label="None" value="" />
+                          {sortRosterPlayersForPicker(
+                            eventEditAssistRoster.filter(
+                              (player) =>
+                                player.playerId !== eventEditModal.assist1Id,
+                            ),
+                          ).map((player) => (
+                            <Picker.Item
+                              key={`edit-goal-a2-${player.playerId}`}
+                              label={formatPlayerPickerLabel(player)}
+                              value={player.playerId}
+                            />
+                          ))}
+                        </Picker>
+                      </View>
+
+                      <Text style={styles.sectionLabel}>GOAL TYPE</Text>
+                      <View style={styles.goalTypeRow}>
+                        {(
+                          [
+                            "Even Strength",
+                            "Power Play",
+                            "Short-Handed",
+                            "Empty Net",
+                            "Penalty Shot",
+                          ] as GoalStrength[]
+                        ).map((type) => (
+                          <Pressable
+                            key={type}
+                            disabled={
+                              type === "Even Strength" &&
+                              shouldLockEventEditEvenStrength
+                            }
+                            style={[
+                              styles.goalTypeButton,
+                              eventEditModal.strength === type &&
+                                styles.goalTypeButtonActive,
+                              type === "Even Strength" &&
+                                shouldLockEventEditEvenStrength &&
+                                styles.goalTypeButtonDisabled,
+                            ]}
+                            onPress={() => {
+                              if (
+                                type === "Even Strength" &&
+                                shouldLockEventEditEvenStrength
+                              )
+                                return;
+                              setEventEditModal((prev) =>
+                                prev ? { ...prev, strength: type } : prev,
+                              );
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.goalTypeButtonText,
+                                eventEditModal.strength === type &&
+                                  styles.goalTypeButtonTextActive,
+                                type === "Even Strength" &&
+                                  shouldLockEventEditEvenStrength &&
+                                  styles.goalTypeButtonTextDisabled,
+                              ]}
+                            >
+                              {type}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                      {eventEditSkaterStrength === "Power Play" ? (
+                        <Text style={styles.powerPlayIndicator}>PP Goal</Text>
+                      ) : null}
+                    </>
+                  ) : eventEditModal.event.eventType === "Penalty" ? (
+                    <>
+                      <View style={styles.goalLockedGrid}>
+                        <View style={styles.goalLockedItem}>
+                          <Text style={styles.goalLockedLabel}>
+                            Penalized Team
+                          </Text>
+                          <Text style={styles.goalLockedValue}>
+                            {eventEditModal.teamId === homeTeamId
+                              ? (session?.homeTeam ??
+                                eventEditModal.event.teamName)
+                              : eventEditModal.teamId === awayTeamId
+                                ? (session?.awayTeam ??
+                                  eventEditModal.event.teamName)
+                                : eventEditModal.event.teamName}
+                          </Text>
+                        </View>
+                        <View style={styles.goalLockedItem}>
+                          <Text style={styles.goalLockedLabel}>Period</Text>
+                          <Text style={styles.goalLockedValue}>
+                            {eventEditModal.period}
+                          </Text>
+                        </View>
+                        <View style={styles.goalLockedItem}>
+                          <Text style={styles.goalLockedLabel}>Time</Text>
+                          <Text style={styles.goalLockedValue}>
+                            {eventEditModal.timeInPeriod}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.sectionLabel}>PENALIZED PLAYER</Text>
+                      <View style={styles.pickerShell}>
+                        <Picker
+                          selectedValue={eventEditModal.playerId}
+                          onValueChange={(value) =>
+                            setEventEditModal((prev) =>
+                              prev
+                                ? { ...prev, playerId: String(value) }
+                                : prev,
+                            )
+                          }
+                          dropdownIconColor="#FF7B00"
+                          style={styles.picker}
+                          itemStyle={styles.pickerItem}
+                        >
+                          <Picker.Item label="Select player..." value="" />
+                          {sortRosterPlayersForPicker(eventEditTeamRoster).map(
+                            (player) => (
+                              <Picker.Item
+                                key={`edit-penalty-player-${player.playerId}`}
+                                label={formatPlayerPickerLabel(player)}
+                                value={player.playerId}
+                              />
+                            ),
+                          )}
+                        </Picker>
+                      </View>
+
+                      <Text style={styles.sectionLabel}>QUICK PICK</Text>
+                      <View style={styles.quickPickRow}>
+                        {QUICK_PICK_INFRACTIONS.map((infraction) => (
+                          <Pressable
+                            key={`edit-quick-${infraction}`}
+                            style={[
+                              styles.quickPickPill,
+                              eventEditModal.infraction === infraction &&
+                                styles.quickPickPillActive,
+                            ]}
+                            onPress={() =>
+                              setEventEditModal((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      infraction,
+                                      penaltyType:
+                                        resolvePenaltyTypeForInfraction(
+                                          infraction,
+                                          prev.penaltyType,
+                                        ),
+                                      durationMinutes:
+                                        getPenaltyDurationMinutes(
+                                          resolvePenaltyTypeForInfraction(
+                                            infraction,
+                                            prev.penaltyType,
+                                          ),
+                                        ),
+                                    }
+                                  : prev,
+                              )
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.quickPickPillText,
+                                eventEditModal.infraction === infraction &&
+                                  styles.quickPickPillTextActive,
+                              ]}
+                            >
+                              {infraction}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+
+                      <Text style={styles.sectionLabel}>INFRACTION</Text>
+                      <View style={styles.pickerShell}>
+                        <Picker
+                          selectedValue={eventEditModal.infraction}
+                          onValueChange={(value) =>
+                            setEventEditModal((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    infraction: String(value),
+                                    penaltyType:
+                                      resolvePenaltyTypeForInfraction(
+                                        String(value),
+                                        prev.penaltyType,
+                                      ),
                                     durationMinutes: getPenaltyDurationMinutes(
-                                      option.value,
+                                      resolvePenaltyTypeForInfraction(
+                                        String(value),
+                                        prev.penaltyType,
+                                      ),
                                     ),
                                   }
                                 : prev,
                             )
                           }
+                          dropdownIconColor="#FF7B00"
+                          style={styles.picker}
                         >
-                          <Text
-                            style={[
-                              styles.goalTypeButtonText,
-                              selected && styles.goalTypeButtonTextActive,
-                            ]}
-                          >
-                            {option.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                          {ALL_HOCKEY_INFRACTIONS_SORTED.map((infraction) => (
+                            <Picker.Item
+                              key={`edit-infraction-${infraction}`}
+                              label={infraction}
+                              value={infraction}
+                            />
+                          ))}
+                        </Picker>
+                      </View>
 
-                  <Text style={styles.sectionLabel}>DURATION (MINUTES)</Text>
-                  <View style={styles.themedSelectTrigger}>
-                    <Text style={styles.themedSelectValue}>
-                      {getPenaltyDurationMinutes(eventEditModal.penaltyType)}{" "}
-                      min
-                    </Text>
-                    <Text style={styles.themedSelectChevron}>•</Text>
-                  </View>
+                      <Text style={styles.sectionLabel}>PENALTY TYPE</Text>
+                      <View style={styles.goalTypeRow}>
+                        {PENALTY_TYPE_OPTIONS.map((option) => {
+                          const selected =
+                            normalizePenaltyType(eventEditModal.penaltyType) ===
+                            option.value;
+                          return (
+                            <Pressable
+                              key={`edit-ptype-${option.value}`}
+                              style={[
+                                styles.goalTypeButton,
+                                selected && styles.goalTypeButtonActive,
+                              ]}
+                              onPress={() =>
+                                setEventEditModal((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        penaltyType: option.value,
+                                        durationMinutes:
+                                          getPenaltyDurationMinutes(
+                                            option.value,
+                                          ),
+                                      }
+                                    : prev,
+                                )
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.goalTypeButtonText,
+                                  selected && styles.goalTypeButtonTextActive,
+                                ]}
+                              >
+                                {option.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
 
+                      <Text style={styles.sectionLabel}>
+                        DURATION (MINUTES)
+                      </Text>
+                      <View style={styles.themedSelectTrigger}>
+                        <Text style={styles.themedSelectValue}>
+                          {getPenaltyDurationMinutes(
+                            eventEditModal.penaltyType,
+                          )}{" "}
+                          min
+                        </Text>
+                        <Text style={styles.themedSelectChevron}>•</Text>
+                      </View>
                     </>
                   ) : (
                     <Text style={styles.footerHint}>
@@ -8315,10 +8423,16 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.scoreboardActionGoal,
-                      (!canControlGame(session.role) || isAnyModalOpen || isClockRunning) &&
+                      (!canControlGame(session.role) ||
+                        isAnyModalOpen ||
+                        isClockRunning) &&
                         styles.disabledButton,
                     ]}
-                    disabled={!canControlGame(session.role) || isAnyModalOpen || isClockRunning}
+                    disabled={
+                      !canControlGame(session.role) ||
+                      isAnyModalOpen ||
+                      isClockRunning
+                    }
                     onPress={() =>
                       homeTeamId && handleGoalButtonPress(homeTeamId)
                     }
@@ -8328,10 +8442,16 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.scoreboardActionPenalty,
-                      (!canControlGame(session.role) || isAnyModalOpen || isClockRunning) &&
+                      (!canControlGame(session.role) ||
+                        isAnyModalOpen ||
+                        isClockRunning) &&
                         styles.disabledButton,
                     ]}
-                    disabled={!canControlGame(session.role) || isAnyModalOpen || isClockRunning}
+                    disabled={
+                      !canControlGame(session.role) ||
+                      isAnyModalOpen ||
+                      isClockRunning
+                    }
                     onPress={() =>
                       homeTeamId && handlePenaltyButtonPress(homeTeamId)
                     }
@@ -8400,10 +8520,16 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.scoreboardActionGoal,
-                      (!canControlGame(session.role) || isAnyModalOpen || isClockRunning) &&
+                      (!canControlGame(session.role) ||
+                        isAnyModalOpen ||
+                        isClockRunning) &&
                         styles.disabledButton,
                     ]}
-                    disabled={!canControlGame(session.role) || isAnyModalOpen || isClockRunning}
+                    disabled={
+                      !canControlGame(session.role) ||
+                      isAnyModalOpen ||
+                      isClockRunning
+                    }
                     onPress={() =>
                       awayTeamId && handleGoalButtonPress(awayTeamId)
                     }
@@ -8413,10 +8539,16 @@ export default function App() {
                   <Pressable
                     style={[
                       styles.scoreboardActionPenalty,
-                      (!canControlGame(session.role) || isAnyModalOpen || isClockRunning) &&
+                      (!canControlGame(session.role) ||
+                        isAnyModalOpen ||
+                        isClockRunning) &&
                         styles.disabledButton,
                     ]}
-                    disabled={!canControlGame(session.role) || isAnyModalOpen || isClockRunning}
+                    disabled={
+                      !canControlGame(session.role) ||
+                      isAnyModalOpen ||
+                      isClockRunning
+                    }
                     onPress={() =>
                       awayTeamId && handlePenaltyButtonPress(awayTeamId)
                     }
@@ -8480,10 +8612,13 @@ export default function App() {
                           <Pressable
                             style={[
                               styles.penaltyAdjustBtn,
-                              (!canControlGame(session.role) || isClockRunning) &&
+                              (!canControlGame(session.role) ||
+                                isClockRunning) &&
                                 styles.disabledButton,
                             ]}
-                            disabled={!canControlGame(session.role) || isClockRunning}
+                            disabled={
+                              !canControlGame(session.role) || isClockRunning
+                            }
                             onPress={() => openPenaltyAdjustModal(penalty)}
                           >
                             <Text style={styles.penaltyAdjustBtnText}>
@@ -8556,7 +8691,8 @@ export default function App() {
                       style={[
                         styles.clockSecondaryBtn,
                         styles.clockHalfWidthBtn,
-                        (isAnyModalOpen || isClockRunning) && styles.disabledButton,
+                        (isAnyModalOpen || isClockRunning) &&
+                          styles.disabledButton,
                       ]}
                       disabled={isAnyModalOpen || isClockRunning}
                       onPress={openSetEditClockModal}
@@ -8569,7 +8705,8 @@ export default function App() {
                       style={[
                         styles.clockSecondaryBtn,
                         styles.clockHalfWidthBtn,
-                        (isAnyModalOpen || isClockRunning) && styles.disabledButton,
+                        (isAnyModalOpen || isClockRunning) &&
+                          styles.disabledButton,
                       ]}
                       disabled={isAnyModalOpen || isClockRunning}
                       onPress={openTimeoutModal}
@@ -8634,10 +8771,13 @@ export default function App() {
                           <Pressable
                             style={[
                               styles.penaltyAdjustBtn,
-                              (!canControlGame(session.role) || isClockRunning) &&
+                              (!canControlGame(session.role) ||
+                                isClockRunning) &&
                                 styles.disabledButton,
                             ]}
-                            disabled={!canControlGame(session.role) || isClockRunning}
+                            disabled={
+                              !canControlGame(session.role) || isClockRunning
+                            }
                             onPress={() => openPenaltyAdjustModal(penalty)}
                           >
                             <Text style={styles.penaltyAdjustBtnText}>
@@ -8814,13 +8954,16 @@ export default function App() {
                               {event.teamName} TIMEOUT
                             </Text>
                             <Text style={styles.eventSubtitle}>
-                              Duration: {formatSecondsToClock(event.timeoutDurationSeconds ?? 60)}
+                              Duration:{" "}
+                              {formatSecondsToClock(
+                                event.timeoutDurationSeconds ?? 60,
+                              )}
                             </Text>
                           </>
                         ) : (
                           <>
                             <Text style={styles.eventTitle}>
-                              {event.teamName} GOALIE {" "}
+                              {event.teamName} GOALIE{" "}
                               {event.goalieChangeKind === "returned"
                                 ? "RETURNED"
                                 : event.goalieChangeKind === "pulled"
@@ -8874,15 +9017,6 @@ export default function App() {
                 Checks for suspension review notes and finalizes game
               </Text>
             </Pressable>
-
-            <View style={styles.rowButtons}>
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => setStage("officialsVerify")}
-              >
-                <Text style={styles.secondaryButtonText}>Back</Text>
-              </Pressable>
-            </View>
           </View>
         ) : null}
 
@@ -9017,7 +9151,7 @@ export default function App() {
                     ? styles.emailStatusBadgeSent
                     : emailDeliveryStatus === "queued"
                       ? styles.emailStatusBadgeQueued
-                    : styles.emailStatusBadgeFailed,
+                      : styles.emailStatusBadgeFailed,
                 ]}
               >
                 <Text style={styles.emailStatusBadgeTitle}>
@@ -9025,7 +9159,7 @@ export default function App() {
                     ? "Email Sent"
                     : emailDeliveryStatus === "queued"
                       ? "Finalize Queued"
-                    : "Email Failed"}
+                      : "Email Failed"}
                 </Text>
                 {emailDeliveryMessage ? (
                   <Text style={styles.emailStatusBadgeText}>
@@ -9519,7 +9653,9 @@ export default function App() {
               {officialEmailRecipients.length === 0 ? (
                 <Text
                   style={
-                    dqEmailPenaltyEvents.length > 0 ? styles.error : styles.footerHint
+                    dqEmailPenaltyEvents.length > 0
+                      ? styles.error
+                      : styles.footerHint
                   }
                 >
                   {dqEmailPenaltyEvents.length > 0
@@ -9619,7 +9755,9 @@ export default function App() {
                 <View key={recipient.key} style={styles.recipientRow}>
                   <View style={styles.recipientTextWrap}>
                     <Text style={styles.recipientName}>{recipient.email}</Text>
-                    <Text style={styles.recipientMeta}>Additional recipient</Text>
+                    <Text style={styles.recipientMeta}>
+                      Additional recipient
+                    </Text>
                   </View>
                   <View style={styles.addEmailActions}>
                     <Switch
@@ -9639,7 +9777,9 @@ export default function App() {
                     />
                     <Pressable
                       style={styles.removeEmailButton}
-                      onPress={() => removeCustomEmailRecipient(recipient.email)}
+                      onPress={() =>
+                        removeCustomEmailRecipient(recipient.email)
+                      }
                     >
                       <Text style={styles.removeEmailButtonText}>Remove</Text>
                     </Pressable>

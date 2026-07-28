@@ -426,7 +426,7 @@ namespace NetFrontAPI.Services
                                 {
                                     foreach (var player in report.AwayRoster)
                                     {
-                                        awayCol.Item().Text($"- {FormatNumberAndName(player.JerseyNumber, player.PlayerName)}{(player.IsGoalie ? " (Goalie)" : string.Empty)}");
+                                        awayCol.Item().Text($"{FormatNumberAndName(player.JerseyNumber, player.PlayerName)}{(player.IsGoalie ? " (Goalie)" : string.Empty)}");
                                     }
                                 }
                             });
@@ -442,7 +442,7 @@ namespace NetFrontAPI.Services
                         {
                             foreach (var official in report.Officials)
                             {
-                                col.Item().Text($"- {FormatOfficialRole(official.Role)}: {official.OfficialName}");
+                                col.Item().Text($"{FormatOfficialRole(official.Role)}: {official.OfficialName}");
                             }
                         }
 
@@ -824,31 +824,30 @@ namespace NetFrontAPI.Services
         {
             try
             {
-                var baseDir = AppContext.BaseDirectory;
-                var cwd = Directory.GetCurrentDirectory();
-                var candidates = new[]
-                {
-                    @"C:\NetFront\api\NetFrontAPI\Assets\NF_Logo_Default.png",
-                    Path.Combine(cwd, "Assets", "NF_Logo_Default.png"),
-                    Path.Combine(baseDir, "Assets", "NF_Logo_Default.png"),
-                    @"C:\NetFront\web\shared\styles\NF_Logo_Default.png",
-                    Path.Combine(cwd, "web", "shared", "styles", "NF_Logo_Default.png"),
-                    Path.Combine(cwd, "..", "web", "shared", "styles", "NF_Logo_Default.png"),
-                    Path.Combine(cwd, "..", "..", "web", "shared", "styles", "NF_Logo_Default.png"),
-                    Path.Combine(baseDir, "web", "shared", "styles", "NF_Logo_Default.png"),
-                    Path.Combine(baseDir, "..", "..", "..", "..", "web", "shared", "styles", "NF_Logo_Default.png"),
-                    Path.Combine(baseDir, "Assets", "NF_Logo_Default.png"),
-                    Path.Combine(Directory.GetCurrentDirectory(), "Assets", "NF_Logo_Default.png")
-                };
+                // Primary location: API Assets folder (always ship logo here)
+                var primaryPath = Path.Combine(AppContext.BaseDirectory, "Assets", "NF_Logo_Default.png");
 
-                var file = candidates.FirstOrDefault(File.Exists);
-                return file == null ? null : File.ReadAllBytes(file);
+                if (File.Exists(primaryPath))
+                    return File.ReadAllBytes(primaryPath);
+
+                // Fallback: current working directory (dev environments)
+                var fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "NF_Logo_Default.png");
+
+                if (File.Exists(fallbackPath))
+                    return File.ReadAllBytes(fallbackPath);
+
+                // Optional: log missing file for debugging
+                Console.WriteLine($"[GameSummaryReport] Logo not found. Checked:\n - {primaryPath}\n - {fallbackPath}");
+
+                return null;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[GameSummaryReport] Error reading logo: {ex.Message}");
                 return null;
             }
         }
+
 
         private static void DrawShotsTable(IContainer container, GameSummaryReport report)
         {

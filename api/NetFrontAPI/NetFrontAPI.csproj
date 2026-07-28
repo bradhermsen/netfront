@@ -35,7 +35,7 @@
   </None>
 </ItemGroup>
   <ItemGroup>
-    <None Update="Assets\netfront-logo.png">
+    <None Update="Assets\NF_Logo_Default">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>

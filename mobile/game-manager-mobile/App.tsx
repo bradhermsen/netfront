@@ -822,6 +822,25 @@ function parseClockToSeconds(mmss: string): number {
   return 0;
 }
 
+function parseClockDisplayToMs(clockDisplay: string): number {
+  const value = (clockDisplay ?? "").trim();
+  if (!value) return 0;
+
+  if (value.includes(":")) {
+    const [mRaw, sRaw] = value.split(":");
+    const minutes = Number(mRaw ?? 0);
+    const seconds = Number(sRaw ?? 0);
+    const totalSeconds = Number.isFinite(minutes) && Number.isFinite(seconds)
+      ? minutes * 60 + seconds
+      : 0;
+    return Math.max(0, Math.floor(totalSeconds * 1000));
+  }
+
+  const secondsTenths = Number(value);
+  if (!Number.isFinite(secondsTenths)) return 0;
+  return Math.max(0, Math.floor(secondsTenths * 1000));
+}
+
 function formatSecondsToClock(totalSeconds: number): string {
   const clamped = Math.max(0, Math.floor(totalSeconds));
   const minutes = Math.floor(clamped / 60);
@@ -1555,10 +1574,11 @@ export default function App() {
   const rosterScrollOffsetRef = useRef(0);
   const syncInFlightRef = useRef(false);
   const penaltyClockPrevRemainingMsRef = useRef<number | null>(null);
+  const penaltyClockCarryMsRef = useRef(0);
 
   const gameClock = useHockeyGameClock({
     initialPeriodDurationMs: 17 * 60 * 1000,
-    tickIntervalMs: 250,
+    tickIntervalMs: 100,
     onExpire: () => {
       setIsClockRunning(false);
       setShowPeriodOverVerify(true);
@@ -2184,7 +2204,7 @@ export default function App() {
     gameClock.setDuration(periodDurationMs);
 
     if (!isClockRunning) {
-      const sessionRemainingMs = parseClockToSeconds(session.clock) * 1000;
+      const sessionRemainingMs = parseClockDisplayToMs(session.clock);
       gameClock.syncPausedRemaining(sessionRemainingMs, periodDurationMs);
     }
   }, [stage, session?.period, session?.periodLength]);
@@ -2192,6 +2212,7 @@ export default function App() {
   useEffect(() => {
     if (stage !== "gameDashboard" || periodController.state !== "IN_PROGRESS") {
       penaltyClockPrevRemainingMsRef.current = null;
+      penaltyClockCarryMsRef.current = 0;
       return;
     }
 
@@ -2208,10 +2229,15 @@ export default function App() {
       return;
     }
 
+    const deltaMs = Math.max(0, prevRemainingMs - currentRemainingMs);
+    penaltyClockCarryMsRef.current += deltaMs;
+
     const elapsedWholeSeconds = Math.floor(
-      Math.max(0, prevRemainingMs - currentRemainingMs) / 1000,
+      penaltyClockCarryMsRef.current / 1000,
     );
     if (elapsedWholeSeconds <= 0) return;
+
+    penaltyClockCarryMsRef.current -= elapsedWholeSeconds * 1000;
 
     setActivePenalties((prev) => {
       if (periodController.state !== "IN_PROGRESS") return prev;
@@ -3777,9 +3803,11 @@ export default function App() {
 
     gameClock.setDuration(periodDurationMs);
     gameClock.syncPausedRemaining(
-      parseClockToSeconds(session.clock) * 1000,
+      parseClockDisplayToMs(session.clock),
       periodDurationMs,
     );
+    penaltyClockPrevRemainingMsRef.current = gameClock.remainingTimeMs;
+    penaltyClockCarryMsRef.current = 0;
     gameClock.resume();
     setIsClockRunning(true);
   }

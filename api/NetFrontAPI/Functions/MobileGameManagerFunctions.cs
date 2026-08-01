@@ -64,8 +64,10 @@ namespace NetFrontAPI.Functions
             {
                 var normalizedAccessCode = normalized.ToUpperInvariant();
                 var accessCodeNoPrefix = normalizedAccessCode;
+                var codeScope = "ANY";
                 if (accessCodeNoPrefix.StartsWith("GM-") || accessCodeNoPrefix.StartsWith("SM-"))
                 {
+                    codeScope = accessCodeNoPrefix.StartsWith("GM-") ? "GM" : "SM";
                     accessCodeNoPrefix = accessCodeNoPrefix.Substring(3);
                 }
 
@@ -76,19 +78,41 @@ namespace NetFrontAPI.Functions
                     FROM Teams t
                     WHERE t.IsActive = 1
                       AND (
-                        UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCode
-                        OR UPPER(ISNULL(t.StatManagerCode, '')) = @AccessCode
-                        OR UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCodeNoPrefix
-                        OR UPPER(ISNULL(t.StatManagerCode, '')) = @AccessCodeNoPrefix
-                        OR ('GM-' + UPPER(ISNULL(t.ScorekeeperCode, ''))) = @AccessCode
-                        OR ('SM-' + UPPER(ISNULL(t.StatManagerCode, ''))) = @AccessCode
+                        (
+                            @CodeScope = 'GM'
+                            AND (
+                                UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCode
+                                OR UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCodeNoPrefix
+                                OR ('GM-' + UPPER(ISNULL(t.ScorekeeperCode, ''))) = @AccessCode
+                            )
+                        )
+                        OR (
+                            @CodeScope = 'SM'
+                            AND (
+                                UPPER(ISNULL(t.StatManagerCode, '')) = @AccessCode
+                                OR UPPER(ISNULL(t.StatManagerCode, '')) = @AccessCodeNoPrefix
+                                OR ('SM-' + UPPER(ISNULL(t.StatManagerCode, ''))) = @AccessCode
+                            )
+                        )
+                        OR (
+                            @CodeScope = 'ANY'
+                            AND (
+                                UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCode
+                                OR UPPER(ISNULL(t.StatManagerCode, '')) = @AccessCode
+                                OR UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCodeNoPrefix
+                                OR UPPER(ISNULL(t.StatManagerCode, '')) = @AccessCodeNoPrefix
+                                OR ('GM-' + UPPER(ISNULL(t.ScorekeeperCode, ''))) = @AccessCode
+                                OR ('SM-' + UPPER(ISNULL(t.StatManagerCode, ''))) = @AccessCode
+                            )
+                        )
                       )
                     ORDER BY t.Name;";
 
                 teams = await conn.QueryAsync<MobileTeamDto>(byCodeSql, new
                 {
                     AccessCode = normalizedAccessCode,
-                    AccessCodeNoPrefix = accessCodeNoPrefix
+                    AccessCodeNoPrefix = accessCodeNoPrefix,
+                    CodeScope = codeScope
                 });
             }
 

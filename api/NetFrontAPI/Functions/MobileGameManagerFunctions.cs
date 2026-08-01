@@ -114,6 +114,87 @@ namespace NetFrontAPI.Functions
                     AccessCodeNoPrefix = accessCodeNoPrefix,
                     CodeScope = codeScope
                 });
+
+                var matchedTeams = teams.ToList();
+                if ((codeScope == "GM" || codeScope == "SM") && matchedTeams.Count > 1)
+                {
+                    const string chooseBestTeamSql = @"
+                        SELECT TOP 1
+                            t.Id AS TeamId
+                        FROM Teams t
+                        OUTER APPLY (
+                            SELECT TOP 1
+                                g.GameDateTime AS StartTime
+                            FROM Games g
+                            WHERE (g.HomeTeamId = t.Id OR g.AwayTeamId = t.Id)
+                              AND UPPER(ISNULL(g.Status, 'SCHEDULED')) NOT IN (
+                                    'COMPLETED',
+                                    'CLOSED',
+                                    'FINAL',
+                                    'CANCELLED',
+                                    'CANCELED',
+                                    'POSTPONED',
+                                    'PPD'
+                              )
+                              AND (
+                                CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date)
+                                OR g.GameDateTime >= SYSUTCDATETIME()
+                              )
+                            ORDER BY
+                                CASE
+                                    WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date) THEN 0
+                                    ELSE 1
+                                END,
+                                CASE
+                                    WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date)
+                                         AND g.GameDateTime >= SYSDATETIME() THEN 0
+                                    WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date) THEN 1
+                                    ELSE 0
+                                END,
+                                CASE
+                                    WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date)
+                                        THEN ABS(DATEDIFF(MINUTE, SYSDATETIME(), g.GameDateTime))
+                                    ELSE DATEDIFF(MINUTE, SYSUTCDATETIME(), g.GameDateTime)
+                                END,
+                                g.GameDateTime ASC
+                        ) ng
+                        WHERE t.Id IN @TeamIds
+                        ORDER BY
+                            CASE WHEN ng.StartTime IS NULL THEN 1 ELSE 0 END,
+                            CASE
+                                WHEN ng.StartTime IS NOT NULL
+                                     AND CAST(ng.StartTime AS date) = CAST(SYSDATETIME() AS date) THEN 0
+                                ELSE 1
+                            END,
+                            CASE
+                                WHEN ng.StartTime IS NOT NULL
+                                     AND CAST(ng.StartTime AS date) = CAST(SYSDATETIME() AS date)
+                                     AND ng.StartTime >= SYSDATETIME() THEN 0
+                                WHEN ng.StartTime IS NOT NULL
+                                     AND CAST(ng.StartTime AS date) = CAST(SYSDATETIME() AS date) THEN 1
+                                ELSE 0
+                            END,
+                            CASE
+                                WHEN ng.StartTime IS NULL THEN 2147483647
+                                WHEN CAST(ng.StartTime AS date) = CAST(SYSDATETIME() AS date)
+                                    THEN ABS(DATEDIFF(MINUTE, SYSDATETIME(), ng.StartTime))
+                                ELSE DATEDIFF(MINUTE, SYSUTCDATETIME(), ng.StartTime)
+                            END,
+                            t.Name ASC;";
+
+                    var bestTeamId = await conn.QueryFirstOrDefaultAsync<Guid?>(
+                        chooseBestTeamSql,
+                        new { TeamIds = matchedTeams.Select(t => t.TeamId).ToArray() });
+
+                    if (bestTeamId.HasValue)
+                    {
+                        teams = matchedTeams.Where(t => t.TeamId == bestTeamId.Value).ToArray();
+                    }
+                    else
+                    {
+                        teams = matchedTeams.Take(1).ToArray();
+                    }
+                }
             }
 
             var response = req.CreateResponse(HttpStatusCode.OK);

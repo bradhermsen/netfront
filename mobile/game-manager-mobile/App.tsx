@@ -2,7 +2,6 @@ import { StatusBar } from "expo-status-bar";
 import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Picker } from "@react-native-picker/picker";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -7707,7 +7706,7 @@ export default function App() {
             presentationStyle="overFullScreen"
             onRequestClose={closeEventEditModal}
           >
-            <View style={[styles.confirmOverlay, styles.eventEditOverlay]}>
+            <View style={styles.confirmOverlay}>
               <View style={styles.goalModal}>
                 <Text style={styles.goalModalTitle}>Edit Event</Text>
                 <Text style={styles.goalModalSubtitle}>
@@ -7762,105 +7761,175 @@ export default function App() {
                       </View>
 
                       <Text style={styles.sectionLabel}>SCORER</Text>
-                      <View style={styles.pickerShell}>
-                        <Picker
-                          selectedValue={eventEditModal.playerId}
-                          onValueChange={(value) =>
-                            setEventEditModal((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    playerId: String(value),
-                                    assist1Id:
-                                      prev.assist1Id === String(value)
-                                        ? ""
-                                        : prev.assist1Id,
-                                    assist2Id:
-                                      prev.assist2Id === String(value)
-                                        ? ""
-                                        : prev.assist2Id,
-                                  }
-                                : prev,
-                            )
-                          }
-                          dropdownIconColor="#FF7B00"
-                          style={styles.picker}
-                          itemStyle={styles.pickerItem}
+                      <Pressable
+                        style={styles.themedSelectTrigger}
+                        onPress={() =>
+                          openThemedDropdown({
+                            title: "Scorer",
+                            selectedValue: eventEditModal.playerId,
+                            onSelect: (value) =>
+                              setEventEditModal((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      playerId: value,
+                                      assist1Id:
+                                        prev.assist1Id === value
+                                          ? ""
+                                          : prev.assist1Id,
+                                      assist2Id:
+                                        prev.assist2Id === value
+                                          ? ""
+                                          : prev.assist2Id,
+                                    }
+                                  : prev,
+                              ),
+                            options: [
+                              { value: "", label: "Select player..." },
+                              ...sortRosterPlayersForPicker(
+                                eventEditTeamRoster,
+                              ).map((player) => ({
+                                value: player.playerId,
+                                label: formatPlayerPickerLabel(player),
+                              })),
+                            ],
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.themedSelectValue,
+                            !eventEditModal.playerId &&
+                              styles.themedSelectPlaceholder,
+                          ]}
                         >
-                          <Picker.Item label="Select player..." value="" />
-                          {sortRosterPlayersForPicker(eventEditTeamRoster).map(
-                            (player) => (
-                              <Picker.Item
-                                key={`edit-goal-player-${player.playerId}`}
-                                label={formatPlayerPickerLabel(player)}
-                                value={player.playerId}
-                              />
-                            ),
-                          )}
-                        </Picker>
-                      </View>
+                          {eventEditModal.playerId
+                            ? formatPlayerPickerLabel(
+                                eventEditTeamRoster.find(
+                                  (player) =>
+                                    player.playerId === eventEditModal.playerId,
+                                ) ?? {
+                                  playerId: "",
+                                  fullName: "Unknown Player",
+                                  jerseyNumber: null,
+                                  position: "-",
+                                  grade: null,
+                                  isGoalie: false,
+                                  isActive: true,
+                                },
+                              )
+                            : "Select player..."}
+                        </Text>
+                        <Text style={styles.themedSelectChevron}>▾</Text>
+                      </Pressable>
 
                       <Text style={styles.sectionLabel}>ASSIST 1</Text>
-                      <View style={styles.pickerShell}>
-                        <Picker
-                          selectedValue={eventEditModal.assist1Id}
-                          onValueChange={(value) =>
-                            setEventEditModal((prev) =>
-                              prev
-                                ? { ...prev, assist1Id: String(value) }
-                                : prev,
-                            )
-                          }
-                          dropdownIconColor="#FF7B00"
-                          style={styles.picker}
-                          itemStyle={styles.pickerItem}
+                      <Pressable
+                        style={styles.themedSelectTrigger}
+                        onPress={() =>
+                          openThemedDropdown({
+                            title: "Assist 1",
+                            selectedValue: eventEditModal.assist1Id,
+                            onSelect: (value) =>
+                              setEventEditModal((prev) =>
+                                prev ? { ...prev, assist1Id: value } : prev,
+                              ),
+                            options: [
+                              { value: "", label: "None" },
+                              ...sortRosterPlayersForPicker(
+                                eventEditAssistRoster.filter(
+                                  (player) =>
+                                    player.playerId !== eventEditModal.assist2Id,
+                                ),
+                              ).map((player) => ({
+                                value: player.playerId,
+                                label: formatPlayerPickerLabel(player),
+                              })),
+                            ],
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.themedSelectValue,
+                            !eventEditModal.assist1Id &&
+                              styles.themedSelectPlaceholder,
+                          ]}
                         >
-                          <Picker.Item label="None" value="" />
-                          {sortRosterPlayersForPicker(
-                            eventEditAssistRoster.filter(
-                              (player) =>
-                                player.playerId !== eventEditModal.assist2Id,
-                            ),
-                          ).map((player) => (
-                            <Picker.Item
-                              key={`edit-goal-a1-${player.playerId}`}
-                              label={formatPlayerPickerLabel(player)}
-                              value={player.playerId}
-                            />
-                          ))}
-                        </Picker>
-                      </View>
+                          {eventEditModal.assist1Id
+                            ? formatPlayerPickerLabel(
+                                eventEditTeamRoster.find(
+                                  (player) =>
+                                    player.playerId ===
+                                    eventEditModal.assist1Id,
+                                ) ?? {
+                                  playerId: "",
+                                  fullName: "Unknown Player",
+                                  jerseyNumber: null,
+                                  position: "-",
+                                  grade: null,
+                                  isGoalie: false,
+                                  isActive: true,
+                                },
+                              )
+                            : "None"}
+                        </Text>
+                        <Text style={styles.themedSelectChevron}>▾</Text>
+                      </Pressable>
 
                       <Text style={styles.sectionLabel}>ASSIST 2</Text>
-                      <View style={styles.pickerShell}>
-                        <Picker
-                          selectedValue={eventEditModal.assist2Id}
-                          onValueChange={(value) =>
-                            setEventEditModal((prev) =>
-                              prev
-                                ? { ...prev, assist2Id: String(value) }
-                                : prev,
-                            )
-                          }
-                          dropdownIconColor="#FF7B00"
-                          style={styles.picker}
-                          itemStyle={styles.pickerItem}
+                      <Pressable
+                        style={styles.themedSelectTrigger}
+                        onPress={() =>
+                          openThemedDropdown({
+                            title: "Assist 2",
+                            selectedValue: eventEditModal.assist2Id,
+                            onSelect: (value) =>
+                              setEventEditModal((prev) =>
+                                prev ? { ...prev, assist2Id: value } : prev,
+                              ),
+                            options: [
+                              { value: "", label: "None" },
+                              ...sortRosterPlayersForPicker(
+                                eventEditAssistRoster.filter(
+                                  (player) =>
+                                    player.playerId !== eventEditModal.assist1Id,
+                                ),
+                              ).map((player) => ({
+                                value: player.playerId,
+                                label: formatPlayerPickerLabel(player),
+                              })),
+                            ],
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.themedSelectValue,
+                            !eventEditModal.assist2Id &&
+                              styles.themedSelectPlaceholder,
+                          ]}
                         >
-                          <Picker.Item label="None" value="" />
-                          {sortRosterPlayersForPicker(
-                            eventEditAssistRoster.filter(
-                              (player) =>
-                                player.playerId !== eventEditModal.assist1Id,
-                            ),
-                          ).map((player) => (
-                            <Picker.Item
-                              key={`edit-goal-a2-${player.playerId}`}
-                              label={formatPlayerPickerLabel(player)}
-                              value={player.playerId}
-                            />
-                          ))}
-                        </Picker>
-                      </View>
+                          {eventEditModal.assist2Id
+                            ? formatPlayerPickerLabel(
+                                eventEditTeamRoster.find(
+                                  (player) =>
+                                    player.playerId ===
+                                    eventEditModal.assist2Id,
+                                ) ?? {
+                                  playerId: "",
+                                  fullName: "Unknown Player",
+                                  jerseyNumber: null,
+                                  position: "-",
+                                  grade: null,
+                                  isGoalie: false,
+                                  isActive: true,
+                                },
+                              )
+                            : "None"}
+                        </Text>
+                        <Text style={styles.themedSelectChevron}>▾</Text>
+                      </Pressable>
 
                       <Text style={styles.sectionLabel}>GOAL TYPE</Text>
                       <View style={styles.goalTypeRow}>
@@ -7949,32 +8018,54 @@ export default function App() {
                       </View>
 
                       <Text style={styles.sectionLabel}>PENALIZED PLAYER</Text>
-                      <View style={styles.pickerShell}>
-                        <Picker
-                          selectedValue={eventEditModal.playerId}
-                          onValueChange={(value) =>
-                            setEventEditModal((prev) =>
-                              prev
-                                ? { ...prev, playerId: String(value) }
-                                : prev,
-                            )
-                          }
-                          dropdownIconColor="#FF7B00"
-                          style={styles.picker}
-                          itemStyle={styles.pickerItem}
+                      <Pressable
+                        style={styles.themedSelectTrigger}
+                        onPress={() =>
+                          openThemedDropdown({
+                            title: "Penalized Player",
+                            selectedValue: eventEditModal.playerId,
+                            onSelect: (value) =>
+                              setEventEditModal((prev) =>
+                                prev ? { ...prev, playerId: value } : prev,
+                              ),
+                            options: [
+                              { value: "", label: "Select player..." },
+                              ...sortRosterPlayersForPicker(
+                                eventEditTeamRoster,
+                              ).map((player) => ({
+                                value: player.playerId,
+                                label: formatPlayerPickerLabel(player),
+                              })),
+                            ],
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.themedSelectValue,
+                            !eventEditModal.playerId &&
+                              styles.themedSelectPlaceholder,
+                          ]}
                         >
-                          <Picker.Item label="Select player..." value="" />
-                          {sortRosterPlayersForPicker(eventEditTeamRoster).map(
-                            (player) => (
-                              <Picker.Item
-                                key={`edit-penalty-player-${player.playerId}`}
-                                label={formatPlayerPickerLabel(player)}
-                                value={player.playerId}
-                              />
-                            ),
-                          )}
-                        </Picker>
-                      </View>
+                          {eventEditModal.playerId
+                            ? formatPlayerPickerLabel(
+                                eventEditTeamRoster.find(
+                                  (player) =>
+                                    player.playerId === eventEditModal.playerId,
+                                ) ?? {
+                                  playerId: "",
+                                  fullName: "Unknown Player",
+                                  jerseyNumber: null,
+                                  position: "-",
+                                  grade: null,
+                                  isGoalie: false,
+                                  isActive: true,
+                                },
+                              )
+                            : "Select player..."}
+                        </Text>
+                        <Text style={styles.themedSelectChevron}>▾</Text>
+                      </Pressable>
 
                       <Text style={styles.sectionLabel}>QUICK PICK</Text>
                       <View style={styles.quickPickRow}>
@@ -8023,42 +8114,46 @@ export default function App() {
                       </View>
 
                       <Text style={styles.sectionLabel}>INFRACTION</Text>
-                      <View style={styles.pickerShell}>
-                        <Picker
-                          selectedValue={eventEditModal.infraction}
-                          onValueChange={(value) =>
-                            setEventEditModal((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    infraction: String(value),
-                                    penaltyType:
-                                      resolvePenaltyTypeForInfraction(
-                                        String(value),
-                                        prev.penaltyType,
+                      <Pressable
+                        style={styles.themedSelectTrigger}
+                        onPress={() =>
+                          openThemedDropdown({
+                            title: "Infraction",
+                            selectedValue: eventEditModal.infraction,
+                            onSelect: (value) =>
+                              setEventEditModal((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      infraction: value,
+                                      penaltyType:
+                                        resolvePenaltyTypeForInfraction(
+                                          value,
+                                          prev.penaltyType,
+                                        ),
+                                      durationMinutes: getPenaltyDurationMinutes(
+                                        resolvePenaltyTypeForInfraction(
+                                          value,
+                                          prev.penaltyType,
+                                        ),
                                       ),
-                                    durationMinutes: getPenaltyDurationMinutes(
-                                      resolvePenaltyTypeForInfraction(
-                                        String(value),
-                                        prev.penaltyType,
-                                      ),
-                                    ),
-                                  }
-                                : prev,
-                            )
-                          }
-                          dropdownIconColor="#FF7B00"
-                          style={styles.picker}
-                        >
-                          {ALL_HOCKEY_INFRACTIONS_SORTED.map((infraction) => (
-                            <Picker.Item
-                              key={`edit-infraction-${infraction}`}
-                              label={infraction}
-                              value={infraction}
-                            />
-                          ))}
-                        </Picker>
-                      </View>
+                                    }
+                                  : prev,
+                              ),
+                            options: ALL_HOCKEY_INFRACTIONS_SORTED.map(
+                              (infraction) => ({
+                                value: infraction,
+                                label: infraction,
+                              }),
+                            ),
+                          })
+                        }
+                      >
+                        <Text style={styles.themedSelectValue}>
+                          {eventEditModal.infraction}
+                        </Text>
+                        <Text style={styles.themedSelectChevron}>▾</Text>
+                      </Pressable>
 
                       <Text style={styles.sectionLabel}>PENALTY TYPE</Text>
                       <View style={styles.goalTypeRow}>
@@ -10805,10 +10900,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
   },
-  eventEditOverlay: {
-    justifyContent: "flex-start",
-    paddingTop: 68,
-  },
   confirmModal: {
     width: "100%",
     maxWidth: 420,
@@ -11654,25 +11745,6 @@ const styles = StyleSheet.create({
   goalLockedValue: {
     color: "#E8EDF5",
     fontSize: 13,
-    fontWeight: "800",
-  },
-  pickerShell: {
-    borderWidth: 1,
-    borderColor: "rgba(255,123,0,0.75)",
-    borderRadius: 8,
-    backgroundColor: "#122844",
-    overflow: "hidden",
-  },
-  picker: {
-    color: "#F3F7FD",
-    backgroundColor: "#122844",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  pickerItem: {
-    color: "#F3F7FD",
-    backgroundColor: "#122844",
-    fontSize: 14,
     fontWeight: "800",
   },
   themedSelectTrigger: {

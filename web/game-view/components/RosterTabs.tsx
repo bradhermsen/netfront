@@ -5,10 +5,17 @@ export interface RosterPlayerRow {
   playerId: string;
   playerName: string;
   jerseyNumber: string;
+  position: string;
   grade: string;
+  isGoalie: boolean;
   goals: number;
   assists: number;
   penaltyMinutes: number;
+  shotsAgainst: number;
+  goalsAgainst: number;
+  goalsAgainstAverage: number;
+  savePercentage: number;
+  minutesPlayed: number;
 }
 
 interface Props {
@@ -20,6 +27,7 @@ interface Props {
   awayCoaches: ApiTeamCoach[];
   activeTab: "home" | "away";
   onTabChange: (tab: "home" | "away") => void;
+  goalieStatsNotice?: string;
 }
 
 export function RosterTabs({
@@ -31,9 +39,12 @@ export function RosterTabs({
   awayCoaches,
   activeTab,
   onTabChange,
+  goalieStatsNotice = "",
 }: Props) {
   const rows = activeTab === "home" ? homeRoster : awayRoster;
   const coaches = activeTab === "home" ? homeCoaches : awayCoaches;
+  const skaterRows = rows.filter((row) => !row.isGoalie);
+  const goalieRows = rows.filter((row) => row.isGoalie);
 
   return (
     <section className="game-view-roster-card">
@@ -62,33 +73,74 @@ export function RosterTabs({
         </button>
       </div>
 
-      <p className="game-view-roster-active-team" aria-live="polite">
-        Viewing roster: <strong>{activeTab === "home" ? homeTeamName : awayTeamName}</strong>
-      </p>
+      {goalieStatsNotice ? (
+        <p className="game-view-roster-notice" role="status" aria-live="polite">
+          {goalieStatsNotice}
+        </p>
+      ) : null}
 
       {rows.length === 0 ? (
         <p className="game-view-empty-text">No roster data available.</p>
       ) : (
         <div className="game-view-roster-grid-wrap">
-          <div className="game-view-roster-grid game-view-roster-grid-header">
-            <span>Player #</span>
-            <span>Player Name</span>
-            <span>Grade</span>
-            <span>Goals</span>
-            <span>Assists</span>
-            <span>PIM</span>
+          <div className="game-view-roster-section">
+            <h3 className="game-view-roster-subtitle">F / D</h3>
+            <div className="game-view-roster-grid game-view-roster-grid-header game-view-roster-grid--skaters">
+              <span>Jersey #</span>
+              <span>Position</span>
+              <span>Player Name</span>
+              <span>Grade</span>
+              <span>Goals</span>
+              <span>Assists</span>
+              <span>PIM</span>
+            </div>
+
+            {skaterRows.length === 0 ? (
+              <p className="game-view-empty-text">No skaters available.</p>
+            ) : (
+              skaterRows.map((row) => (
+                <div key={row.playerId} className="game-view-roster-grid game-view-roster-grid-row game-view-roster-grid--skaters">
+                  <span>{row.jerseyNumber || "-"}</span>
+                  <span>{row.position || "-"}</span>
+                  <span>{row.playerName}</span>
+                  <span>{row.grade || "-"}</span>
+                  <span>{row.goals}</span>
+                  <span>{row.assists}</span>
+                  <span>{row.penaltyMinutes}</span>
+                </div>
+              ))
+            )}
           </div>
 
-          {rows.map((row) => (
-            <div key={row.playerId} className="game-view-roster-grid game-view-roster-grid-row">
-              <span>{row.jerseyNumber || "-"}</span>
-              <span>{row.playerName}</span>
-              <span>{row.grade || "-"}</span>
-              <span>{row.goals}</span>
-              <span>{row.assists}</span>
-              <span>{row.penaltyMinutes}</span>
+          {goalieRows.length > 0 ? (
+            <div className="game-view-roster-section game-view-roster-section--goalies">
+              <div className="game-view-roster-separator" aria-hidden="true" />
+              <h3 className="game-view-roster-subtitle">Goalies</h3>
+              <div className="game-view-roster-grid game-view-roster-grid-header game-view-roster-grid--goalies">
+                <span>Jersey #</span>
+                <span>Position</span>
+                <span>Player Name</span>
+                <span>Shot total</span>
+                <span>GA</span>
+                <span>GAA</span>
+                <span>SVG</span>
+                <span>MIN</span>
+              </div>
+
+              {goalieRows.map((row) => (
+                <div key={row.playerId} className="game-view-roster-grid game-view-roster-grid-row game-view-roster-grid--goalies">
+                  <span>{row.jerseyNumber || "-"}</span>
+                  <span>{row.position || "G"}</span>
+                  <span>{row.playerName}</span>
+                  <span>{row.shotsAgainst}</span>
+                  <span>{row.goalsAgainst}</span>
+                  <span>{row.goalsAgainstAverage.toFixed(2)}</span>
+                  <span>{row.savePercentage.toFixed(1)}%</span>
+                  <span>{row.minutesPlayed.toFixed(1)}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : null}
         </div>
       )}
 

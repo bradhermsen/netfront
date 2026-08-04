@@ -89,6 +89,9 @@ namespace NetFrontAPI.Services
         public int OT { get; set; }
         public int Total { get; set; }
         public int TimeInNetSeconds { get; set; }
+        public decimal GoalsAgainstEstimate { get; set; }
+        public decimal SavesEstimate { get; set; }
+        public decimal SavePctEstimate { get; set; }
     }
 
     public class RosterPlayerSummaryLine

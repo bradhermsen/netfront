@@ -7,6 +7,7 @@ interface Props {
   awayScore: number;
   periodLabel: string;
   statusLabel: string;
+  statusDetail?: string;
   homeShots?: number;
   awayShots?: number;
   homeShotsP1?: number;
@@ -16,8 +17,6 @@ interface Props {
   awayShotsP2?: number;
   awayShotsP3?: number;
   currentPeriodNumber?: number;
-  homePowerPlay?: boolean;
-  awayPowerPlay?: boolean;
   isInProgress?: boolean;
 }
 
@@ -28,6 +27,7 @@ export function MiniScoreboard({
   awayScore,
   periodLabel,
   statusLabel,
+  statusDetail,
   homeShots = 0,
   awayShots = 0,
   homeShotsP1,
@@ -37,12 +37,11 @@ export function MiniScoreboard({
   awayShotsP2,
   awayShotsP3,
   currentPeriodNumber,
-  homePowerPlay = false,
-  awayPowerPlay = false,
   isInProgress = false,
 }: Props) {
   const statusText = String(statusLabel || "").trim().toUpperCase();
   const periodText = String(periodLabel || "").trim().toUpperCase();
+  const statusDetailText = String(statusDetail || "").trim();
 
   function formatPeriodShots(value: number | undefined, period: 1 | 2 | 3) {
     if (typeof value === "number") {
@@ -66,10 +65,15 @@ export function MiniScoreboard({
         ) : null}
       </div>
 
+      {statusDetailText ? (
+        <div className="game-view-mini-status-detail" aria-label="Current game situation">
+          {statusDetailText}
+        </div>
+      ) : null}
+
       <div className="game-view-mini-team-row">
         <div className="game-view-mini-team-left">
           <span className="game-view-mini-team-name">{awayTeam}</span>
-          {awayPowerPlay ? <span className="game-view-mini-pp game-view-pill-green">PP</span> : null}
         </div>
 
         <div className="game-view-mini-team-right">
@@ -82,7 +86,6 @@ export function MiniScoreboard({
       <div className="game-view-mini-team-row">
         <div className="game-view-mini-team-left">
           <span className="game-view-mini-team-name">{homeTeam}</span>
-          {homePowerPlay ? <span className="game-view-mini-pp game-view-pill-green">PP</span> : null}
         </div>
 
         <div className="game-view-mini-team-right">

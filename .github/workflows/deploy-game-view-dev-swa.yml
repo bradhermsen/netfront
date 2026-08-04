@@ -1,0 +1,75 @@
+name: Deploy Game View
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - web/game-view/**
+      - .github/workflows/deploy-game-view-dev-swa.yml
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Game View
+    env:
+      STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME_GAMEVIEW }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deploy settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${STORAGE_ACCOUNT_NAME:-}" ]; then
+            echo "Missing required secret: AZURE_STORAGE_ACCOUNT_NAME_GAMEVIEW"
+            exit 1
+          fi
+          echo "Using storage account: ${STORAGE_ACCOUNT_NAME}"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Show Azure context
+        shell: bash
+        run: |
+          set -euo pipefail
+          az account show --query "{subscription:id, tenant:tenantId, user:user.name}" -o table
+          az storage account show --name "${STORAGE_ACCOUNT_NAME}" --query "{name:name, resourceGroup:resourceGroup, location:primaryLocation}" -o table
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Game View
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd web/game-view
+          npm ci
+          npm run build
+
+      - name: Install Azure CLI storage preview extension
+        run: az extension add --name storage-preview --upgrade
+
+      - name: Sync Game View to Storage static website
+        shell: bash
+        run: |
+          set -euo pipefail
+          az storage blob sync \
+            --account-name "${STORAGE_ACCOUNT_NAME}" \
+            --container '$web' \
+            --source 'web/game-view/dist' \
+            --delete-destination true \
+            --auth-mode login

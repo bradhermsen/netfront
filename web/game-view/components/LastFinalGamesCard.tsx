@@ -3,9 +3,10 @@ import type { LastFinalGameItemModel } from "../types/gameView";
 
 interface Props {
   games: LastFinalGameItemModel[];
+  onClick: (gameId: string) => void;
 }
 
-export function LastFinalGamesCard({ games }: Props) {
+export function LastFinalGamesCard({ games, onClick }: Props) {
   return (
     <section className="game-view-section" aria-label="Game Finals">
       <h2 className="game-view-section-title">Game Finals</h2>
@@ -24,13 +25,18 @@ export function LastFinalGamesCard({ games }: Props) {
                 });
 
             return (
-              <article key={game.gameId} className="game-view-schedule-card">
+              <button
+                key={game.gameId}
+                type="button"
+                className="game-view-schedule-card game-view-schedule-card-button"
+                onClick={() => onClick(game.gameId)}
+              >
                 <p className="game-view-schedule-matchup">
                   {game.matchupLabel || `${game.awayTeamName} at ${game.homeTeamName}`}
                 </p>
                 <p className="game-view-schedule-meta">{dateText} • {game.status}</p>
                 <p className="game-view-schedule-meta">{game.scoreText}</p>
-              </article>
+              </button>
             );
           })}
         </div>

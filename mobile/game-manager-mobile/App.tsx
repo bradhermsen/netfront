@@ -95,6 +95,8 @@ type CompleteGamePayload = {
   };
 };
 
+type LiveShotSummaryPayload = CompleteGamePayload["shotSummary"];
+
 type CompletionResponse = {
   emailRequested?: boolean;
   emailSent?: boolean;
@@ -320,6 +322,13 @@ type ThemedDropdownState = {
   onSelect: (value: string) => void;
 };
 
+type ScoreboardGatewaySettings = {
+  enabled: boolean;
+  host: string;
+  port: string;
+  tokenSecret: string;
+};
+
 type GameFeedEvent = {
   localId: string;
   gameId: string;
@@ -462,6 +471,9 @@ const FINALIZE_OFFLINE_QUEUE_KEY = "netfront.finalizeOfflineQueue";
 const ACTIVE_GAME_SNAPSHOT_KEY = "netfront.activeGameSnapshot";
 const ACTIVE_GAME_RESUME_KEY = "netfront.activeGameResume";
 const ACTIVE_GAME_MARKER_KEY = "netfront.activeGameMarker";
+const SCOREBOARD_GATEWAY_SETTINGS_KEY = "netfront.scoreboardGatewaySettings";
+const DEFAULT_SCOREBOARD_GATEWAY_HOST = "192.168.68.69";
+const DEFAULT_SCOREBOARD_GATEWAY_PORT = "80";
 const VERBOSE_TRACE = false;
 const STORAGE_FALLBACK_DIR = new FileSystem.Directory(
   FileSystem.Paths.document,
@@ -1540,6 +1552,30 @@ export default function App() {
     useState<ThemedDropdownState | null>(null);
   const [showSuspensionNotesModal, setShowSuspensionNotesModal] =
     useState(false);
+  const [showScoreboardSettingsModal, setShowScoreboardSettingsModal] =
+    useState(false);
+  const [scoreboardGatewaySettings, setScoreboardGatewaySettings] =
+    useState<ScoreboardGatewaySettings>({
+      enabled: false,
+      host: DEFAULT_SCOREBOARD_GATEWAY_HOST,
+      port: DEFAULT_SCOREBOARD_GATEWAY_PORT,
+      tokenSecret: "",
+    });
+  const [scoreboardSettingsDraft, setScoreboardSettingsDraft] =
+    useState<ScoreboardGatewaySettings>({
+      enabled: false,
+      host: DEFAULT_SCOREBOARD_GATEWAY_HOST,
+      port: DEFAULT_SCOREBOARD_GATEWAY_PORT,
+      tokenSecret: "",
+    });
+  const [scoreboardConnectionState, setScoreboardConnectionState] = useState<
+    "disconnected" | "connecting" | "connected" | "error"
+  >("disconnected");
+  const [scoreboardConnectionMessage, setScoreboardConnectionMessage] =
+    useState("Disconnected");
+  const [scoreboardReconnectNonce, setScoreboardReconnectNonce] = useState(0);
+  const [showScoreboardTokenSecret, setShowScoreboardTokenSecret] =
+    useState(false);
   const [rosterPreviewTeam, setRosterPreviewTeam] = useState<
     "home" | "away" | null
   >(null);
@@ -1574,6 +1610,26 @@ export default function App() {
   const syncInFlightRef = useRef(false);
   const penaltyClockPrevRemainingMsRef = useRef<number | null>(null);
   const penaltyClockCarryMsRef = useRef(0);
+  const scoreboardSocketRef = useRef<WebSocket | null>(null);
+  const scoreboardReconnectTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scoreboardReconnectAttemptRef = useRef(0);
+  const scoreboardClockSyncActiveRef = useRef(false);
+  const gatewayLastClockSecondsRef = useRef<number | null>(null);
+  const scoreboardLastMessageAtRef = useRef<number | null>(null);
+  const stageRef = useRef<Stage>(stage);
+  const sessionPeriodRef = useRef(1);
+  const sessionPeriodLengthRef = useRef("17");
+  const gameClockControlsRef = useRef({
+    setDuration: (_nextDurationMs: number) => {},
+    syncPausedRemaining: (_nextRemainingMs: number, _nextDurationMs?: number) => {},
+    pause: () => {},
+    resume: () => {},
+  });
+  const liveShotSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const lastLiveShotSyncSignatureRef = useRef("");
 
   const gameClock = useHockeyGameClock({
     initialPeriodDurationMs: 17 * 60 * 1000,
@@ -1670,6 +1726,7 @@ export default function App() {
     isEventDeleteConfirmModalOpen ||
     isEventEditModalOpen ||
     isPenaltyAdjustModalOpen ||
+    showScoreboardSettingsModal ||
     showPeriodOverVerify ||
     showResumeVerify ||
     showEndOfRegulation;
@@ -1758,6 +1815,83 @@ export default function App() {
       : homeSkatersOnIce > awaySkatersOnIce
         ? `POWER PLAY - ${session?.homeTeam?.toUpperCase() ?? "HOME"}`
         : `POWER PLAY - ${session?.awayTeam?.toUpperCase() ?? "AWAY"}`;
+
+  const scoreboardConnectionBadgeText = useMemo(() => {
+    if (!scoreboardGatewaySettings.enabled) {
+      return "Manual Clock";
+    }
+    if (scoreboardConnectionState === "connected") {
+      return "Scoreboard Connected";
+    }
+    if (scoreboardConnectionState === "connecting") {
+      return "Connecting...";
+    }
+    return "Not Connected";
+  }, [scoreboardConnectionState, scoreboardGatewaySettings.enabled]);
+
+  const scoreboardConnectionBadgeStyle = useMemo(() => {
+    if (!scoreboardGatewaySettings.enabled) {
+      return styles.scoreboardConnectionManual;
+    }
+    if (scoreboardConnectionState === "connected") {
+      return styles.scoreboardConnectionConnected;
+    }
+    if (scoreboardConnectionState === "connecting") {
+      return styles.scoreboardConnectionConnecting;
+    }
+    return styles.scoreboardConnectionDisconnected;
+  }, [scoreboardConnectionState, scoreboardGatewaySettings.enabled]);
+
+  const scoreboardConnectionBadgeTextStyle = useMemo(() => {
+    if (!scoreboardGatewaySettings.enabled) {
+      return styles.scoreboardConnectionBadgeTextManual;
+    }
+    if (scoreboardConnectionState === "connected") {
+      return styles.scoreboardConnectionBadgeTextConnected;
+    }
+    if (scoreboardConnectionState === "connecting") {
+      return styles.scoreboardConnectionBadgeTextConnecting;
+    }
+    return styles.scoreboardConnectionBadgeTextDisconnected;
+  }, [scoreboardConnectionState, scoreboardGatewaySettings.enabled]);
+
+  const isScoreboardClockSyncActive =
+    stage === "gameDashboard" &&
+    scoreboardGatewaySettings.enabled &&
+    scoreboardConnectionState === "connected";
+  const clockSourceLabel = isScoreboardClockSyncActive
+    ? "Gateway Sync"
+    : "Manual (Tablet)";
+
+  useEffect(() => {
+    scoreboardClockSyncActiveRef.current = isScoreboardClockSyncActive;
+  }, [isScoreboardClockSyncActive]);
+
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
+
+  useEffect(() => {
+    sessionPeriodRef.current = session?.period ?? 1;
+  }, [session?.period]);
+
+  useEffect(() => {
+    sessionPeriodLengthRef.current = session?.periodLength ?? "17";
+  }, [session?.periodLength]);
+
+  useEffect(() => {
+    gameClockControlsRef.current = {
+      setDuration: gameClock.setDuration,
+      syncPausedRemaining: gameClock.syncPausedRemaining,
+      pause: gameClock.pause,
+      resume: gameClock.resume,
+    };
+  }, [
+    gameClock.setDuration,
+    gameClock.syncPausedRemaining,
+    gameClock.pause,
+    gameClock.resume,
+  ]);
 
   const activePeriodLabel = getPeriodLabel(
     session?.period ?? 1,
@@ -2163,6 +2297,446 @@ export default function App() {
     [customEmails],
   );
 
+  function disconnectScoreboardSocket() {
+    const socket = scoreboardSocketRef.current;
+    if (!socket) return;
+    try {
+      socket.close();
+    } catch {
+      // Ignore close failures.
+    }
+    scoreboardSocketRef.current = null;
+  }
+
+  function clearScheduledScoreboardReconnect() {
+    if (scoreboardReconnectTimerRef.current == null) return;
+    clearTimeout(scoreboardReconnectTimerRef.current);
+    scoreboardReconnectTimerRef.current = null;
+  }
+
+  function scheduleScoreboardReconnect(reason: string) {
+    if (!scoreboardGatewaySettings.enabled || stageRef.current !== "gameDashboard") {
+      return;
+    }
+
+    if (scoreboardReconnectTimerRef.current != null) {
+      return;
+    }
+
+    const attempt = scoreboardReconnectAttemptRef.current;
+    const delayMs = Math.min(12000, 1500 + attempt * 1500);
+    scoreboardReconnectAttemptRef.current = attempt + 1;
+    setScoreboardConnectionMessage(`${reason}. Retrying in ${Math.ceil(delayMs / 1000)}s`);
+
+    scoreboardReconnectTimerRef.current = setTimeout(() => {
+      scoreboardReconnectTimerRef.current = null;
+      gatewayLastClockSecondsRef.current = null;
+      scoreboardLastMessageAtRef.current = null;
+      setScoreboardConnectionState("connecting");
+      setScoreboardConnectionMessage("Reconnecting to gateway");
+      setScoreboardReconnectNonce((prev) => prev + 1);
+    }, delayMs);
+  }
+
+  function normalizeScoreboardHost(rawHost: string) {
+    const trimmed = rawHost.trim();
+    if (!trimmed) return "";
+    return trimmed
+      .replace(/^wss?:\/\//i, "")
+      .replace(/\/.*$/, "")
+      .replace(/\s+/g, "");
+  }
+
+  function normalizeScoreboardPort(rawPort: string) {
+    const digits = rawPort.replace(/[^0-9]/g, "").trim();
+    if (!digits) return DEFAULT_SCOREBOARD_GATEWAY_PORT;
+    const parsed = Number(digits);
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 65535) {
+      return DEFAULT_SCOREBOARD_GATEWAY_PORT;
+    }
+    return String(parsed);
+  }
+
+  function maskTokenForDisplay(token: string) {
+    const trimmed = token.trim();
+    if (!trimmed) return "--";
+    if (trimmed.length <= 8) return "********";
+    return `${trimmed.slice(0, 4)}********${trimmed.slice(-4)}`;
+  }
+
+  function buildClockDisplayFromGatewayPayload(payload: Record<string, unknown>) {
+    const formatted =
+      typeof payload.clockFormatted === "string"
+        ? payload.clockFormatted.trim()
+        : "";
+    if (formatted) return formatted;
+
+    const minuteValue = Number(payload.clockMin);
+    const secondValue = Number(payload.clockSec);
+    const tenthsValue = Number(payload.clockTenths);
+
+    if (
+      Number.isFinite(minuteValue) &&
+      Number.isFinite(secondValue) &&
+      Number.isFinite(tenthsValue)
+    ) {
+      const safeMinutes = Math.max(0, Math.floor(minuteValue));
+      const safeSeconds = Math.max(0, Math.floor(secondValue));
+      const safeTenths = Math.max(0, Math.floor(tenthsValue));
+      if (safeMinutes > 0) {
+        return `${String(safeMinutes).padStart(2, "0")}:${String(safeSeconds).padStart(2, "0")}`;
+      }
+      return `${String(safeSeconds).padStart(2, "0")}.${safeTenths}`;
+    }
+
+    const fallbackClock =
+      typeof payload.clock === "string" ? payload.clock.trim() : "";
+    return fallbackClock;
+  }
+
+  function applyGatewayClockPayload(payload: Record<string, unknown>) {
+    if (stageRef.current !== "gameDashboard") return;
+
+    const nextClock = buildClockDisplayFromGatewayPayload(payload);
+    if (!nextClock) return;
+
+    const periodDurationMs =
+      getPeriodLengthMinutes(sessionPeriodLengthRef.current) * 60 * 1000;
+    const nextRemainingMs = parseClockDisplayToMs(nextClock);
+    const nextClockSeconds = parseClockToSeconds(nextClock);
+    const payloadPeriod = Number(payload.period);
+    const normalizedPayloadPeriod = Number.isFinite(payloadPeriod)
+      ? Math.max(1, Math.floor(payloadPeriod))
+      : null;
+    const payloadClockRunning =
+      typeof payload.clockRunning === "boolean" ? payload.clockRunning : null;
+
+    const previousGatewayClockSeconds = gatewayLastClockSecondsRef.current;
+    gatewayLastClockSecondsRef.current = nextClockSeconds;
+
+    const didPeriodChange =
+      normalizedPayloadPeriod != null &&
+      normalizedPayloadPeriod !== sessionPeriodRef.current;
+
+    if (didPeriodChange) {
+      // On period transition, remove expired penalties and keep only active carry-over penalties.
+      setActivePenalties((prev) => prev.filter((penalty) => penalty.remainingSeconds > 0));
+      penaltyClockCarryMsRef.current = 0;
+      penaltyClockPrevRemainingMsRef.current = null;
+    }
+
+    if (
+      !didPeriodChange &&
+      payloadClockRunning === false &&
+      previousGatewayClockSeconds != null
+    ) {
+      const deltaSeconds = nextClockSeconds - previousGatewayClockSeconds;
+      if (deltaSeconds !== 0) {
+        shiftPenaltyTimersForClockAdjustment(deltaSeconds);
+      }
+    }
+
+    setSession((prev) => {
+      if (!prev) return prev;
+
+      const patch: Partial<SessionState> = {};
+      if (prev.clock !== nextClock) {
+        patch.clock = nextClock;
+      }
+
+      if (normalizedPayloadPeriod != null && prev.period !== normalizedPayloadPeriod) {
+        patch.period = normalizedPayloadPeriod;
+      }
+
+      return Object.keys(patch).length > 0 ? { ...prev, ...patch } : prev;
+    });
+
+    gameClockControlsRef.current.setDuration(periodDurationMs);
+    gameClockControlsRef.current.syncPausedRemaining(
+      nextRemainingMs,
+      periodDurationMs,
+    );
+
+    if (payloadClockRunning === true) {
+      gameClockControlsRef.current.resume();
+      setIsClockRunning(true);
+      setPeriodController((prev) =>
+        prev.state === "NOT_STARTED" ? { ...prev, state: "IN_PROGRESS" } : prev,
+      );
+      return;
+    }
+
+    if (payloadClockRunning === false) {
+      gameClockControlsRef.current.pause();
+      setIsClockRunning(false);
+    }
+  }
+
+  function openScoreboardSettingsModal() {
+    setScoreboardSettingsDraft(scoreboardGatewaySettings);
+    setShowScoreboardTokenSecret(false);
+    setShowScoreboardSettingsModal(true);
+  }
+
+  function requestScoreboardReconnect() {
+    if (!scoreboardGatewaySettings.enabled) return;
+    clearScheduledScoreboardReconnect();
+    scoreboardReconnectAttemptRef.current = 0;
+    disconnectScoreboardSocket();
+    gatewayLastClockSecondsRef.current = null;
+    scoreboardLastMessageAtRef.current = null;
+    setScoreboardConnectionState("connecting");
+    setScoreboardConnectionMessage("Reconnecting to gateway");
+    setScoreboardReconnectNonce((prev) => prev + 1);
+  }
+
+  function closeScoreboardSettingsModal() {
+    setShowScoreboardSettingsModal(false);
+    setShowScoreboardTokenSecret(false);
+    setScoreboardSettingsDraft(scoreboardGatewaySettings);
+  }
+
+  async function saveScoreboardSettings() {
+    const normalizedSettings: ScoreboardGatewaySettings = {
+      enabled: scoreboardSettingsDraft.enabled,
+      host:
+        normalizeScoreboardHost(scoreboardSettingsDraft.host) ||
+        DEFAULT_SCOREBOARD_GATEWAY_HOST,
+      port: normalizeScoreboardPort(scoreboardSettingsDraft.port),
+      tokenSecret: scoreboardSettingsDraft.tokenSecret.trim(),
+    };
+
+    setScoreboardGatewaySettings(normalizedSettings);
+    setScoreboardSettingsDraft(normalizedSettings);
+    setShowScoreboardSettingsModal(false);
+
+    try {
+      await storageSetItem(
+        SCOREBOARD_GATEWAY_SETTINGS_KEY,
+        JSON.stringify(normalizedSettings),
+      );
+      trace("scoreboard.gateway.settings.saved", {
+        enabled: normalizedSettings.enabled,
+        host: normalizedSettings.host,
+        port: normalizedSettings.port,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      trace("scoreboard.gateway.settings.save.error", { message });
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadScoreboardSettings() {
+      try {
+        const raw = await storageGetItem(SCOREBOARD_GATEWAY_SETTINGS_KEY);
+        if (!raw || cancelled) return;
+        const parsed = JSON.parse(raw) as Partial<ScoreboardGatewaySettings>;
+        const normalizedSettings: ScoreboardGatewaySettings = {
+          enabled: Boolean(parsed.enabled),
+          host:
+            normalizeScoreboardHost(String(parsed.host ?? "")) ||
+            DEFAULT_SCOREBOARD_GATEWAY_HOST,
+          port: normalizeScoreboardPort(String(parsed.port ?? "")),
+          tokenSecret: String(parsed.tokenSecret ?? "").trim(),
+        };
+        setScoreboardGatewaySettings(normalizedSettings);
+        setScoreboardSettingsDraft(normalizedSettings);
+      } catch {
+        // Ignore malformed saved settings and keep defaults.
+      }
+    }
+
+    void loadScoreboardSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const shouldConnect =
+      stage === "gameDashboard" && scoreboardGatewaySettings.enabled;
+
+    if (!shouldConnect) {
+      clearScheduledScoreboardReconnect();
+      scoreboardReconnectAttemptRef.current = 0;
+      disconnectScoreboardSocket();
+      gatewayLastClockSecondsRef.current = null;
+      scoreboardLastMessageAtRef.current = null;
+      setScoreboardConnectionState("disconnected");
+      setScoreboardConnectionMessage(
+        scoreboardGatewaySettings.enabled
+          ? "Disconnected"
+            : "Manual mode (tablet clock)",
+      );
+      return;
+    }
+
+    const host = normalizeScoreboardHost(scoreboardGatewaySettings.host);
+    const port = normalizeScoreboardPort(scoreboardGatewaySettings.port);
+    if (!host) {
+      clearScheduledScoreboardReconnect();
+      scoreboardReconnectAttemptRef.current = 0;
+      setScoreboardConnectionState("error");
+      setScoreboardConnectionMessage("Missing gateway IP address");
+      disconnectScoreboardSocket();
+      return;
+    }
+
+    clearScheduledScoreboardReconnect();
+    disconnectScoreboardSocket();
+    setScoreboardConnectionState("connecting");
+    setScoreboardConnectionMessage("Connecting to gateway");
+
+    const websocketUrl = `ws://${host}:${port}/ws`;
+    const socket = new WebSocket(websocketUrl);
+    scoreboardSocketRef.current = socket;
+    scoreboardLastMessageAtRef.current = null;
+
+    const heartbeatInterval = setInterval(() => {
+      if (scoreboardSocketRef.current !== socket) return;
+      if (socket.readyState !== WebSocket.OPEN) return;
+
+      const lastMessageAt = scoreboardLastMessageAtRef.current;
+      if (lastMessageAt == null) return;
+
+      if (Date.now() - lastMessageAt < 3000) return;
+
+      setScoreboardConnectionState("disconnected");
+      setScoreboardConnectionMessage("Gateway connection timed out");
+      gatewayLastClockSecondsRef.current = null;
+      scoreboardLastMessageAtRef.current = null;
+      try {
+        socket.close();
+      } catch {
+        // Ignore close failures.
+      }
+      scheduleScoreboardReconnect("Gateway timed out");
+    }, 1000);
+
+    socket.onopen = () => {
+      if (scoreboardSocketRef.current !== socket) return;
+      clearScheduledScoreboardReconnect();
+      scoreboardReconnectAttemptRef.current = 0;
+      setScoreboardConnectionState("connected");
+      setScoreboardConnectionMessage(`Connected: ${host}:${port}`);
+      scoreboardLastMessageAtRef.current = Date.now();
+
+      const tokenSecret = scoreboardGatewaySettings.tokenSecret.trim();
+      if (tokenSecret.length > 0) {
+        try {
+          socket.send(JSON.stringify({ auth: tokenSecret, client: "mobile-gm" }));
+        } catch {
+          // Ignore auth send failures; socket error handlers update status.
+        }
+      }
+    };
+
+    socket.onmessage = (event) => {
+      if (scoreboardSocketRef.current !== socket) return;
+      scoreboardLastMessageAtRef.current = Date.now();
+
+      const rawData =
+        typeof event.data === "string" ? event.data.trim() : "";
+      let messageType = rawData.toUpperCase();
+      let parsedPayload: Record<string, unknown> | null = null;
+
+      try {
+        const parsed = JSON.parse(rawData) as { type?: string };
+        if (parsed && typeof parsed === "object") {
+          parsedPayload = parsed as Record<string, unknown>;
+        }
+        if (typeof parsed?.type === "string") {
+          messageType = parsed.type.toUpperCase();
+        }
+      } catch {
+        // Non-JSON messages are valid; keep raw uppercase text fallback.
+      }
+
+      if (messageType === "AUTH_REQUIRED") {
+        const tokenSecret = scoreboardGatewaySettings.tokenSecret.trim();
+        if (!tokenSecret) {
+          setScoreboardConnectionState("error");
+          setScoreboardConnectionMessage("Gateway requires token secret");
+          return;
+        }
+
+        try {
+          socket.send(JSON.stringify({ auth: tokenSecret, client: "mobile-gm" }));
+          setScoreboardConnectionMessage("Authenticating with gateway");
+        } catch {
+          setScoreboardConnectionState("error");
+          setScoreboardConnectionMessage("Failed to send auth token");
+        }
+        return;
+      }
+
+      if (messageType === "AUTH_OK" || messageType === "AUTH_SUCCESS") {
+        setScoreboardConnectionState("connected");
+        setScoreboardConnectionMessage(`Connected: ${host}:${port}`);
+        clearScheduledScoreboardReconnect();
+        scoreboardReconnectAttemptRef.current = 0;
+        return;
+      }
+
+      if (messageType === "AUTH_FAILED" || messageType === "AUTH_ERROR") {
+        setScoreboardConnectionState("error");
+        setScoreboardConnectionMessage("Gateway auth failed");
+        scheduleScoreboardReconnect("Gateway auth failed");
+        try {
+          socket.close();
+        } catch {
+          // Ignore close failures.
+        }
+        return;
+      }
+
+      if (parsedPayload && scoreboardClockSyncActiveRef.current) {
+        applyGatewayClockPayload(parsedPayload);
+      }
+    };
+
+    socket.onerror = () => {
+      if (scoreboardSocketRef.current !== socket) return;
+      setScoreboardConnectionState("error");
+      setScoreboardConnectionMessage(`Connection failed: ${host}:${port}`);
+      scheduleScoreboardReconnect("Connection failed");
+    };
+
+    socket.onclose = () => {
+      if (scoreboardSocketRef.current !== socket) return;
+      scoreboardSocketRef.current = null;
+      gatewayLastClockSecondsRef.current = null;
+      scoreboardLastMessageAtRef.current = null;
+      setScoreboardConnectionState("disconnected");
+      setScoreboardConnectionMessage("Disconnected");
+      scheduleScoreboardReconnect("Disconnected from gateway");
+    };
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      if (scoreboardSocketRef.current === socket) {
+        scoreboardSocketRef.current = null;
+      }
+      scoreboardLastMessageAtRef.current = null;
+      try {
+        socket.close();
+      } catch {
+        // Ignore close failures.
+      }
+    };
+  }, [
+    stage,
+    scoreboardGatewaySettings.enabled,
+    scoreboardGatewaySettings.host,
+    scoreboardGatewaySettings.port,
+    scoreboardGatewaySettings.tokenSecret,
+    scoreboardReconnectNonce,
+  ]);
+
   useEffect(() => {
     if (!session || stage !== "gameDashboard") {
       return;
@@ -2185,7 +2759,8 @@ export default function App() {
     if (
       !session ||
       stage !== "gameDashboard" ||
-      periodController.state === "INTERMISSION"
+      periodController.state === "INTERMISSION" ||
+      isScoreboardClockSyncActive
     ) {
       return;
     }
@@ -2193,7 +2768,13 @@ export default function App() {
     if (session.clock !== gameClock.displayTime) {
       updateSession({ clock: gameClock.displayTime });
     }
-  }, [session, stage, periodController.state, gameClock.displayTime]);
+  }, [
+    session,
+    stage,
+    periodController.state,
+    gameClock.displayTime,
+    isScoreboardClockSyncActive,
+  ]);
 
   useEffect(() => {
     if (!session || stage !== "gameDashboard") return;
@@ -2202,11 +2783,18 @@ export default function App() {
       getPeriodLengthMinutes(session.periodLength) * 60 * 1000;
     gameClock.setDuration(periodDurationMs);
 
-    if (!isClockRunning) {
+    if (!isClockRunning && !isScoreboardClockSyncActive) {
       const sessionRemainingMs = parseClockDisplayToMs(session.clock);
       gameClock.syncPausedRemaining(sessionRemainingMs, periodDurationMs);
     }
-  }, [stage, session?.period, session?.periodLength]);
+  }, [
+    stage,
+    session?.period,
+    session?.periodLength,
+    isClockRunning,
+    isScoreboardClockSyncActive,
+    session?.clock,
+  ]);
 
   useEffect(() => {
     if (stage !== "gameDashboard" || periodController.state !== "IN_PROGRESS") {
@@ -2228,13 +2816,14 @@ export default function App() {
       return;
     }
 
-    const deltaMs = Math.max(0, prevRemainingMs - currentRemainingMs);
+    const deltaMs = prevRemainingMs - currentRemainingMs;
     penaltyClockCarryMsRef.current += deltaMs;
 
-    const elapsedWholeSeconds = Math.floor(
-      penaltyClockCarryMsRef.current / 1000,
-    );
-    if (elapsedWholeSeconds <= 0) return;
+    const elapsedWholeSeconds =
+      penaltyClockCarryMsRef.current >= 0
+        ? Math.floor(penaltyClockCarryMsRef.current / 1000)
+        : Math.ceil(penaltyClockCarryMsRef.current / 1000);
+    if (elapsedWholeSeconds === 0) return;
 
     penaltyClockCarryMsRef.current -= elapsedWholeSeconds * 1000;
 
@@ -2246,7 +2835,10 @@ export default function App() {
           ...penalty,
           remainingSeconds: Math.max(
             -rewindBufferSeconds,
-            penalty.remainingSeconds - elapsedWholeSeconds,
+            Math.min(
+              rewindBufferSeconds,
+              penalty.remainingSeconds - elapsedWholeSeconds,
+            ),
           ),
         };
       });
@@ -2262,6 +2854,10 @@ export default function App() {
 
   useEffect(() => {
     if (stage !== "gameDashboard" || periodController.state !== "IN_PROGRESS") {
+      return;
+    }
+
+    if (isScoreboardClockSyncActive) {
       return;
     }
 
@@ -2284,6 +2880,7 @@ export default function App() {
     isClockRunning,
     isAnyModalOpen,
     gameClock.isRunning,
+    isScoreboardClockSyncActive,
   ]);
 
   useEffect(() => {
@@ -2302,6 +2899,72 @@ export default function App() {
 
     return () => clearInterval(syncTimer);
   }, [stage, activeApiBase, nextGame?.gameId]);
+
+  useEffect(() => {
+    if (stage !== "gameDashboard" || gameHasEnded || !nextGame?.gameId) {
+      return;
+    }
+
+    const payload = buildLiveShotSummaryPayload();
+    const signature = JSON.stringify(payload);
+    if (signature === lastLiveShotSyncSignatureRef.current) {
+      return;
+    }
+
+    if (liveShotSyncTimerRef.current != null) {
+      clearTimeout(liveShotSyncTimerRef.current);
+      liveShotSyncTimerRef.current = null;
+    }
+
+    const gameId = nextGame.gameId;
+    liveShotSyncTimerRef.current = setTimeout(() => {
+      liveShotSyncTimerRef.current = null;
+      void (async () => {
+        try {
+          await postLiveShotSummaryToBackend(gameId, payload);
+          lastLiveShotSyncSignatureRef.current = signature;
+          trace("shots.sync.success", {
+            gameId,
+            homeTotal: payload.homeTotal,
+            awayTotal: payload.awayTotal,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          trace("shots.sync.failed", { gameId, message });
+        }
+      })();
+    }, 450);
+
+    return () => {
+      if (liveShotSyncTimerRef.current != null) {
+        clearTimeout(liveShotSyncTimerRef.current);
+        liveShotSyncTimerRef.current = null;
+      }
+    };
+  }, [
+    stage,
+    gameHasEnded,
+    nextGame?.gameId,
+    activeApiBase,
+    safeHomeShotsByPeriod[1],
+    safeHomeShotsByPeriod[2],
+    safeHomeShotsByPeriod[3],
+    safeHomeShotsByPeriod.OT,
+    safeAwayShotsByPeriod[1],
+    safeAwayShotsByPeriod[2],
+    safeAwayShotsByPeriod[3],
+    safeAwayShotsByPeriod.OT,
+    homeShotsTotal,
+    awayShotsTotal,
+  ]);
+
+  useEffect(() => {
+    lastLiveShotSyncSignatureRef.current = "";
+    if (liveShotSyncTimerRef.current != null) {
+      clearTimeout(liveShotSyncTimerRef.current);
+      liveShotSyncTimerRef.current = null;
+    }
+  }, [nextGame?.gameId]);
 
   useEffect(() => {
     if (
@@ -2557,9 +3220,7 @@ export default function App() {
         /\.error$/.test(step) ||
         /\.failed$/.test(step) ||
         /\.restored$/.test(step) ||
-        /^officials\.save\./.test(step) ||
-        step === "activegame.snapshot.saved" ||
-        step === "activegame.resume.saved";
+        /^officials\.save\./.test(step);
 
       if (!isImportant) {
         return;
@@ -2878,6 +3539,40 @@ export default function App() {
     }
 
     return (await response.json()) as CompletionResponse;
+  }
+
+  function buildLiveShotSummaryPayload(): LiveShotSummaryPayload {
+    return {
+      homeByPeriod: {
+        p1: safeHomeShotsByPeriod[1],
+        p2: safeHomeShotsByPeriod[2],
+        p3: safeHomeShotsByPeriod[3],
+        ot: safeHomeShotsByPeriod.OT,
+      },
+      awayByPeriod: {
+        p1: safeAwayShotsByPeriod[1],
+        p2: safeAwayShotsByPeriod[2],
+        p3: safeAwayShotsByPeriod[3],
+        ot: safeAwayShotsByPeriod.OT,
+      },
+      homeTotal: homeShotsTotal,
+      awayTotal: awayShotsTotal,
+    };
+  }
+
+  async function postLiveShotSummaryToBackend(
+    gameId: string,
+    shotSummary: LiveShotSummaryPayload,
+  ) {
+    const response = await fetch(`${activeApiBase}/games/${gameId}/shots-mobile`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(shotSummary),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Shot sync failed (${response.status}).`);
+    }
   }
 
   async function flushPendingFinalizeQueue() {
@@ -8533,6 +9228,133 @@ export default function App() {
           </Modal>
         ) : null}
 
+        {showScoreboardSettingsModal ? (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={closeScoreboardSettingsModal}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.goalModal}>
+                <Text style={styles.goalModalTitle}>Scoreboard Settings</Text>
+                <Text style={styles.goalModalSubtitle}>
+                  Read-only websocket connection to NetFront Gateway (no clock
+                  control).
+                </Text>
+
+                <View style={styles.toggleRow}>
+                  <Text style={styles.toggleLabel}>
+                    Connect to Scoreboard: {scoreboardSettingsDraft.enabled ? "On" : "Off"}
+                  </Text>
+                  <Switch
+                    value={scoreboardSettingsDraft.enabled}
+                    onValueChange={(value) =>
+                      setScoreboardSettingsDraft((prev) => ({
+                        ...prev,
+                        enabled: value,
+                      }))
+                    }
+                    trackColor={{ false: "#516273", true: "#2f9fe8" }}
+                    thumbColor={
+                      scoreboardSettingsDraft.enabled ? "#dff2ff" : "#d4dbe3"
+                    }
+                  />
+                </View>
+
+                <Text style={styles.sectionLabel}>GATEWAY IP ADDRESS</Text>
+                <TextInput
+                  style={styles.inputCompact}
+                  value={scoreboardSettingsDraft.host}
+                  onChangeText={(value) =>
+                    setScoreboardSettingsDraft((prev) => ({
+                      ...prev,
+                      host: value,
+                    }))
+                  }
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="192.168.68.69"
+                  placeholderTextColor="#7a8fa8"
+                />
+
+                <Text style={styles.sectionLabel}>TCP PORT</Text>
+                <TextInput
+                  style={styles.inputCompact}
+                  value={scoreboardSettingsDraft.port}
+                  onChangeText={(value) =>
+                    setScoreboardSettingsDraft((prev) => ({
+                      ...prev,
+                      port: value.replace(/[^0-9]/g, ""),
+                    }))
+                  }
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="80"
+                  placeholderTextColor="#7a8fa8"
+                />
+
+                <Text style={styles.sectionLabel}>TOKEN SECRET</Text>
+                <TextInput
+                  style={styles.inputCompact}
+                  value={scoreboardSettingsDraft.tokenSecret}
+                  onChangeText={(value) =>
+                    setScoreboardSettingsDraft((prev) => ({
+                      ...prev,
+                      tokenSecret: value,
+                    }))
+                  }
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry={!showScoreboardTokenSecret}
+                  placeholder="Enter gateway token"
+                  placeholderTextColor="#7a8fa8"
+                />
+
+                <View style={styles.scoreboardTokenMetaRow}>
+                  <Text style={styles.scoreboardTokenMetaText}>
+                    Saved token: {showScoreboardTokenSecret
+                      ? (scoreboardSettingsDraft.tokenSecret.trim() || "--")
+                      : maskTokenForDisplay(scoreboardSettingsDraft.tokenSecret)}
+                  </Text>
+                  <Pressable
+                    style={styles.scoreboardTokenRevealButton}
+                    onPress={() =>
+                      setShowScoreboardTokenSecret((prev) => !prev)
+                    }
+                  >
+                    <Text style={styles.scoreboardTokenRevealButtonText}>
+                      {showScoreboardTokenSecret ? "Hide" : "Reveal"}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.footerHint}>
+                  Connection status: {scoreboardConnectionMessage}
+                </Text>
+
+                <View style={styles.rowButtons}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={closeScoreboardSettingsModal}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={() => void saveScoreboardSettings()}
+                  >
+                    <Text style={styles.primaryButtonText}>Save</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        ) : null}
+
         {stage === "gameDashboard" && session ? (
           <View style={styles.card}>
             <Text style={styles.title}>Game Dashboard</Text>
@@ -8686,9 +9508,29 @@ export default function App() {
                   {session.gameTime} | {session.venue}
                 </Text>
                 <View style={styles.scoreboardStatusBadges}>
-                  <Text style={styles.scoreboardWarning}>
-                    Scoreboard Not Connected
-                  </Text>
+                  <Pressable
+                    style={styles.scoreboardSettingsButton}
+                    onPress={openScoreboardSettingsModal}
+                  >
+                    <Text style={styles.scoreboardSettingsButtonText}>⚙</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.scoreboardConnectionBadge,
+                      scoreboardConnectionBadgeStyle,
+                    ]}
+                    onPress={requestScoreboardReconnect}
+                    disabled={!scoreboardGatewaySettings.enabled}
+                  >
+                    <Text
+                      style={[
+                        styles.scoreboardConnectionBadgeText,
+                        scoreboardConnectionBadgeTextStyle,
+                      ]}
+                    >
+                      {scoreboardConnectionBadgeText}
+                    </Text>
+                  </Pressable>
                   <Text style={[styles.scoreboardSyncBadge, syncStatusStyle]}>
                     {syncStatusText}
                   </Text>
@@ -8762,7 +9604,7 @@ export default function App() {
                     <Text style={styles.gameClockTime}>{session.clock}</Text>
                     <View style={styles.gameClockModeBadge}>
                       <Text style={styles.gameClockModeText}>
-                        {isClockRunning ? "Running" : "Stopped"}
+                        {isClockRunning ? "Running" : "Stopped"} • {clockSourceLabel}
                       </Text>
                     </View>
                     <Text style={styles.gameClockManpowerText}>
@@ -11139,6 +11981,55 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 10,
   },
+  scoreboardSettingsButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,123,0,0.35)",
+    backgroundColor: "#162a4a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scoreboardSettingsButtonText: {
+    color: "#FFB15B",
+    fontSize: 14,
+    fontWeight: "900",
+    lineHeight: 14,
+  },
+  scoreboardConnectionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  scoreboardConnectionBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  scoreboardConnectionManual: {
+    backgroundColor: "#3f3110",
+  },
+  scoreboardConnectionDisconnected: {
+    backgroundColor: "#4a1414",
+  },
+  scoreboardConnectionConnecting: {
+    backgroundColor: "#11334f",
+  },
+  scoreboardConnectionConnected: {
+    backgroundColor: "#123c2a",
+  },
+  scoreboardConnectionBadgeTextManual: {
+    color: "#ffbf47",
+  },
+  scoreboardConnectionBadgeTextDisconnected: {
+    color: "#e53935",
+  },
+  scoreboardConnectionBadgeTextConnecting: {
+    color: "#4eb4ff",
+  },
+  scoreboardConnectionBadgeTextConnected: {
+    color: "#43d17d",
+  },
   scoreboardStatusBadges: {
     flexDirection: "row",
     alignItems: "center",
@@ -11178,6 +12069,32 @@ const styles = StyleSheet.create({
   scoreboardSyncNowButtonText: {
     color: "#9ed0ff",
     fontSize: 10,
+    fontWeight: "800",
+  },
+  scoreboardTokenMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 2,
+  },
+  scoreboardTokenMetaText: {
+    flex: 1,
+    color: "#7A8FA8",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  scoreboardTokenRevealButton: {
+    borderWidth: 1,
+    borderColor: "rgba(255,123,0,0.35)",
+    borderRadius: 8,
+    backgroundColor: "#162a4a",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  scoreboardTokenRevealButtonText: {
+    color: "#FFB15B",
+    fontSize: 11,
     fontWeight: "800",
   },
   gameClockShell: {

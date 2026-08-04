@@ -361,6 +361,38 @@ namespace NetFrontAPI.Functions
                 WHERE gp.GameId = @GameId
                 ORDER BY gp.Period, gp.TimeInPeriod, gp.CreatedAt;";
 
+            const string shotsSql = @"
+                IF OBJECT_ID('dbo.GameStatsSnapshots', 'U') IS NULL
+                BEGIN
+                    SELECT
+                        CAST(NULL AS INT) AS HomeShotsP1,
+                        CAST(NULL AS INT) AS HomeShotsP2,
+                        CAST(NULL AS INT) AS HomeShotsP3,
+                        CAST(NULL AS INT) AS HomeShotsOT,
+                        CAST(NULL AS INT) AS HomeShotsTotal,
+                        CAST(NULL AS INT) AS AwayShotsP1,
+                        CAST(NULL AS INT) AS AwayShotsP2,
+                        CAST(NULL AS INT) AS AwayShotsP3,
+                        CAST(NULL AS INT) AS AwayShotsOT,
+                        CAST(NULL AS INT) AS AwayShotsTotal;
+                END
+                ELSE
+                BEGIN
+                    SELECT TOP 1
+                        HomeShotsP1,
+                        HomeShotsP2,
+                        HomeShotsP3,
+                        HomeShotsOT,
+                        HomeShotsTotal,
+                        AwayShotsP1,
+                        AwayShotsP2,
+                        AwayShotsP3,
+                        AwayShotsOT,
+                        AwayShotsTotal
+                    FROM dbo.GameStatsSnapshots
+                    WHERE GameId = @GameId;
+                END";
+
             var goals = (await conn.QueryAsync<MobileSummaryGoalRow>(goalsSql, new { GameId = gameId }))
                 .Select(goal => new
                 {
@@ -394,12 +426,144 @@ namespace NetFrontAPI.Functions
                 })
                 .ToArray();
 
+            var shotTotals = await conn.QueryFirstOrDefaultAsync<MobileShotTotalsRow>(shotsSql, new { GameId = gameId });
+            var homeShotsP1 = shotTotals?.HomeShotsP1;
+            var homeShotsP2 = shotTotals?.HomeShotsP2;
+            var homeShotsP3 = shotTotals?.HomeShotsP3;
+            var homeShotsOT = shotTotals?.HomeShotsOT;
+            var homeShotsTotal = shotTotals?.HomeShotsTotal;
+            var awayShotsP1 = shotTotals?.AwayShotsP1;
+            var awayShotsP2 = shotTotals?.AwayShotsP2;
+            var awayShotsP3 = shotTotals?.AwayShotsP3;
+            var awayShotsOT = shotTotals?.AwayShotsOT;
+            var awayShotsTotal = shotTotals?.AwayShotsTotal;
+
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(new
             {
                 GameId = gameId,
                 Goals = goals,
-                Penalties = penalties
+                Penalties = penalties,
+                HomeShotsP1 = homeShotsP1,
+                HomeShotsP2 = homeShotsP2,
+                HomeShotsP3 = homeShotsP3,
+                HomeShotsOT = homeShotsOT,
+                HomeShots = homeShotsTotal,
+                AwayShotsP1 = awayShotsP1,
+                AwayShotsP2 = awayShotsP2,
+                AwayShotsP3 = awayShotsP3,
+                AwayShotsOT = awayShotsOT,
+                AwayShots = awayShotsTotal
+            });
+            return response;
+        }
+
+        [Function("UpsertGameShotsForMobile")]
+        public async Task<HttpResponseData> UpsertGameShotsForMobile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "games/{gameId:guid}/shots-mobile")] HttpRequestData req,
+            Guid gameId)
+        {
+            var payload = await req.ReadFromJsonAsync<MobileShotSummaryRequest>();
+            using var conn = _connectionFactory.CreateConnection();
+
+            const string ensureSnapshotTableSql = @"
+                IF OBJECT_ID('dbo.GameStatsSnapshots', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.GameStatsSnapshots
+                    (
+                        GameId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
+                        HomeShotsP1 INT NULL,
+                        HomeShotsP2 INT NULL,
+                        HomeShotsP3 INT NULL,
+                        HomeShotsOT INT NULL,
+                        AwayShotsP1 INT NULL,
+                        AwayShotsP2 INT NULL,
+                        AwayShotsP3 INT NULL,
+                        AwayShotsOT INT NULL,
+                        HomeShotsTotal INT NULL,
+                        AwayShotsTotal INT NULL,
+                        GoalieSummaryJson NVARCHAR(MAX) NULL,
+                        CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_GameStatsSnapshots_CreatedAt DEFAULT SYSUTCDATETIME(),
+                        UpdatedAt DATETIME2 NOT NULL CONSTRAINT DF_GameStatsSnapshots_UpdatedAt DEFAULT SYSUTCDATETIME()
+                    );
+
+                    ALTER TABLE dbo.GameStatsSnapshots
+                    ADD CONSTRAINT FK_GameStatsSnapshots_Games
+                    FOREIGN KEY (GameId) REFERENCES dbo.Games (GameId);
+                END;";
+
+            const string upsertSnapshotSql = @"
+                MERGE dbo.GameStatsSnapshots AS target
+                USING (SELECT @GameId AS GameId) AS source
+                ON target.GameId = source.GameId
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        HomeShotsP1 = @HomeShotsP1,
+                        HomeShotsP2 = @HomeShotsP2,
+                        HomeShotsP3 = @HomeShotsP3,
+                        HomeShotsOT = @HomeShotsOT,
+                        AwayShotsP1 = @AwayShotsP1,
+                        AwayShotsP2 = @AwayShotsP2,
+                        AwayShotsP3 = @AwayShotsP3,
+                        AwayShotsOT = @AwayShotsOT,
+                        HomeShotsTotal = @HomeShotsTotal,
+                        AwayShotsTotal = @AwayShotsTotal,
+                        UpdatedAt = SYSUTCDATETIME()
+                WHEN NOT MATCHED THEN
+                    INSERT
+                    (
+                        GameId,
+                        HomeShotsP1,
+                        HomeShotsP2,
+                        HomeShotsP3,
+                        HomeShotsOT,
+                        AwayShotsP1,
+                        AwayShotsP2,
+                        AwayShotsP3,
+                        AwayShotsOT,
+                        HomeShotsTotal,
+                        AwayShotsTotal,
+                        CreatedAt,
+                        UpdatedAt
+                    )
+                    VALUES
+                    (
+                        @GameId,
+                        @HomeShotsP1,
+                        @HomeShotsP2,
+                        @HomeShotsP3,
+                        @HomeShotsOT,
+                        @AwayShotsP1,
+                        @AwayShotsP2,
+                        @AwayShotsP3,
+                        @AwayShotsOT,
+                        @HomeShotsTotal,
+                        @AwayShotsTotal,
+                        SYSUTCDATETIME(),
+                        SYSUTCDATETIME()
+                    );";
+
+            await conn.ExecuteAsync(ensureSnapshotTableSql);
+            await conn.ExecuteAsync(upsertSnapshotSql, new
+            {
+                GameId = gameId,
+                HomeShotsP1 = payload?.HomeByPeriod?.P1,
+                HomeShotsP2 = payload?.HomeByPeriod?.P2,
+                HomeShotsP3 = payload?.HomeByPeriod?.P3,
+                HomeShotsOT = payload?.HomeByPeriod?.OT,
+                AwayShotsP1 = payload?.AwayByPeriod?.P1,
+                AwayShotsP2 = payload?.AwayByPeriod?.P2,
+                AwayShotsP3 = payload?.AwayByPeriod?.P3,
+                AwayShotsOT = payload?.AwayByPeriod?.OT,
+                HomeShotsTotal = payload?.HomeTotal,
+                AwayShotsTotal = payload?.AwayTotal,
+            });
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(new
+            {
+                GameId = gameId,
+                Saved = true
             });
             return response;
         }
@@ -1407,6 +1571,20 @@ namespace NetFrontAPI.Functions
             public string TeamName { get; set; } = string.Empty;
             public string PlayerName { get; set; } = string.Empty;
             public string? Notes { get; set; }
+        }
+
+        private class MobileShotTotalsRow
+        {
+            public int? HomeShotsP1 { get; set; }
+            public int? HomeShotsP2 { get; set; }
+            public int? HomeShotsP3 { get; set; }
+            public int? HomeShotsOT { get; set; }
+            public int? HomeShotsTotal { get; set; }
+            public int? AwayShotsP1 { get; set; }
+            public int? AwayShotsP2 { get; set; }
+            public int? AwayShotsP3 { get; set; }
+            public int? AwayShotsOT { get; set; }
+            public int? AwayShotsTotal { get; set; }
         }
 
         private class MobileRosterPlayerDto

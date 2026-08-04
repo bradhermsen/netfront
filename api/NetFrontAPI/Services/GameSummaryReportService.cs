@@ -762,7 +762,10 @@ namespace NetFrontAPI.Services
                         P3 = p3,
                         OT = ot,
                         Total = total,
-                        TimeInNetSeconds = ReadInt(item, "timeInNetSeconds")
+                        TimeInNetSeconds = ReadInt(item, "timeInNetSeconds"),
+                        GoalsAgainstEstimate = ReadDecimal(item, "goalsAgainstEstimate"),
+                        SavesEstimate = ReadDecimal(item, "savesEstimate"),
+                        SavePctEstimate = ReadDecimal(item, "savePctEstimate")
                     });
                 }
             }
@@ -794,6 +797,28 @@ namespace NetFrontAPI.Services
             }
 
             return 0;
+        }
+
+        private static decimal ReadDecimal(JsonElement element, string property)
+        {
+            var target = GetProperty(element, property);
+            if (!target.HasValue)
+            {
+                return 0m;
+            }
+
+            var value = target.Value;
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number))
+            {
+                return number;
+            }
+
+            if (value.ValueKind == JsonValueKind.String && decimal.TryParse(value.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+            {
+                return parsed;
+            }
+
+            return 0m;
         }
 
         private static string? ReadString(JsonElement element, string property)

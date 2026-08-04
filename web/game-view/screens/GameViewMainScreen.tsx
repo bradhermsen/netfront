@@ -477,7 +477,7 @@ export function GameViewMainScreen() {
           </section>
 
           <section className="game-view-section">
-            <LastFinalGamesCard games={pagedFinalGames} />
+            <LastFinalGamesCard games={pagedFinalGames} onClick={handleGameCardClick} />
 
             <div className="game-view-pagination">
               <button

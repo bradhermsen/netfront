@@ -221,6 +221,13 @@
   text-align: left;
 }
 
+.game-view-schedule-card-button {
+  appearance: none;
+  color: #f2f6ff;
+  cursor: pointer;
+  text-align: left;
+}
+
 .game-view-next-card-top {
   align-items: center;
   display: flex;
@@ -327,6 +334,17 @@
   background: #15924d;
   border: 1px solid #1fc667;
   color: #ffffff;
+}
+
+.game-view-mini-status-detail {
+  border-top: 1px solid #23446f;
+  color: #d7e8ff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 8px 12px 6px;
+  text-align: center;
+  text-transform: none;
 }
 
 .game-view-mini-team-row {
@@ -539,6 +557,47 @@
   font-weight: 600;
 }
 
+.game-view-summary-report-card {
+  background: #0d2346;
+  border: 1px solid #274a7a;
+  border-radius: 14px;
+  box-sizing: border-box;
+  padding: 14px;
+  width: 100%;
+}
+
+.game-view-summary-meta-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.game-view-summary-meta-grid p {
+  margin: 0;
+}
+
+.game-view-summary-subsection {
+  border-top: 1px solid #23446f;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.game-view-summary-subtitle {
+  color: #b9d4fb;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.game-view-summary-list {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
 .game-view-roster-list,
 .game-view-events-list {
   list-style: none;
@@ -548,16 +607,51 @@
 
 .game-view-roster-grid-wrap {
   margin-top: 12px;
-  overflow-x: hidden;
+  overflow-x: auto;
+}
+
+.game-view-roster-section + .game-view-roster-section {
+  margin-top: 12px;
+}
+
+.game-view-roster-section--goalies {
+  margin-top: 14px;
+}
+
+.game-view-roster-separator {
+  background: #23446f;
+  height: 1px;
+  margin-bottom: 10px;
+}
+
+.game-view-roster-subtitle {
+  color: #b9d4fb;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.game-view-roster-notice {
+  color: #ffd6a0;
+  font-size: 0.8rem;
+  margin: 10px 0 0;
 }
 
 .game-view-roster-grid {
   column-gap: 6px;
   display: grid;
-  grid-template-columns: 54px minmax(110px, 1fr) 50px 50px 56px 44px;
   min-width: 0;
   row-gap: 2px;
   width: 100%;
+}
+
+.game-view-roster-grid--skaters {
+  grid-template-columns: 62px 64px minmax(110px, 1fr) 50px 50px 56px 44px;
+}
+
+.game-view-roster-grid--goalies {
+  grid-template-columns: 62px 64px minmax(110px, 1fr) 64px 44px 52px 54px 48px;
 }
 
 .game-view-roster-grid-header {
@@ -584,8 +678,8 @@
   min-width: 0;
 }
 
-.game-view-roster-grid-header span:nth-child(2),
-.game-view-roster-grid-row span:nth-child(2) {
+.game-view-roster-grid-header span:nth-child(3),
+.game-view-roster-grid-row span:nth-child(3) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -593,15 +687,20 @@
 
 
 .game-view-roster-grid-header span:nth-child(1),
-.game-view-roster-grid-header span:nth-child(3),
 .game-view-roster-grid-header span:nth-child(4),
 .game-view-roster-grid-header span:nth-child(5),
 .game-view-roster-grid-header span:nth-child(6),
+.game-view-roster-grid-header span:nth-child(7),
+.game-view-roster-grid-header span:nth-child(8),
 .game-view-roster-grid-row span:nth-child(1),
-.game-view-roster-grid-row span:nth-child(3),
 .game-view-roster-grid-row span:nth-child(4),
 .game-view-roster-grid-row span:nth-child(5),
 .game-view-roster-grid-row span:nth-child(6) {
+  text-align: center;
+}
+
+.game-view-roster-grid-row span:nth-child(7),
+.game-view-roster-grid-row span:nth-child(8) {
   text-align: center;
 }
 

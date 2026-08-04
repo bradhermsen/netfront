@@ -1,6 +1,7 @@
 import type {
   ApiGameDetail,
   ApiGameListItem,
+  ApiGameSummaryReport,
   ApiRosterPlayer,
   ApiGameSummary,
   ApiNextGame,
@@ -248,6 +249,130 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
   };
 }
 
+function normalizeGameSummaryReport(payload: unknown): ApiGameSummaryReport {
+  const obj = asObject(payload) || {};
+  const goalsRaw = extractListPayload(obj.goals ?? obj.Goals ?? [], "goals");
+  const penaltiesRaw = extractListPayload(obj.penalties ?? obj.Penalties ?? [], "penalties");
+  const goaliesRaw = extractListPayload(obj.goalies ?? obj.Goalies ?? [], "goalies");
+  const officialsRaw = extractListPayload(obj.officials ?? obj.Officials ?? [], "officials");
+  const suspensionRaw = extractListPayload(
+    obj.suspensionReviews ?? obj.SuspensionReviews ?? [],
+    "suspension reviews",
+  );
+
+  const homeShotsObj = asObject(obj.homeShots ?? obj.HomeShots) || {};
+  const awayShotsObj = asObject(obj.awayShots ?? obj.AwayShots) || {};
+
+  return {
+    gameId: pickString(obj, "gameId", "GameId"),
+    leagueName: pickString(obj, "leagueName", "LeagueName"),
+    homeLevelName: pickString(obj, "homeLevelName", "HomeLevelName"),
+    awayLevelName: pickString(obj, "awayLevelName", "AwayLevelName"),
+    seasonName: pickString(obj, "seasonName", "SeasonName"),
+    gameDateTime: pickString(obj, "gameDateTime", "GameDateTime"),
+    status: pickString(obj, "status", "Status"),
+    homeTeamName: pickString(obj, "homeTeamName", "HomeTeamName"),
+    awayTeamName: pickString(obj, "awayTeamName", "AwayTeamName"),
+    teamType: pickString(obj, "teamType", "TeamType"),
+    homeTeamMascot: pickString(obj, "homeTeamMascot", "HomeTeamMascot"),
+    awayTeamMascot: pickString(obj, "awayTeamMascot", "AwayTeamMascot"),
+    arenaName: pickString(obj, "arenaName", "ArenaName"),
+    rinkName: pickString(obj, "rinkName", "RinkName"),
+    homeHeadCoachName: pickString(obj, "homeHeadCoachName", "HomeHeadCoachName"),
+    homeAssistantCoach1Name: pickString(obj, "homeAssistantCoach1Name", "HomeAssistantCoach1Name"),
+    homeAssistantCoach2Name: pickString(obj, "homeAssistantCoach2Name", "HomeAssistantCoach2Name"),
+    homeAssistantCoach3Name: pickString(obj, "homeAssistantCoach3Name", "HomeAssistantCoach3Name"),
+    homeAssistantCoach4Name: pickString(obj, "homeAssistantCoach4Name", "HomeAssistantCoach4Name"),
+    awayHeadCoachName: pickString(obj, "awayHeadCoachName", "AwayHeadCoachName"),
+    awayAssistantCoach1Name: pickString(obj, "awayAssistantCoach1Name", "AwayAssistantCoach1Name"),
+    awayAssistantCoach2Name: pickString(obj, "awayAssistantCoach2Name", "AwayAssistantCoach2Name"),
+    awayAssistantCoach3Name: pickString(obj, "awayAssistantCoach3Name", "AwayAssistantCoach3Name"),
+    awayAssistantCoach4Name: pickString(obj, "awayAssistantCoach4Name", "AwayAssistantCoach4Name"),
+    homeGoals: pickNumber(obj, "homeGoals", "HomeGoals"),
+    awayGoals: pickNumber(obj, "awayGoals", "AwayGoals"),
+    homeShots: {
+      p1: pickNumber(homeShotsObj, "p1", "P1"),
+      p2: pickNumber(homeShotsObj, "p2", "P2"),
+      p3: pickNumber(homeShotsObj, "p3", "P3"),
+      ot: pickNumber(homeShotsObj, "ot", "OT"),
+      total: pickNumber(homeShotsObj, "total", "Total"),
+    },
+    awayShots: {
+      p1: pickNumber(awayShotsObj, "p1", "P1"),
+      p2: pickNumber(awayShotsObj, "p2", "P2"),
+      p3: pickNumber(awayShotsObj, "p3", "P3"),
+      ot: pickNumber(awayShotsObj, "ot", "OT"),
+      total: pickNumber(awayShotsObj, "total", "Total"),
+    },
+    goals: goalsRaw.map((row) => {
+      const goal = asObject(row) || {};
+      return {
+        period: pickNumber(goal, "period", "Period"),
+        timeInPeriod: pickString(goal, "timeInPeriod", "TimeInPeriod"),
+        teamName: pickString(goal, "teamName", "TeamName"),
+        scorerNumber: pickOptionalNumber(goal, "scorerNumber", "ScorerNumber") ?? null,
+        scorer: pickString(goal, "scorer", "Scorer"),
+        assist1Number: pickOptionalNumber(goal, "assist1Number", "Assist1Number") ?? null,
+        assist1: pickString(goal, "assist1", "Assist1") || null,
+        assist2Number: pickOptionalNumber(goal, "assist2Number", "Assist2Number") ?? null,
+        assist2: pickString(goal, "assist2", "Assist2") || null,
+        strength: pickString(goal, "strength", "Strength"),
+      };
+    }),
+    penalties: penaltiesRaw.map((row) => {
+      const penalty = asObject(row) || {};
+      return {
+        period: pickNumber(penalty, "period", "Period"),
+        timeInPeriod: pickString(penalty, "timeInPeriod", "TimeInPeriod"),
+        teamName: pickString(penalty, "teamName", "TeamName"),
+        playerNumber: pickOptionalNumber(penalty, "playerNumber", "PlayerNumber") ?? null,
+        playerName: pickString(penalty, "playerName", "PlayerName"),
+        infraction: pickString(penalty, "infraction", "Infraction"),
+        durationMinutes: pickNumber(penalty, "durationMinutes", "DurationMinutes"),
+        penaltyType: pickString(penalty, "penaltyType", "PenaltyType") || null,
+        notes: pickString(penalty, "notes", "Notes") || null,
+      };
+    }),
+    goalies: goaliesRaw.map((row) => {
+      const goalie = asObject(row) || {};
+      return {
+        teamName: pickString(goalie, "teamName", "TeamName"),
+        goalieName: pickString(goalie, "goalieName", "GoalieName"),
+        p1: pickNumber(goalie, "p1", "P1"),
+        p2: pickNumber(goalie, "p2", "P2"),
+        p3: pickNumber(goalie, "p3", "P3"),
+        ot: pickNumber(goalie, "ot", "OT"),
+        total: pickNumber(goalie, "total", "Total"),
+        timeInNetSeconds: pickNumber(goalie, "timeInNetSeconds", "TimeInNetSeconds"),
+        goalsAgainstEstimate: pickNumber(goalie, "goalsAgainstEstimate", "GoalsAgainstEstimate"),
+        savesEstimate: pickNumber(goalie, "savesEstimate", "SavesEstimate"),
+        savePctEstimate: pickNumber(goalie, "savePctEstimate", "SavePctEstimate"),
+      };
+    }),
+    officials: officialsRaw.map((row) => {
+      const official = asObject(row) || {};
+      return {
+        role: pickString(official, "role", "Role"),
+        officialName: pickString(official, "officialName", "OfficialName"),
+      };
+    }),
+    suspensionReviews: suspensionRaw.map((row) => {
+      const item = asObject(row) || {};
+      return {
+        period: pickNumber(item, "period", "Period"),
+        timeInPeriod: pickString(item, "timeInPeriod", "TimeInPeriod"),
+        teamName: pickString(item, "teamName", "TeamName"),
+        playerNumber: pickOptionalNumber(item, "playerNumber", "PlayerNumber") ?? null,
+        playerName: pickString(item, "playerName", "PlayerName"),
+        suspensionBehavior: pickString(item, "suspensionBehavior", "SuspensionBehavior") || null,
+        requiresRefereeNotes: pickBoolean(item, "requiresRefereeNotes", "RequiresRefereeNotes"),
+        reviewRequired: pickBoolean(item, "reviewRequired", "ReviewRequired"),
+        notes: pickString(item, "notes", "Notes") || null,
+      };
+    }),
+  };
+}
+
 function normalizeRosterPlayers(payload: unknown): ApiRosterPlayer[] {
   return extractListPayload(payload, "roster").map((row) => {
     const obj = asObject(row) || {};
@@ -257,10 +382,12 @@ function normalizeRosterPlayers(payload: unknown): ApiRosterPlayer[] {
       playerId: pickString(obj, "playerId", "PlayerId"),
       fullName: pickString(obj, "fullName", "FullName"),
       jerseyNumber: pickNumber(obj, "jerseyNumber", "JerseyNumber") || null,
+      position: pickString(obj, "position", "Position") || null,
       grade:
         typeof gradeNumber === "number"
           ? gradeNumber
           : gradeText || null,
+      isGoalie: pickBoolean(obj, "isGoalie", "IsGoalie"),
       isActive: pickBoolean(obj, "isActive", "IsActive"),
     };
   });
@@ -390,6 +517,19 @@ export async function getGameSummaryMobile(
     throw new Error(`Request failed (${res.status}) for /games/${gameId}/summary-mobile`);
   }
   return normalizeGameSummary(await res.json());
+}
+
+export async function getGameSummaryReport(
+  gameId: string,
+): Promise<ApiGameSummaryReport | null> {
+  const res = await authFetch(`/games/${gameId}/summary-report`);
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    throw new Error(`Request failed (${res.status}) for /games/${gameId}/summary-report`);
+  }
+  return normalizeGameSummaryReport(await res.json());
 }
 
 export async function getGameShotTotalsFromStats(

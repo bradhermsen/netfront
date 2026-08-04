@@ -195,5 +195,32 @@ namespace NetFrontAPI.Functions
             await response.Body.FlushAsync();
             return response;
         }
+
+        [Function("GetGameSummaryReport")]
+        public async Task<HttpResponseData> GetGameSummaryReport(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "games/{id:guid}/summary-report")] HttpRequestData req,
+            Guid id)
+        {
+            var token = AuthorizationHelper.ExtractBearerToken(req);
+            if (string.IsNullOrEmpty(token))
+                return await AuthorizationHelper.UnauthorizedResponse(req, "No authorization token provided");
+
+            var (isValid, _, role) = _authorizationService.ValidateToken(token);
+            if (!isValid)
+                return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
+
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "TeamManager", "Coach", "Viewer"))
+                return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view game summary report");
+
+            var report = await _gameSummaryReportService.BuildReportAsync(id);
+            if (report == null)
+            {
+                return req.CreateResponse(HttpStatusCode.NotFound);
+            }
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(report);
+            return response;
+        }
     }
 }

@@ -58,6 +58,14 @@ function displayTeamName(team?: ApiTeam) {
   return String(team?.name || "Team").trim() || "Team";
 }
 
+function displayTeamNameWithMascot(teamName: string, mascot?: string | null): string {
+  const base = String(teamName || "").trim() || "Team";
+  const mascotText = String(mascot || "").trim();
+  if (!mascotText) return base;
+  if (base.toLowerCase().includes(mascotText.toLowerCase())) return base;
+  return `${base} ${mascotText}`;
+}
+
 function buildTeamContextLabel(team?: ApiTeam): string {
   if (!team) return "";
   const parts = [
@@ -180,7 +188,7 @@ export async function fetchFilterData(
   const teamOptions = scoped.teams
     .map((team) => ({
       id: String(team.teamId),
-      label: displayTeamName(team),
+      label: displayTeamNameWithMascot(displayTeamName(team), team.teamMascot),
       teamType: normalizeTeamType(team.teamType),
       seasonId: team.seasonId ? String(team.seasonId) : "",
     }))
@@ -219,6 +227,16 @@ export async function fetchNextGamesByTeam(
     gameCandidates.map(async (game) => {
       const gameId = String(game.gameId);
       const status = String(game.status || "SCHEDULED");
+      const homeTeam = teamMap.get(String(game.homeTeamId || ""));
+      const awayTeam = teamMap.get(String(game.awayTeamId || ""));
+      const homeDisplay = displayTeamNameWithMascot(
+        String(game.homeTeamName || "Home"),
+        homeTeam?.teamMascot || null,
+      );
+      const awayDisplay = displayTeamNameWithMascot(
+        String(game.awayTeamName || "Away"),
+        awayTeam?.teamMascot || null,
+      );
 
       let homeScore: number | undefined;
       let awayScore: number | undefined;
@@ -240,19 +258,17 @@ export async function fetchNextGamesByTeam(
       return {
         gameId,
         teamId: String(game.homeTeamId || ""),
-        teamName: String(game.homeTeamName || "Home"),
-        opponentName: String(game.awayTeamName || "Away"),
+        teamName: homeDisplay,
+        opponentName: awayDisplay,
         matchupLabel: buildMatchupLabel(
-          String(game.awayTeamName || "Away"),
-          String(game.homeTeamName || "Home"),
+          awayDisplay,
+          homeDisplay,
           buildTeamContextLabel(
-            teamMap.get(String(game.homeTeamId || "")) ||
-              teamMap.get(String(game.awayTeamId || "")),
+            homeTeam || awayTeam,
           ),
         ),
         teamContextLabel: buildTeamContextLabel(
-          teamMap.get(String(game.homeTeamId || "")) ||
-            teamMap.get(String(game.awayTeamId || "")),
+          homeTeam || awayTeam,
         ),
         startTimeIso: new Date(game.gameDateTime).toISOString(),
         status,
@@ -298,13 +314,25 @@ export async function fetchUpcomingSchedule(
         new Date(a.gameDateTime).getTime() - new Date(b.gameDateTime).getTime(),
     )
     .map((game) => ({
+      homeTeamName: displayTeamNameWithMascot(
+        String(game.homeTeamName || "Home"),
+        teamMap.get(String(game.homeTeamId || ""))?.teamMascot || null,
+      ),
+      awayTeamName: displayTeamNameWithMascot(
+        String(game.awayTeamName || "Away"),
+        teamMap.get(String(game.awayTeamId || ""))?.teamMascot || null,
+      ),
       gameId: String(game.gameId),
       startTimeIso: new Date(game.gameDateTime).toISOString(),
-      homeTeamName: String(game.homeTeamName || "Home"),
-      awayTeamName: String(game.awayTeamName || "Away"),
       matchupLabel: buildMatchupLabel(
-        String(game.awayTeamName || "Away"),
-        String(game.homeTeamName || "Home"),
+        displayTeamNameWithMascot(
+          String(game.awayTeamName || "Away"),
+          teamMap.get(String(game.awayTeamId || ""))?.teamMascot || null,
+        ),
+        displayTeamNameWithMascot(
+          String(game.homeTeamName || "Home"),
+          teamMap.get(String(game.homeTeamId || ""))?.teamMascot || null,
+        ),
         buildTeamContextLabel(
           teamMap.get(String(game.homeTeamId || "")) ||
             teamMap.get(String(game.awayTeamId || "")),
@@ -340,6 +368,14 @@ export async function fetchLastFinalGamesByTeam(
 
   const rows = await Promise.all(
     finalGames.map(async (game) => {
+      const homeDisplay = displayTeamNameWithMascot(
+        String(game.homeTeamName || "Home"),
+        teamMap.get(String(game.homeTeamId || ""))?.teamMascot || null,
+      );
+      const awayDisplay = displayTeamNameWithMascot(
+        String(game.awayTeamName || "Away"),
+        teamMap.get(String(game.awayTeamId || ""))?.teamMascot || null,
+      );
       let scoreText = "Final score unavailable";
       try {
         const summary = await getGameSummaryMobile(String(game.gameId));
@@ -352,7 +388,7 @@ export async function fetchLastFinalGamesByTeam(
           typeof score.homeScore === "number" &&
           typeof score.awayScore === "number"
         ) {
-          scoreText = `${game.awayTeamName} ${score.awayScore} - ${score.homeScore} ${game.homeTeamName}`;
+          scoreText = `${awayDisplay} ${score.awayScore} - ${score.homeScore} ${homeDisplay}`;
         }
       } catch {
         // Keep fallback score text when summary is unavailable.
@@ -360,11 +396,11 @@ export async function fetchLastFinalGamesByTeam(
 
       return {
         gameId: String(game.gameId),
-        homeTeamName: String(game.homeTeamName || "Home"),
-        awayTeamName: String(game.awayTeamName || "Away"),
+        homeTeamName: homeDisplay,
+        awayTeamName: awayDisplay,
         matchupLabel: buildMatchupLabel(
-          String(game.awayTeamName || "Away"),
-          String(game.homeTeamName || "Home"),
+          awayDisplay,
+          homeDisplay,
           buildTeamContextLabel(
             teamMap.get(String(game.homeTeamId || "")) ||
               teamMap.get(String(game.awayTeamId || "")),

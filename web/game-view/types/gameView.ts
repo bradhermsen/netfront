@@ -151,11 +151,113 @@ export interface ApiGameSummary {
   awayOnPowerPlay?: boolean;
 }
 
+export interface ApiSummaryPeriodShots {
+  p1: number;
+  p2: number;
+  p3: number;
+  ot: number;
+  total: number;
+}
+
+export interface ApiSummaryReportGoal {
+  period: number;
+  timeInPeriod: string;
+  teamName: string;
+  scorerNumber?: number | null;
+  scorer: string;
+  assist1Number?: number | null;
+  assist1?: string | null;
+  assist2Number?: number | null;
+  assist2?: string | null;
+  strength: string;
+}
+
+export interface ApiSummaryReportPenalty {
+  period: number;
+  timeInPeriod: string;
+  teamName: string;
+  playerNumber?: number | null;
+  playerName: string;
+  infraction: string;
+  durationMinutes: number;
+  penaltyType?: string | null;
+  notes?: string | null;
+}
+
+export interface ApiSummaryReportGoalie {
+  teamName: string;
+  goalieName: string;
+  p1: number;
+  p2: number;
+  p3: number;
+  ot: number;
+  total: number;
+  timeInNetSeconds: number;
+  goalsAgainstEstimate: number;
+  savesEstimate: number;
+  savePctEstimate: number;
+}
+
+export interface ApiSummaryReportOfficial {
+  role: string;
+  officialName: string;
+}
+
+export interface ApiSummaryReportSuspension {
+  period: number;
+  timeInPeriod: string;
+  teamName: string;
+  playerNumber?: number | null;
+  playerName: string;
+  suspensionBehavior?: string | null;
+  requiresRefereeNotes: boolean;
+  reviewRequired: boolean;
+  notes?: string | null;
+}
+
+export interface ApiGameSummaryReport {
+  gameId: string;
+  leagueName: string;
+  homeLevelName: string;
+  awayLevelName: string;
+  seasonName: string;
+  gameDateTime: string;
+  status: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  teamType: string;
+  homeTeamMascot: string;
+  awayTeamMascot: string;
+  arenaName: string;
+  rinkName: string;
+  homeHeadCoachName: string;
+  homeAssistantCoach1Name: string;
+  homeAssistantCoach2Name: string;
+  homeAssistantCoach3Name: string;
+  homeAssistantCoach4Name: string;
+  awayHeadCoachName: string;
+  awayAssistantCoach1Name: string;
+  awayAssistantCoach2Name: string;
+  awayAssistantCoach3Name: string;
+  awayAssistantCoach4Name: string;
+  homeGoals: number;
+  awayGoals: number;
+  homeShots: ApiSummaryPeriodShots;
+  awayShots: ApiSummaryPeriodShots;
+  goals: ApiSummaryReportGoal[];
+  penalties: ApiSummaryReportPenalty[];
+  goalies: ApiSummaryReportGoalie[];
+  officials: ApiSummaryReportOfficial[];
+  suspensionReviews: ApiSummaryReportSuspension[];
+}
+
 export interface ApiRosterPlayer {
   playerId: string;
   fullName: string;
   jerseyNumber?: number | null;
+  position?: string | null;
   grade?: number | string | null;
+  isGoalie?: boolean;
   isActive?: boolean;
 }
 

@@ -1,0 +1,953 @@
+/* NetFront GameView styles should consume existing theme tokens. */
+
+.game-view-root {
+  background: #071a33;
+  box-sizing: border-box;
+  color: #f2f6ff;
+  margin: 0 auto;
+  max-width: 1080px;
+  min-height: 100vh;
+  padding: 16px;
+  width: 100%;
+}
+
+.game-view-header {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.game-view-header-separator {
+  background: #ffffff;
+  border-radius: 999px;
+  height: 1px;
+  margin: 6px auto 0;
+  opacity: 0.78;
+  width: min(92%, 980px);
+}
+
+.game-view-logo {
+  display: block;
+  height: 34px;
+  width: 34px;
+}
+
+.game-view-brand {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 2px;
+  text-align: center;
+}
+
+.game-view-title {
+  color: #f26f21;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.05;
+  margin: 0;
+  width: auto;
+}
+
+.game-view-subtitle {
+  color: #d9e7ff;
+  font-size: 0.95rem;
+  margin: 0;
+  text-align: center;
+}
+
+.game-view-menu-button {
+  background: #0f2a4f;
+  border: 1px solid #2a4f83;
+  border-radius: 10px;
+  color: #f2f6ff;
+  cursor: pointer;
+  font-size: 1.1rem;
+  height: 40px;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 40px;
+}
+
+.game-view-back-button {
+  font-size: 0.76rem;
+  height: 40px;
+  min-width: 122px;
+  padding: 0 10px;
+  width: auto;
+}
+
+.game-view-drawer-overlay {
+  background: rgba(2, 8, 18, 0.52);
+  inset: 0;
+  position: fixed;
+  z-index: 25;
+}
+
+.game-view-filter-drawer {
+  background: #0a2242;
+  border-right: 1px solid #2a4f83;
+  box-sizing: border-box;
+  height: 100%;
+  max-width: 340px;
+  padding: 14px;
+  width: min(88vw, 340px);
+}
+
+.game-view-drawer-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.game-view-drawer-close {
+  background: transparent;
+  border: 0;
+  color: #f2f6ff;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.game-view-filter-panel {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+  margin: 12px 0;
+}
+
+.game-view-filter-field {
+  display: grid;
+  gap: 6px;
+}
+
+.game-view-filter-field span {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.game-view-filter-field select {
+  background: #102c53;
+  border: 1px solid #2b5388;
+  border-radius: 10px;
+  color: #f2f6ff;
+  min-height: 44px;
+  padding: 8px 10px;
+}
+
+.game-view-token-input {
+  background: #102c53;
+  border: 1px solid #2b5388;
+  border-radius: 10px;
+  color: #f2f6ff;
+  min-height: 44px;
+  padding: 8px 10px;
+}
+
+.game-view-token-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.game-view-section {
+  margin-top: 16px;
+}
+
+.game-view-section-title,
+.game-view-schedule-title {
+  color: #f26f21;
+  font-size: 1.05rem;
+  margin: 0 0 10px;
+}
+
+.game-view-search-pill {
+  align-items: center;
+  background: #0d2346;
+  border: 1px solid #274a7a;
+  border-radius: 999px;
+  display: flex;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+}
+
+.game-view-search-icon {
+  color: #9ec1f3;
+  font-size: 0.95rem;
+}
+
+.game-view-search-input {
+  background: transparent;
+  border: 0;
+  color: #f2f6ff;
+  flex: 1;
+  font-size: 0.95rem;
+  min-height: 42px;
+  outline: none;
+}
+
+.game-view-search-input::placeholder {
+  color: #9cb6da;
+}
+
+.game-view-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.game-view-next-card,
+.game-view-schedule-card,
+.game-view-scoreboard-card,
+.game-view-roster-card,
+.game-view-events-card {
+  background: #0d2346;
+  border: 1px solid #274a7a;
+  border-radius: 14px;
+  box-sizing: border-box;
+  padding: 14px;
+  width: 100%;
+}
+
+.game-view-next-card {
+  appearance: none;
+  border: 1px solid #274a7a;
+  color: #f2f6ff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.game-view-next-card-top {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.game-view-card-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0;
+  opacity: 0.88;
+  text-transform: uppercase;
+}
+
+.game-view-live-pill {
+  background: #f26f21;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+}
+
+.game-view-next-card-title {
+  margin: 8px 0 0;
+}
+
+.game-view-next-card-opponent,
+.game-view-next-card-meta,
+.game-view-next-card-status,
+.game-view-next-card-score,
+.game-view-schedule-meta,
+.game-view-empty-text,
+.game-view-loading,
+.game-view-error {
+  margin: 6px 0 0;
+}
+
+.game-view-schedule-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.game-view-schedule-row + .game-view-schedule-row {
+  border-top: 1px solid #23446f;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.game-view-schedule-matchup {
+  font-weight: 600;
+  margin: 0;
+}
+
+.game-view-scoreboard-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.game-view-scoreboard-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.game-view-mini-statusbar {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 8px 14px;
+}
+
+.game-view-mini-status-dot {
+  color: #ff5858;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.game-view-mini-period-token {
+  color: #dce9ff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.game-view-mini-status-pill {
+  background: #183a66;
+  border: 1px solid #2e5a8f;
+  border-radius: 999px;
+  color: #e7f0ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 10px;
+  text-transform: uppercase;
+}
+
+.game-view-mini-status-pill.is-live,
+.game-view-pill-green {
+  background: #15924d;
+  border: 1px solid #1fc667;
+  color: #ffffff;
+}
+
+.game-view-mini-team-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 54px;
+  padding: 10px 12px;
+}
+
+.game-view-mini-team-left {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.game-view-mini-team-name {
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.game-view-mini-pp {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 3px 7px;
+}
+
+.game-view-mini-team-right {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.game-view-mini-team-score {
+  color: #ffffff;
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 0.95;
+  min-width: 30px;
+  text-align: right;
+}
+
+.game-view-mini-row-divider {
+  background: #23446f;
+  height: 1px;
+  margin: 0 10px;
+}
+
+.game-view-mini-shots-grid {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px 12px;
+}
+
+.game-view-mini-shots-grid-header,
+.game-view-mini-shots-grid-row {
+  align-items: center;
+  column-gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px 34px 34px 40px;
+}
+
+.game-view-mini-shots-grid-header {
+  color: #9fbbe0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.game-view-mini-shots-h-sog {
+  color: #b8cff0;
+  font-size: 0.68rem;
+}
+
+.game-view-mini-shots-grid-header span:not(:first-child),
+.game-view-mini-shots-grid-row span:not(:first-child) {
+  text-align: center;
+}
+
+.game-view-mini-shots-grid-row {
+  color: #ecf3ff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.game-view-mini-shots-team {
+  color: #dce9ff;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-view-mini-shots-total {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.game-view-mini-footer {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: #7592bc;
+  display: flex;
+  font-size: 0.62rem;
+  font-weight: 700;
+  justify-content: center;
+  letter-spacing: 0.2em;
+  min-height: 28px;
+  text-transform: uppercase;
+}
+
+.game-view-tab-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.game-view-tab {
+  align-items: center;
+  background: #133460;
+  border: 1px solid #2b5488;
+  border-radius: 10px;
+  color: #f2f6ff;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+  min-height: 40px;
+  padding: 6px 12px;
+}
+
+.game-view-tab.is-active {
+  background: #174579;
+  border-color: #47a4ff;
+  box-shadow: 0 0 0 1px rgba(71, 164, 255, 0.35) inset;
+  color: #ffffff;
+}
+
+.game-view-selected-tag {
+  background: #1f9d55;
+  border: 1px solid #2bc66e;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+
+.game-view-roster-active-team {
+  color: #cfe1ff;
+  font-size: 0.82rem;
+  margin: 10px 0 0;
+}
+
+.game-view-coach-data {
+  border-top: 1px solid #23446f;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.game-view-coach-data-title {
+  color: #b9d4fb;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.game-view-coach-data-empty {
+  color: #cfe1ff;
+  font-size: 0.8rem;
+  margin: 8px 0 0;
+}
+
+.game-view-coach-data-list {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.game-view-coach-data-item {
+  align-items: baseline;
+  column-gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(88px, 120px) 1fr;
+}
+
+.game-view-coach-role {
+  color: #9fbbe0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.game-view-coach-name {
+  color: #f2f6ff;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.game-view-roster-list,
+.game-view-events-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.game-view-roster-grid-wrap {
+  margin-top: 12px;
+  overflow-x: hidden;
+}
+
+.game-view-roster-grid {
+  column-gap: 6px;
+  display: grid;
+  grid-template-columns: 54px minmax(110px, 1fr) 50px 50px 56px 44px;
+  min-width: 0;
+  row-gap: 2px;
+  width: 100%;
+}
+
+.game-view-roster-grid-header {
+  align-items: center;
+  color: #b9d4fb;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.game-view-roster-grid-row {
+  align-items: center;
+  border-top: 1px solid #23446f;
+  color: #f2f6ff;
+  font-size: 0.82rem;
+  padding: 8px 0;
+}
+
+.game-view-roster-grid-header span,
+.game-view-roster-grid-row span {
+  display: block;
+  min-width: 0;
+}
+
+.game-view-roster-grid-header span:nth-child(2),
+.game-view-roster-grid-row span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.game-view-roster-grid-header span:nth-child(1),
+.game-view-roster-grid-header span:nth-child(3),
+.game-view-roster-grid-header span:nth-child(4),
+.game-view-roster-grid-header span:nth-child(5),
+.game-view-roster-grid-header span:nth-child(6),
+.game-view-roster-grid-row span:nth-child(1),
+.game-view-roster-grid-row span:nth-child(3),
+.game-view-roster-grid-row span:nth-child(4),
+.game-view-roster-grid-row span:nth-child(5),
+.game-view-roster-grid-row span:nth-child(6) {
+  text-align: center;
+}
+
+.game-view-roster-row + .game-view-roster-row,
+.game-view-event-row + .game-view-event-row {
+  border-top: 1px solid #23446f;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.game-view-roster-name,
+.game-view-event-description {
+  font-weight: 600;
+  margin: 0;
+}
+
+.game-view-roster-meta,
+.game-view-event-time {
+  margin: 4px 0 0;
+}
+
+.game-view-event-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto 1fr;
+}
+
+.game-view-event-icon {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  height: 22px;
+  justify-content: center;
+  margin-top: 2px;
+  width: 22px;
+}
+
+.game-view-event-icon.is-goal {
+  background: #ecf5ff;
+  color: #0d4f9a;
+}
+
+.game-view-event-icon.is-penalty {
+  background: #fff0f0;
+  color: #9b2f2f;
+}
+
+.game-view-event-icon.is-shot {
+  background: #fff8e8;
+  color: #8a5b00;
+}
+
+.game-view-error {
+  color: #ff9e9e;
+}
+
+.game-view-pagination {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.game-view-pagination-btn {
+  background: #133460;
+  border: 1px solid #2b5488;
+  border-radius: 10px;
+  color: #f2f6ff;
+  min-height: 36px;
+  min-width: 72px;
+  padding: 6px 10px;
+}
+
+.game-view-pagination-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.game-view-pagination-label {
+  color: #d6e4fb;
+  font-size: 0.9rem;
+}
+
+.game-view-detail-pagination {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.game-view-pagination-text {
+  color: #d6e4fb;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .game-view-root {
+    padding: 14px;
+  }
+
+  .game-view-header {
+    gap: 6px;
+  }
+
+  .game-view-brand {
+    gap: 8px;
+    max-width: 100%;
+    padding: 0 44px;
+  }
+
+  .game-view-logo {
+    height: 30px;
+    width: 30px;
+  }
+
+  .game-view-title {
+    font-size: clamp(1.35rem, 5.2vw, 1.9rem);
+    line-height: 1.1;
+  }
+
+  .game-view-subtitle {
+    font-size: 0.88rem;
+    line-height: 1.25;
+    max-width: 100%;
+    padding: 0 8px;
+    text-wrap: balance;
+  }
+
+  .game-view-section {
+    margin-top: 14px;
+  }
+
+  .game-view-section-title,
+  .game-view-schedule-title {
+    font-size: 1rem;
+  }
+
+  .game-view-tab-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .game-view-tab {
+    min-height: 38px;
+  }
+
+  .game-view-pagination {
+    justify-content: center;
+  }
+
+  .game-view-back-button {
+    align-self: flex-start;
+    height: 36px;
+    left: auto;
+    min-width: 112px;
+    position: static;
+    top: auto;
+    width: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .game-view-root {
+    padding: 10px;
+  }
+
+  .game-view-section {
+    margin-top: 12px;
+  }
+
+  .game-view-menu-button {
+    height: 36px;
+    width: 36px;
+  }
+
+  .game-view-brand {
+    gap: 6px;
+    padding: 0 40px;
+  }
+
+  .game-view-logo {
+    height: 26px;
+    width: 26px;
+  }
+
+  .game-view-title {
+    font-size: clamp(1.2rem, 5.8vw, 1.5rem);
+  }
+
+  .game-view-subtitle {
+    font-size: 0.8rem;
+    line-height: 1.3;
+    padding: 0 4px;
+  }
+
+  .game-view-search-pill {
+    min-height: 42px;
+    padding: 0 12px;
+  }
+
+  .game-view-search-input {
+    font-size: 0.9rem;
+    min-height: 38px;
+  }
+
+  .game-view-back-button {
+    font-size: 0.7rem;
+    height: 34px;
+    min-width: 104px;
+    padding: 0 8px;
+  }
+
+  .game-view-tab {
+    flex: 1 1 0;
+    font-size: 0.82rem;
+    min-height: 36px;
+    padding: 6px 8px;
+  }
+
+  .game-view-selected-tag {
+    font-size: 0.58rem;
+    padding: 2px 5px;
+  }
+
+  .game-view-roster-active-team {
+    font-size: 0.74rem;
+  }
+
+  .game-view-coach-data-title {
+    font-size: 0.72rem;
+  }
+
+  .game-view-coach-data-item {
+    grid-template-columns: minmax(72px, 96px) 1fr;
+  }
+
+  .game-view-coach-role {
+    font-size: 0.66rem;
+  }
+
+  .game-view-coach-name {
+    font-size: 0.8rem;
+  }
+
+  .game-view-roster-card {
+    padding: 10px;
+  }
+
+  .game-view-roster-grid-wrap {
+    overflow-x: auto;
+  }
+
+  .game-view-roster-grid {
+    column-gap: 4px;
+    grid-template-columns: 44px minmax(90px, 1fr) 42px 44px 48px 40px;
+    min-width: 430px;
+  }
+
+  .game-view-roster-grid-header {
+    font-size: 0.6rem;
+  }
+
+  .game-view-roster-grid-row {
+    font-size: 0.76rem;
+  }
+
+  .game-view-mini-team-name {
+    font-size: 1rem;
+  }
+
+  .game-view-mini-team-score {
+    font-size: 2.2rem;
+    min-width: 24px;
+  }
+
+  .game-view-mini-shots-grid-header,
+  .game-view-mini-shots-grid-row {
+    grid-template-columns: minmax(0, 1fr) 28px 28px 28px 34px;
+  }
+
+  .game-view-mini-shots-grid-header {
+    font-size: 0.6rem;
+  }
+
+  .game-view-mini-shots-grid-row {
+    font-size: 0.76rem;
+  }
+
+  .game-view-mini-footer {
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+  }
+
+  .game-view-roster-grid-header span:nth-child(6),
+  .game-view-roster-grid-row span:nth-child(6) {
+    padding-right: 2px;
+  }
+}
+
+@media (max-width: 420px) {
+  .game-view-root {
+    padding: 8px;
+  }
+
+  .game-view-brand {
+    padding: 0 34px;
+  }
+
+  .game-view-title {
+    font-size: 1.1rem;
+  }
+
+  .game-view-subtitle {
+    font-size: 0.76rem;
+  }
+
+  .game-view-roster-grid {
+    min-width: 410px;
+  }
+
+  .game-view-pagination {
+    gap: 8px;
+  }
+
+  .game-view-pagination-btn {
+    min-width: 64px;
+    padding: 6px 8px;
+  }
+}
+
+@media (min-width: 768px) {
+  .game-view-root {
+    padding: 20px;
+  }
+
+  .game-view-title {
+    font-size: 2.15rem;
+  }
+
+  .game-view-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .game-view-back-button {
+    font-size: 0.82rem;
+    min-width: 136px;
+  }
+}

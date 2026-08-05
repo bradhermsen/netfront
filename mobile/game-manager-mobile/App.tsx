@@ -1821,6 +1821,15 @@ export default function App() {
         ? `POWER PLAY - ${session?.homeTeam?.toUpperCase() ?? "HOME"}`
         : `POWER PLAY - ${session?.awayTeam?.toUpperCase() ?? "AWAY"}`;
 
+  const homeOnPowerPlay = awaySkatersOnIce < homeSkatersOnIce;
+  const awayOnPowerPlay = homeSkatersOnIce < awaySkatersOnIce;
+
+  useEffect(() => {
+    const gameId = nextGame?.gameId;
+    if (!gameId || !session) return;
+    void syncLiveStatus(gameId, homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce);
+  }, [homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce]);
+
   const scoreboardConnectionBadgeText = useMemo(() => {
     if (!scoreboardGatewaySettings.enabled) {
       return "Manual Clock";
@@ -3595,6 +3604,29 @@ export default function App() {
 
     if (!response.ok) {
       throw new Error(`Shot sync failed (${response.status}).`);
+    }
+  }
+
+  async function syncLiveStatus(
+    gameId: string,
+    homeOnPP: boolean,
+    awayOnPP: boolean,
+    homeSkatersCount: number,
+    awaySkatersCount: number,
+  ) {
+    try {
+      await fetch(`${activeApiBase}/games/${gameId}/live-status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          homeOnPowerPlay: homeOnPP,
+          awayOnPowerPlay: awayOnPP,
+          homeSkatersOnIce: homeSkatersCount,
+          awaySkatersOnIce: awaySkatersCount,
+        }),
+      });
+    } catch {
+      // Non-critical; GameView falls back to penalty-history inference.
     }
   }
 

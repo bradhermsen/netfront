@@ -8,6 +8,7 @@ export interface RosterPlayerRow {
   position: string;
   grade: string;
   isGoalie: boolean;
+  isStarter: boolean;
   goals: number;
   assists: number;
   penaltyMinutes: number;
@@ -102,7 +103,10 @@ export function RosterTabs({
                 <div key={row.playerId} className="game-view-roster-grid game-view-roster-grid-row game-view-roster-grid--skaters">
                   <span>{row.jerseyNumber || "-"}</span>
                   <span>{row.position || "-"}</span>
-                  <span>{row.playerName}</span>
+                  <span>
+                    {row.playerName}
+                    {row.isStarter ? <span className="game-view-starter-badge">S</span> : null}
+                  </span>
                   <span>{row.grade || "-"}</span>
                   <span>{row.goals}</span>
                   <span>{row.assists}</span>
@@ -131,7 +135,10 @@ export function RosterTabs({
                 <div key={row.playerId} className="game-view-roster-grid game-view-roster-grid-row game-view-roster-grid--goalies">
                   <span>{row.jerseyNumber || "-"}</span>
                   <span>{row.position || "G"}</span>
-                  <span>{row.playerName}</span>
+                  <span>
+                    {row.playerName}
+                    {row.isStarter ? <span className="game-view-starter-badge">S</span> : null}
+                  </span>
                   <span>{row.shotsAgainst || "-"}</span>
                   <span>{row.minutesPlayed > 0 ? (Math.round(row.goalsAgainst * 10) / 10).toFixed(1) : "-"}</span>
                   <span>{row.minutesPlayed > 0 ? row.goalsAgainstAverage.toFixed(2) : "-"}</span>

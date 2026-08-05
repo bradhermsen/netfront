@@ -149,6 +149,10 @@ export interface ApiGameSummary {
   awayShots?: number;
   homeOnPowerPlay?: boolean;
   awayOnPowerPlay?: boolean;
+  homeSkatersOnIce?: number;
+  awaySkatersOnIce?: number;
+  homeStarterIds?: string[];
+  awayStarterIds?: string[];
 }
 
 export interface ApiSummaryPeriodShots {

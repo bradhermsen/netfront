@@ -638,6 +638,20 @@
   margin: 10px 0 0;
 }
 
+.game-view-starter-badge {
+  background: #1a6e3a;
+  border: 1px solid #2bc66e;
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  margin-left: 5px;
+  padding: 1px 4px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 .game-view-roster-grid {
   column-gap: 6px;
   display: grid;

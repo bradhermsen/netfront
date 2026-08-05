@@ -841,9 +841,10 @@ function parseClockDisplayToMs(clockDisplay: string): number {
     const [mRaw, sRaw] = value.split(":");
     const minutes = Number(mRaw ?? 0);
     const seconds = Number(sRaw ?? 0);
-    const totalSeconds = Number.isFinite(minutes) && Number.isFinite(seconds)
-      ? minutes * 60 + seconds
-      : 0;
+    const totalSeconds =
+      Number.isFinite(minutes) && Number.isFinite(seconds)
+        ? minutes * 60 + seconds
+        : 0;
     return Math.max(0, Math.floor(totalSeconds * 1000));
   }
 
@@ -1611,8 +1612,9 @@ export default function App() {
   const penaltyClockPrevRemainingMsRef = useRef<number | null>(null);
   const penaltyClockCarryMsRef = useRef(0);
   const scoreboardSocketRef = useRef<WebSocket | null>(null);
-  const scoreboardReconnectTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scoreboardReconnectTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const scoreboardReconnectAttemptRef = useRef(0);
   const scoreboardClockSyncActiveRef = useRef(false);
   const gatewayLastClockSecondsRef = useRef<number | null>(null);
@@ -1622,7 +1624,10 @@ export default function App() {
   const sessionPeriodLengthRef = useRef("17");
   const gameClockControlsRef = useRef({
     setDuration: (_nextDurationMs: number) => {},
-    syncPausedRemaining: (_nextRemainingMs: number, _nextDurationMs?: number) => {},
+    syncPausedRemaining: (
+      _nextRemainingMs: number,
+      _nextDurationMs?: number,
+    ) => {},
     pause: () => {},
     resume: () => {},
   });
@@ -1816,6 +1821,15 @@ export default function App() {
         ? `POWER PLAY - ${session?.homeTeam?.toUpperCase() ?? "HOME"}`
         : `POWER PLAY - ${session?.awayTeam?.toUpperCase() ?? "AWAY"}`;
 
+  const homeOnPowerPlay = awaySkatersOnIce < homeSkatersOnIce;
+  const awayOnPowerPlay = homeSkatersOnIce < awaySkatersOnIce;
+
+  useEffect(() => {
+    const gameId = nextGame?.gameId;
+    if (!gameId || !session) return;
+    void syncLiveStatus(gameId, homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce);
+  }, [homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce]);
+
   const scoreboardConnectionBadgeText = useMemo(() => {
     if (!scoreboardGatewaySettings.enabled) {
       return "Manual Clock";
@@ -1860,7 +1874,7 @@ export default function App() {
     scoreboardGatewaySettings.enabled &&
     scoreboardConnectionState === "connected";
   const clockSourceLabel = isScoreboardClockSyncActive
-    ? "Gateway Sync"
+    ? "Scoreboard Sync"
     : "Manual (Tablet)";
 
   useEffect(() => {
@@ -2315,7 +2329,10 @@ export default function App() {
   }
 
   function scheduleScoreboardReconnect(reason: string) {
-    if (!scoreboardGatewaySettings.enabled || stageRef.current !== "gameDashboard") {
+    if (
+      !scoreboardGatewaySettings.enabled ||
+      stageRef.current !== "gameDashboard"
+    ) {
       return;
     }
 
@@ -2326,7 +2343,9 @@ export default function App() {
     const attempt = scoreboardReconnectAttemptRef.current;
     const delayMs = Math.min(12000, 1500 + attempt * 1500);
     scoreboardReconnectAttemptRef.current = attempt + 1;
-    setScoreboardConnectionMessage(`${reason}. Retrying in ${Math.ceil(delayMs / 1000)}s`);
+    setScoreboardConnectionMessage(
+      `${reason}. Retrying in ${Math.ceil(delayMs / 1000)}s`,
+    );
 
     scoreboardReconnectTimerRef.current = setTimeout(() => {
       scoreboardReconnectTimerRef.current = null;
@@ -2364,7 +2383,9 @@ export default function App() {
     return `${trimmed.slice(0, 4)}********${trimmed.slice(-4)}`;
   }
 
-  function buildClockDisplayFromGatewayPayload(payload: Record<string, unknown>) {
+  function buildClockDisplayFromGatewayPayload(
+    payload: Record<string, unknown>,
+  ) {
     const formatted =
       typeof payload.clockFormatted === "string"
         ? payload.clockFormatted.trim()
@@ -2420,7 +2441,9 @@ export default function App() {
 
     if (didPeriodChange) {
       // On period transition, remove expired penalties and keep only active carry-over penalties.
-      setActivePenalties((prev) => prev.filter((penalty) => penalty.remainingSeconds > 0));
+      setActivePenalties((prev) =>
+        prev.filter((penalty) => penalty.remainingSeconds > 0),
+      );
       penaltyClockCarryMsRef.current = 0;
       penaltyClockPrevRemainingMsRef.current = null;
     }
@@ -2444,7 +2467,10 @@ export default function App() {
         patch.clock = nextClock;
       }
 
-      if (normalizedPayloadPeriod != null && prev.period !== normalizedPayloadPeriod) {
+      if (
+        normalizedPayloadPeriod != null &&
+        prev.period !== normalizedPayloadPeriod
+      ) {
         patch.period = normalizedPayloadPeriod;
       }
 
@@ -2570,7 +2596,7 @@ export default function App() {
       setScoreboardConnectionMessage(
         scoreboardGatewaySettings.enabled
           ? "Disconnected"
-            : "Manual mode (tablet clock)",
+          : "Manual mode (tablet clock)",
       );
       return;
     }
@@ -2628,7 +2654,9 @@ export default function App() {
       const tokenSecret = scoreboardGatewaySettings.tokenSecret.trim();
       if (tokenSecret.length > 0) {
         try {
-          socket.send(JSON.stringify({ auth: tokenSecret, client: "mobile-gm" }));
+          socket.send(
+            JSON.stringify({ auth: tokenSecret, client: "mobile-gm" }),
+          );
         } catch {
           // Ignore auth send failures; socket error handlers update status.
         }
@@ -2639,8 +2667,7 @@ export default function App() {
       if (scoreboardSocketRef.current !== socket) return;
       scoreboardLastMessageAtRef.current = Date.now();
 
-      const rawData =
-        typeof event.data === "string" ? event.data.trim() : "";
+      const rawData = typeof event.data === "string" ? event.data.trim() : "";
       let messageType = rawData.toUpperCase();
       let parsedPayload: Record<string, unknown> | null = null;
 
@@ -2665,7 +2692,9 @@ export default function App() {
         }
 
         try {
-          socket.send(JSON.stringify({ auth: tokenSecret, client: "mobile-gm" }));
+          socket.send(
+            JSON.stringify({ auth: tokenSecret, client: "mobile-gm" }),
+          );
           setScoreboardConnectionMessage("Authenticating with gateway");
         } catch {
           setScoreboardConnectionState("error");
@@ -3564,14 +3593,40 @@ export default function App() {
     gameId: string,
     shotSummary: LiveShotSummaryPayload,
   ) {
-    const response = await fetch(`${activeApiBase}/games/${gameId}/shots-mobile`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(shotSummary),
-    });
+    const response = await fetch(
+      `${activeApiBase}/games/${gameId}/shots-mobile`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(shotSummary),
+      },
+    );
 
     if (!response.ok) {
       throw new Error(`Shot sync failed (${response.status}).`);
+    }
+  }
+
+  async function syncLiveStatus(
+    gameId: string,
+    homeOnPP: boolean,
+    awayOnPP: boolean,
+    homeSkatersCount: number,
+    awaySkatersCount: number,
+  ) {
+    try {
+      await fetch(`${activeApiBase}/games/${gameId}/live-status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          homeOnPowerPlay: homeOnPP,
+          awayOnPowerPlay: awayOnPP,
+          homeSkatersOnIce: homeSkatersCount,
+          awaySkatersOnIce: awaySkatersCount,
+        }),
+      });
+    } catch {
+      // Non-critical; GameView falls back to penalty-history inference.
     }
   }
 
@@ -8534,7 +8589,8 @@ export default function App() {
                               ...sortRosterPlayersForPicker(
                                 eventEditAssistRoster.filter(
                                   (player) =>
-                                    player.playerId !== eventEditModal.assist2Id,
+                                    player.playerId !==
+                                    eventEditModal.assist2Id,
                                 ),
                               ).map((player) => ({
                                 value: player.playerId,
@@ -8588,7 +8644,8 @@ export default function App() {
                               ...sortRosterPlayersForPicker(
                                 eventEditAssistRoster.filter(
                                   (player) =>
-                                    player.playerId !== eventEditModal.assist1Id,
+                                    player.playerId !==
+                                    eventEditModal.assist1Id,
                                 ),
                               ).map((player) => ({
                                 value: player.playerId,
@@ -8826,12 +8883,13 @@ export default function App() {
                                           value,
                                           prev.penaltyType,
                                         ),
-                                      durationMinutes: getPenaltyDurationMinutes(
-                                        resolvePenaltyTypeForInfraction(
-                                          value,
-                                          prev.penaltyType,
+                                      durationMinutes:
+                                        getPenaltyDurationMinutes(
+                                          resolvePenaltyTypeForInfraction(
+                                            value,
+                                            prev.penaltyType,
+                                          ),
                                         ),
-                                      ),
                                     }
                                   : prev,
                               ),
@@ -9247,7 +9305,8 @@ export default function App() {
 
                 <View style={styles.toggleRow}>
                   <Text style={styles.toggleLabel}>
-                    Connect to Scoreboard: {scoreboardSettingsDraft.enabled ? "On" : "Off"}
+                    Connect to Scoreboard:{" "}
+                    {scoreboardSettingsDraft.enabled ? "On" : "Off"}
                   </Text>
                   <Switch
                     value={scoreboardSettingsDraft.enabled}
@@ -9316,9 +9375,12 @@ export default function App() {
 
                 <View style={styles.scoreboardTokenMetaRow}>
                   <Text style={styles.scoreboardTokenMetaText}>
-                    Saved token: {showScoreboardTokenSecret
-                      ? (scoreboardSettingsDraft.tokenSecret.trim() || "--")
-                      : maskTokenForDisplay(scoreboardSettingsDraft.tokenSecret)}
+                    Saved token:{" "}
+                    {showScoreboardTokenSecret
+                      ? scoreboardSettingsDraft.tokenSecret.trim() || "--"
+                      : maskTokenForDisplay(
+                          scoreboardSettingsDraft.tokenSecret,
+                        )}
                   </Text>
                   <Pressable
                     style={styles.scoreboardTokenRevealButton}
@@ -9604,7 +9666,8 @@ export default function App() {
                     <Text style={styles.gameClockTime}>{session.clock}</Text>
                     <View style={styles.gameClockModeBadge}>
                       <Text style={styles.gameClockModeText}>
-                        {isClockRunning ? "Running" : "Stopped"} • {clockSourceLabel}
+                        {isClockRunning ? "Running" : "Stopped"} •{" "}
+                        {clockSourceLabel}
                       </Text>
                     </View>
                     <Text style={styles.gameClockManpowerText}>

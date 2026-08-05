@@ -139,6 +139,25 @@ namespace NetFrontAPI.Services
                 FROM GameStatsSnapshots
                 WHERE GameId = @GameId;", new { GameId = gameId });
 
+            IList<GoalieEventRow>? derivedGoalieEvents = null;
+            if (string.IsNullOrWhiteSpace(goalieJson) || goalieJson.Trim() == "[]")
+            {
+                derivedGoalieEvents = (await conn.QueryAsync<GoalieEventRow>(@"
+                    SELECT
+                        ge.TeamId,
+                        ge.Period,
+                        ge.TimeInPeriod,
+                        JSON_VALUE(ge.Details, '$.GoalieChangeKind') AS ChangeKind,
+                        JSON_VALUE(ge.Details, '$.GoalieOldName') AS OldName,
+                        JSON_VALUE(ge.Details, '$.GoalieNewName') AS NewName
+                    FROM dbo.GameEvents ge
+                    WHERE ge.GameId = @GameId
+                      AND ge.EventType = 'Goalie'
+                      AND ISJSON(ge.Details) = 1
+                    ORDER BY ge.Period, ge.TimeInPeriod, ge.CreatedAt;",
+                    new { GameId = gameId })).ToList();
+            }
+
             var coaches = await conn.QueryFirstOrDefaultAsync<CoachRow>(@"
                 SELECT
                     h.HeadCoachName AS HomeHeadCoachName,
@@ -271,7 +290,13 @@ namespace NetFrontAPI.Services
                 },
                 Goals = goals,
                 Penalties = penalties,
-                Goalies = ParseGoalieSummary(goalieJson),
+                Goalies = string.IsNullOrWhiteSpace(goalieJson) || goalieJson.Trim() == "[]"
+                    ? DeriveGoaliesFromEvents(
+                        derivedGoalieEvents ?? new List<GoalieEventRow>(),
+                        game.HomeTeamId, game.HomeTeamName ?? "Home",
+                        game.AwayTeamId, game.AwayTeamName ?? "Visitor",
+                        totals)
+                    : ParseGoalieSummary(goalieJson),
                 HomeRoster = roster.Where(x => x.TeamId == game.HomeTeamId)
                     .Select(x => new RosterPlayerSummaryLine
                     {
@@ -713,6 +738,157 @@ namespace NetFrontAPI.Services
             return infraction == "disqualification" || infraction == "dq";
         }
 
+        private static List<GoalieSummaryLine> DeriveGoaliesFromEvents(
+            IList<GoalieEventRow> events,
+            Guid homeTeamId, string homeTeamName,
+            Guid awayTeamId, string awayTeamName,
+            ScoreAndShotRow? shots)
+        {
+            var result = new List<GoalieSummaryLine>();
+
+            var teamPairs = new[]
+            {
+                (teamId: homeTeamId, teamName: homeTeamName,
+                 sp1: shots?.AwayShotsP1 ?? 0, sp2: shots?.AwayShotsP2 ?? 0,
+                 sp3: shots?.AwayShotsP3 ?? 0, sot: shots?.AwayShotsOT ?? 0),
+                (teamId: awayTeamId, teamName: awayTeamName,
+                 sp1: shots?.HomeShotsP1 ?? 0, sp2: shots?.HomeShotsP2 ?? 0,
+                 sp3: shots?.HomeShotsP3 ?? 0, sot: shots?.HomeShotsOT ?? 0),
+            };
+
+            foreach (var team in teamPairs)
+            {
+                var teamEvents = events
+                    .Where(e => e.TeamId == team.teamId)
+                    .OrderBy(e => e.Period)
+                    .ThenBy(e => e.TimeInPeriod)
+                    .ToList();
+
+                // Determine starting goalie from first change event's old name
+                string? startingGoalie = teamEvents
+                    .Where(e => !string.IsNullOrWhiteSpace(e.OldName))
+                    .Select(e => e.OldName!.Trim())
+                    .FirstOrDefault();
+
+                if (startingGoalie == null && teamEvents.Count == 0)
+                    continue;
+
+                // Replay events to find who was in net at the START and END of each period
+                var periodGoalies = new Dictionary<int, (string? start, string? end)>();
+                string? active = startingGoalie;
+
+                // Mark starting goalie as covering period 1 start
+                for (var p = 1; p <= 4; p++)
+                    periodGoalies[p] = (active, active);
+
+                foreach (var ev in teamEvents)
+                {
+                    var kind = (ev.ChangeKind ?? "change").Trim().ToLowerInvariant();
+                    var newName = string.IsNullOrWhiteSpace(ev.NewName) ? null : ev.NewName.Trim();
+                    var oldName = string.IsNullOrWhiteSpace(ev.OldName) ? null : ev.OldName.Trim();
+
+                    // Ensure starting goalie is captured from this event if not already set
+                    if (active == null && oldName != null)
+                    {
+                        active = oldName;
+                        for (var p = 1; p < ev.Period; p++)
+                            periodGoalies[p] = (active, active);
+                        if (periodGoalies.TryGetValue(ev.Period, out var cur))
+                            periodGoalies[ev.Period] = (active, cur.end);
+                    }
+
+                    if (kind == "change")
+                    {
+                        // Record that active goalie was in net at START of this period
+                        if (periodGoalies.TryGetValue(ev.Period, out var before))
+                            periodGoalies[ev.Period] = (before.start ?? active, newName);
+                        active = newName;
+                        // New goalie covers all subsequent periods (until next event overrides)
+                        for (var p = ev.Period + 1; p <= 4; p++)
+                            periodGoalies[p] = (active, active);
+                    }
+                    else if (kind == "pulled")
+                    {
+                        if (periodGoalies.TryGetValue(ev.Period, out var before))
+                            periodGoalies[ev.Period] = (before.start ?? active, null);
+                        active = null;
+                    }
+                    else if (kind == "returned")
+                    {
+                        var returnedName = newName ?? oldName ?? active;
+                        active = returnedName;
+                        if (periodGoalies.TryGetValue(ev.Period, out var before))
+                            periodGoalies[ev.Period] = (before.start, active);
+                        for (var p = ev.Period + 1; p <= 4; p++)
+                            periodGoalies[p] = (active, active);
+                    }
+                }
+
+                // Gather all unique goalies who played for this team
+                var allGoalies = periodGoalies.Values
+                    .SelectMany(v => new[] { v.start, v.end })
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Select(n => n!)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (allGoalies.Count == 0)
+                    continue;
+
+                // Attribute shots per period: if start==end goalie → full shots; otherwise split 50/50
+                var goalieShots = allGoalies.ToDictionary(
+                    g => g,
+                    _ => new int[4], // indexes 0-3 = P1,P2,P3,OT
+                    StringComparer.OrdinalIgnoreCase);
+
+                var periodShotArrays = new[] { team.sp1, team.sp2, team.sp3, team.sot };
+                for (var pidx = 0; pidx < 4; pidx++)
+                {
+                    var period = pidx + 1;
+                    var totalShots = periodShotArrays[pidx];
+                    if (!periodGoalies.TryGetValue(period, out var pg)) continue;
+
+                    var startG = string.IsNullOrWhiteSpace(pg.start) ? null : pg.start;
+                    var endG = string.IsNullOrWhiteSpace(pg.end) ? null : pg.end;
+
+                    if (startG != null && string.Equals(startG, endG, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // One goalie for the whole period
+                        if (goalieShots.TryGetValue(startG, out var arr))
+                            arr[pidx] += totalShots;
+                    }
+                    else
+                    {
+                        // Change mid-period: split evenly
+                        var half1 = totalShots / 2;
+                        var half2 = totalShots - half1;
+                        if (startG != null && goalieShots.TryGetValue(startG, out var arrS))
+                            arrS[pidx] += half1;
+                        if (endG != null && goalieShots.TryGetValue(endG, out var arrE))
+                            arrE[pidx] += half2;
+                    }
+                }
+
+                foreach (var goalieName in allGoalies)
+                {
+                    if (!goalieShots.TryGetValue(goalieName, out var gs)) continue;
+                    var total = gs[0] + gs[1] + gs[2] + gs[3];
+                    result.Add(new GoalieSummaryLine
+                    {
+                        TeamName = team.teamName,
+                        GoalieName = goalieName,
+                        P1 = gs[0],
+                        P2 = gs[1],
+                        P3 = gs[2],
+                        OT = gs[3],
+                        Total = total,
+                    });
+                }
+            }
+
+            return result;
+        }
+
         private static List<GoalieSummaryLine> ParseGoalieSummary(string? goalieJson)
         {
             var rows = new List<GoalieSummaryLine>();
@@ -1015,6 +1191,16 @@ namespace NetFrontAPI.Services
             public int? JerseyNumber { get; set; }
             public string PlayerName { get; set; } = string.Empty;
             public bool IsGoalie { get; set; }
+        }
+
+        private sealed class GoalieEventRow
+        {
+            public Guid TeamId { get; set; }
+            public int Period { get; set; }
+            public string TimeInPeriod { get; set; } = string.Empty;
+            public string? ChangeKind { get; set; }
+            public string? OldName { get; set; }
+            public string? NewName { get; set; }
         }
 
         private sealed class ScoreAndShotRow

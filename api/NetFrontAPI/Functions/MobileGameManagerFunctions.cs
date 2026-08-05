@@ -438,6 +438,20 @@ namespace NetFrontAPI.Functions
             var awayShotsOT = shotTotals?.AwayShotsOT;
             var awayShotsTotal = shotTotals?.AwayShotsTotal;
 
+            bool? homeOnPowerPlay = null;
+            bool? awayOnPowerPlay = null;
+            if (ObjectExistsInDb(conn, "GameLiveStatus"))
+            {
+                var liveStatus = await conn.QueryFirstOrDefaultAsync<MobileLiveStatusRow>(
+                    "SELECT HomeOnPowerPlay, AwayOnPowerPlay FROM dbo.GameLiveStatus WHERE GameId = @GameId;",
+                    new { GameId = gameId });
+                if (liveStatus != null)
+                {
+                    homeOnPowerPlay = liveStatus.HomeOnPowerPlay;
+                    awayOnPowerPlay = liveStatus.AwayOnPowerPlay;
+                }
+            }
+
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(new
             {
@@ -453,9 +467,18 @@ namespace NetFrontAPI.Functions
                 AwayShotsP2 = awayShotsP2,
                 AwayShotsP3 = awayShotsP3,
                 AwayShotsOT = awayShotsOT,
-                AwayShots = awayShotsTotal
+                AwayShots = awayShotsTotal,
+                HomeOnPowerPlay = homeOnPowerPlay,
+                AwayOnPowerPlay = awayOnPowerPlay,
             });
             return response;
+        }
+
+        private static bool ObjectExistsInDb(System.Data.IDbConnection conn, string tableName)
+        {
+            return conn.QueryFirstOrDefault<int>(
+                "SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName;",
+                new { TableName = tableName }) > 0;
         }
 
         [Function("UpsertGameShotsForMobile")]
@@ -566,6 +589,64 @@ namespace NetFrontAPI.Functions
                 Saved = true
             });
             return response;
+        }
+
+        [Function("PutGameLiveStatus")]
+        public async Task<HttpResponseData> PutGameLiveStatus(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "games/{gameId:guid}/live-status")] HttpRequestData req,
+            Guid gameId)
+        {
+            var payload = await req.ReadFromJsonAsync<MobileLiveStatusRequest>();
+            if (payload == null)
+            {
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteAsJsonAsync(new { error = "Invalid live-status payload." });
+                return bad;
+            }
+
+            using var conn = _connectionFactory.CreateConnection();
+
+            const string ensureTableSql = @"
+                IF OBJECT_ID('dbo.GameLiveStatus', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.GameLiveStatus
+                    (
+                        GameId            UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
+                        HomeOnPowerPlay   BIT NOT NULL CONSTRAINT DF_GameLiveStatus_HomeOnPowerPlay DEFAULT 0,
+                        AwayOnPowerPlay   BIT NOT NULL CONSTRAINT DF_GameLiveStatus_AwayOnPowerPlay DEFAULT 0,
+                        HomeSkatersOnIce  INT NULL,
+                        AwaySkatersOnIce  INT NULL,
+                        UpdatedAt         DATETIME2 NOT NULL CONSTRAINT DF_GameLiveStatus_UpdatedAt DEFAULT SYSUTCDATETIME()
+                    );
+                END;";
+
+            const string upsertSql = @"
+                MERGE dbo.GameLiveStatus AS target
+                USING (SELECT @GameId AS GameId) AS source ON target.GameId = source.GameId
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        HomeOnPowerPlay  = @HomeOnPowerPlay,
+                        AwayOnPowerPlay  = @AwayOnPowerPlay,
+                        HomeSkatersOnIce = @HomeSkatersOnIce,
+                        AwaySkatersOnIce = @AwaySkatersOnIce,
+                        UpdatedAt        = SYSUTCDATETIME()
+                WHEN NOT MATCHED THEN
+                    INSERT (GameId, HomeOnPowerPlay, AwayOnPowerPlay, HomeSkatersOnIce, AwaySkatersOnIce)
+                    VALUES (@GameId, @HomeOnPowerPlay, @AwayOnPowerPlay, @HomeSkatersOnIce, @AwaySkatersOnIce);";
+
+            await conn.ExecuteAsync(ensureTableSql);
+            await conn.ExecuteAsync(upsertSql, new
+            {
+                GameId = gameId,
+                HomeOnPowerPlay = payload.HomeOnPowerPlay ? 1 : 0,
+                AwayOnPowerPlay = payload.AwayOnPowerPlay ? 1 : 0,
+                HomeSkatersOnIce = payload.HomeSkatersOnIce,
+                AwaySkatersOnIce = payload.AwaySkatersOnIce,
+            });
+
+            var ok = req.CreateResponse(HttpStatusCode.OK);
+            await ok.WriteAsJsonAsync(new { GameId = gameId, payload.HomeOnPowerPlay, payload.AwayOnPowerPlay });
+            return ok;
         }
 
         [Function("StartGameForMobile")]
@@ -1717,6 +1798,20 @@ namespace NetFrontAPI.Functions
             public List<string>? To { get; set; }
             public string? Subject { get; set; }
             public string? Body { get; set; }
+        }
+
+        private class MobileLiveStatusRequest
+        {
+            public bool HomeOnPowerPlay { get; set; }
+            public bool AwayOnPowerPlay { get; set; }
+            public int? HomeSkatersOnIce { get; set; }
+            public int? AwaySkatersOnIce { get; set; }
+        }
+
+        private class MobileLiveStatusRow
+        {
+            public bool HomeOnPowerPlay { get; set; }
+            public bool AwayOnPowerPlay { get; set; }
         }
     }
 }

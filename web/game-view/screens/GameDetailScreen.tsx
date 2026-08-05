@@ -48,17 +48,6 @@ function parseClockToSeconds(timeInPeriod?: string): number {
   return minutes * 60 + seconds;
 }
 
-function extractStatusDetail(statusRaw: string): string {
-  const text = String(statusRaw || "").trim();
-  if (!text) return "";
-  const lowered = text.toLowerCase();
-  const hasStrengthLabel = /\b\d+\s*v\s*\d+\b/i.test(text);
-  if (lowered.includes("powerplay") || hasStrengthLabel) {
-    return text;
-  }
-  return "";
-}
-
 function normalizeTeamType(raw?: string | null): string {
   const value = String(raw || "").trim().toLowerCase();
   if (value.startsWith("girl")) return "Girls";
@@ -72,81 +61,6 @@ function withMascot(teamName: string, mascot?: string | null): string {
   if (!mascotText) return base;
   if (base.toLowerCase().includes(mascotText.toLowerCase())) return base;
   return `${base} ${mascotText}`;
-}
-
-function inferPowerPlayStatusDetail(
-  summary: ApiGameSummary | null,
-  statusRaw: string,
-  homeTeamName: string,
-  awayTeamName: string,
-  isInProgress: boolean,
-): string {
-  if (!isInProgress || !summary) return "";
-
-  // Explicit flags from the live-status endpoint take priority over any stale statusRaw text.
-  const homeFlag = summary.homeOnPowerPlay;
-  const awayFlag = summary.awayOnPowerPlay;
-  const homeCount = summary.homeSkatersOnIce;
-  const awayCount = summary.awaySkatersOnIce;
-  if (typeof homeFlag === "boolean" || typeof awayFlag === "boolean") {
-    if (homeFlag && !awayFlag) {
-      const h = homeCount ?? 4;
-      const a = awayCount ?? 5;
-      return `${h}v${a} - PowerPlay - ${homeTeamName}`;
-    }
-    if (awayFlag && !homeFlag) {
-      const h = homeCount ?? 4;
-      const a = awayCount ?? 5;
-      return `${h}v${a} - PowerPlay - ${awayTeamName}`;
-    }
-    if (homeFlag && awayFlag) {
-      const h = homeCount ?? 4;
-      const a = awayCount ?? 4;
-      return `${h}v${a} - Special Teams`;
-    }
-    return ""; // both false → even strength, do not show stale status text
-  }
-
-  // No explicit flags – fall back to status text then penalty heuristic.
-  const statusDetail = extractStatusDetail(statusRaw);
-  if (statusDetail) return statusDetail;
-
-  const latestPenalty = [...(summary.penalties || [])]
-    .sort((a, b) => {
-      const periodDiff = (Number(b.period) || 0) - (Number(a.period) || 0);
-      if (periodDiff !== 0) return periodDiff;
-      return parseClockToSeconds(b.timeInPeriod) - parseClockToSeconds(a.timeInPeriod);
-    })[0];
-
-  if (!latestPenalty) return "";
-
-  const latestGoal = [...(summary.goals || [])]
-    .sort((a, b) => {
-      const periodDiff = (Number(b.period) || 0) - (Number(a.period) || 0);
-      if (periodDiff !== 0) return periodDiff;
-      return parseClockToSeconds(b.timeInPeriod) - parseClockToSeconds(a.timeInPeriod);
-    })[0];
-
-  if (latestGoal) {
-    const penaltyPeriod = Number(latestPenalty.period) || 0;
-    const goalPeriod = Number(latestGoal.period) || 0;
-    if (goalPeriod > penaltyPeriod) return "";
-    if (
-      goalPeriod === penaltyPeriod &&
-      parseClockToSeconds(latestGoal.timeInPeriod) > parseClockToSeconds(latestPenalty.timeInPeriod)
-    ) {
-      return "";
-    }
-  }
-
-  const penalized = String(latestPenalty.teamName || "").trim().toLowerCase();
-  const homeKey = String(homeTeamName || "").trim().toLowerCase();
-  const awayKey = String(awayTeamName || "").trim().toLowerCase();
-
-  if (!penalized) return "";
-  if (penalized === homeKey) return `4v5 - PowerPlay - ${awayTeamName}`;
-  if (penalized === awayKey) return `5v4 - PowerPlay - ${homeTeamName}`;
-  return "";
 }
 
 function toPeriodToken(period?: number): string {
@@ -391,7 +305,6 @@ export function GameDetailScreen() {
   const [gameTitle, setGameTitle] = useState("");
   const [periodLabel, setPeriodLabel] = useState("Period -");
   const [statusLabel, setStatusLabel] = useState("Scheduled");
-  const [statusDetail, setStatusDetail] = useState("");
   const [isInProgress, setIsInProgress] = useState(false);
   const [homeTeamName, setHomeTeamName] = useState("Home");
   const [awayTeamName, setAwayTeamName] = useState("Away");
@@ -527,15 +440,6 @@ export function GameDetailScreen() {
         setIsInProgress(isInProgress);
         setStatusLabel(
           isIntermission ? "Intermission" : isInProgress ? "In Progress" : statusRaw,
-        );
-        setStatusDetail(
-          inferPowerPlayStatusDetail(
-            summary,
-            statusRaw,
-            nextHomeName,
-            nextAwayName,
-            isInProgress,
-          ),
         );
 
         const currentFromStatus = inferCurrentPeriodFromStatus(statusRaw);
@@ -733,7 +637,6 @@ export function GameDetailScreen() {
               currentPeriodNumber={currentPeriodNumber}
               periodLabel={periodLabel}
               statusLabel={statusLabel}
-              statusDetail={statusDetail}
               isInProgress={isInProgress}
             />
           </section>

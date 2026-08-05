@@ -440,16 +440,31 @@ namespace NetFrontAPI.Functions
 
             bool? homeOnPowerPlay = null;
             bool? awayOnPowerPlay = null;
+            int? homeSkatersOnIce = null;
+            int? awaySkatersOnIce = null;
+            string? homeStartersJson = null;
+            string? awayStartersJson = null;
             if (ObjectExistsInDb(conn, "GameLiveStatus"))
             {
                 var liveStatus = await conn.QueryFirstOrDefaultAsync<MobileLiveStatusRow>(
-                    "SELECT HomeOnPowerPlay, AwayOnPowerPlay FROM dbo.GameLiveStatus WHERE GameId = @GameId;",
+                    "SELECT HomeOnPowerPlay, AwayOnPowerPlay, HomeSkatersOnIce, AwaySkatersOnIce, HomeStartersJson, AwayStartersJson FROM dbo.GameLiveStatus WHERE GameId = @GameId;",
                     new { GameId = gameId });
                 if (liveStatus != null)
                 {
                     homeOnPowerPlay = liveStatus.HomeOnPowerPlay;
                     awayOnPowerPlay = liveStatus.AwayOnPowerPlay;
+                    homeSkatersOnIce = liveStatus.HomeSkatersOnIce;
+                    awaySkatersOnIce = liveStatus.AwaySkatersOnIce;
+                    homeStartersJson = liveStatus.HomeStartersJson;
+                    awayStartersJson = liveStatus.AwayStartersJson;
                 }
+            }
+
+            // Deserialize starter ID arrays for the response
+            static List<string>? ParseIdList(string? json)
+            {
+                if (string.IsNullOrWhiteSpace(json)) return null;
+                try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json); } catch { return null; }
             }
 
             var response = req.CreateResponse(HttpStatusCode.OK);
@@ -470,6 +485,10 @@ namespace NetFrontAPI.Functions
                 AwayShots = awayShotsTotal,
                 HomeOnPowerPlay = homeOnPowerPlay,
                 AwayOnPowerPlay = awayOnPowerPlay,
+                HomeSkatersOnIce = homeSkatersOnIce,
+                AwaySkatersOnIce = awaySkatersOnIce,
+                HomeStarterIds = ParseIdList(homeStartersJson),
+                AwayStarterIds = ParseIdList(awayStartersJson),
             });
             return response;
         }
@@ -629,10 +648,12 @@ namespace NetFrontAPI.Functions
                         AwayOnPowerPlay  = @AwayOnPowerPlay,
                         HomeSkatersOnIce = @HomeSkatersOnIce,
                         AwaySkatersOnIce = @AwaySkatersOnIce,
+                        HomeStartersJson = @HomeStartersJson,
+                        AwayStartersJson = @AwayStartersJson,
                         UpdatedAt        = SYSUTCDATETIME()
                 WHEN NOT MATCHED THEN
-                    INSERT (GameId, HomeOnPowerPlay, AwayOnPowerPlay, HomeSkatersOnIce, AwaySkatersOnIce)
-                    VALUES (@GameId, @HomeOnPowerPlay, @AwayOnPowerPlay, @HomeSkatersOnIce, @AwaySkatersOnIce);";
+                    INSERT (GameId, HomeOnPowerPlay, AwayOnPowerPlay, HomeSkatersOnIce, AwaySkatersOnIce, HomeStartersJson, AwayStartersJson)
+                    VALUES (@GameId, @HomeOnPowerPlay, @AwayOnPowerPlay, @HomeSkatersOnIce, @AwaySkatersOnIce, @HomeStartersJson, @AwayStartersJson);";
 
             await conn.ExecuteAsync(ensureTableSql);
             await conn.ExecuteAsync(upsertSql, new
@@ -642,6 +663,8 @@ namespace NetFrontAPI.Functions
                 AwayOnPowerPlay = payload.AwayOnPowerPlay ? 1 : 0,
                 HomeSkatersOnIce = payload.HomeSkatersOnIce,
                 AwaySkatersOnIce = payload.AwaySkatersOnIce,
+                HomeStartersJson = payload.HomeStarterIds == null ? null : System.Text.Json.JsonSerializer.Serialize(payload.HomeStarterIds),
+                AwayStartersJson = payload.AwayStarterIds == null ? null : System.Text.Json.JsonSerializer.Serialize(payload.AwayStarterIds),
             });
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
@@ -1806,12 +1829,18 @@ namespace NetFrontAPI.Functions
             public bool AwayOnPowerPlay { get; set; }
             public int? HomeSkatersOnIce { get; set; }
             public int? AwaySkatersOnIce { get; set; }
+            public List<string>? HomeStarterIds { get; set; }
+            public List<string>? AwayStarterIds { get; set; }
         }
 
         private class MobileLiveStatusRow
         {
             public bool HomeOnPowerPlay { get; set; }
             public bool AwayOnPowerPlay { get; set; }
+            public int? HomeSkatersOnIce { get; set; }
+            public int? AwaySkatersOnIce { get; set; }
+            public string? HomeStartersJson { get; set; }
+            public string? AwayStartersJson { get; set; }
         }
     }
 }

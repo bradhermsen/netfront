@@ -1827,7 +1827,9 @@ export default function App() {
   useEffect(() => {
     const gameId = nextGame?.gameId;
     if (!gameId || !session) return;
-    void syncLiveStatus(gameId, homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce);
+    const homeStarters = startersByTeam[homeTeamId ?? ""] ?? [];
+    const awayStarters = startersByTeam[awayTeamId ?? ""] ?? [];
+    void syncLiveStatus(gameId, homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce, homeStarters, awayStarters);
   }, [homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce]);
 
   const scoreboardConnectionBadgeText = useMemo(() => {
@@ -3613,6 +3615,8 @@ export default function App() {
     awayOnPP: boolean,
     homeSkatersCount: number,
     awaySkatersCount: number,
+    homeStarterIds: string[],
+    awayStarterIds: string[],
   ) {
     try {
       await fetch(`${activeApiBase}/games/${gameId}/live-status`, {
@@ -3623,6 +3627,8 @@ export default function App() {
           awayOnPowerPlay: awayOnPP,
           homeSkatersOnIce: homeSkatersCount,
           awaySkatersOnIce: awaySkatersCount,
+          homeStarterIds,
+          awayStarterIds,
         }),
       });
     } catch {

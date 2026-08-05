@@ -246,6 +246,14 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
       "isAwayOnPowerPlay",
       "IsAwayOnPowerPlay",
     ),
+    homeSkatersOnIce: pickOptionalNumber(obj, "homeSkatersOnIce", "HomeSkatersOnIce"),
+    awaySkatersOnIce: pickOptionalNumber(obj, "awaySkatersOnIce", "AwaySkatersOnIce"),
+    homeStarterIds: Array.isArray(obj.homeStarterIds ?? obj.HomeStarterIds)
+      ? ([] as unknown[]).concat(obj.homeStarterIds ?? obj.HomeStarterIds).map((id) => String(id))
+      : undefined,
+    awayStarterIds: Array.isArray(obj.awayStarterIds ?? obj.AwayStarterIds)
+      ? ([] as unknown[]).concat(obj.awayStarterIds ?? obj.AwayStarterIds).map((id) => String(id))
+      : undefined,
   };
 }
 

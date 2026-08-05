@@ -86,10 +86,24 @@ function inferPowerPlayStatusDetail(
   // Explicit flags from the live-status endpoint take priority over any stale statusRaw text.
   const homeFlag = summary.homeOnPowerPlay;
   const awayFlag = summary.awayOnPowerPlay;
+  const homeCount = summary.homeSkatersOnIce;
+  const awayCount = summary.awaySkatersOnIce;
   if (typeof homeFlag === "boolean" || typeof awayFlag === "boolean") {
-    if (homeFlag && !awayFlag) return `5v4 - PowerPlay - ${homeTeamName}`;
-    if (awayFlag && !homeFlag) return `4v5 - PowerPlay - ${awayTeamName}`;
-    if (homeFlag && awayFlag) return "4v4 - Special Teams";
+    if (homeFlag && !awayFlag) {
+      const h = homeCount ?? 4;
+      const a = awayCount ?? 5;
+      return `${h}v${a} - PowerPlay - ${homeTeamName}`;
+    }
+    if (awayFlag && !homeFlag) {
+      const h = homeCount ?? 4;
+      const a = awayCount ?? 5;
+      return `${h}v${a} - PowerPlay - ${awayTeamName}`;
+    }
+    if (homeFlag && awayFlag) {
+      const h = homeCount ?? 4;
+      const a = awayCount ?? 4;
+      return `${h}v${a} - Special Teams`;
+    }
     return ""; // both false → even strength, do not show stale status text
   }
 
@@ -190,6 +204,7 @@ function buildRosterRows(
   roster: Awaited<ReturnType<typeof getTeamRosterMobile>>,
   summary: ApiGameSummary | null,
   report: ApiGameSummaryReport | null,
+  starterIds?: string[],
 ): RosterPlayerRow[] {
   const goalsByPlayer = new Map<string, number>();
   const assistsByPlayer = new Map<string, number>();
@@ -312,6 +327,7 @@ function buildRosterRows(
       }
       const normalizedPosition = String(player.position || "").trim().toUpperCase();
       const isGoalie = Boolean(player.isGoalie) || normalizedPosition === "G";
+      const isStarter = starterIds ? starterIds.includes(String(player.playerId)) : false;
       return {
         playerId: String(player.playerId),
         playerName: String(player.fullName || "Player"),
@@ -323,6 +339,7 @@ function buildRosterRows(
             ? String(player.grade)
             : String(player.grade || "").trim(),
         isGoalie,
+        isStarter,
         goals: goalsByPlayer.get(key) || 0,
         assists: assistsByPlayer.get(key) || 0,
         penaltyMinutes: penaltyByPlayer.get(key) || 0,
@@ -567,8 +584,8 @@ export function GameDetailScreen() {
         }
 
         const report = reportResult.report;
-        setHomeRoster(buildRosterRows(homeRosterRaw, summary, report));
-        setAwayRoster(buildRosterRows(awayRosterRaw, summary, report));
+        setHomeRoster(buildRosterRows(homeRosterRaw, summary, report, summary?.homeStarterIds));
+        setAwayRoster(buildRosterRows(awayRosterRaw, summary, report, summary?.awayStarterIds));
         setHomeCoaches(homeCoachesRaw);
         setAwayCoaches(awayCoachesRaw);
         setSummaryReport(report);

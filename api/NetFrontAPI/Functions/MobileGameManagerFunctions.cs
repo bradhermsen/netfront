@@ -446,18 +446,37 @@ namespace NetFrontAPI.Functions
             string? awayStartersJson = null;
             if (ObjectExistsInDb(conn, "GameLiveStatus"))
             {
-                var liveStatus = await conn.QueryFirstOrDefaultAsync<MobileLiveStatusRow>(
-                    "SELECT HomeOnPowerPlay, AwayOnPowerPlay, HomeSkatersOnIce, AwaySkatersOnIce, HomeStartersJson, AwayStartersJson FROM dbo.GameLiveStatus WHERE GameId = @GameId;",
-                    new { GameId = gameId });
-                if (liveStatus != null)
+                // Ensure new columns exist on tables created by earlier deployments.
+                try
                 {
-                    homeOnPowerPlay = liveStatus.HomeOnPowerPlay;
-                    awayOnPowerPlay = liveStatus.AwayOnPowerPlay;
-                    homeSkatersOnIce = liveStatus.HomeSkatersOnIce;
-                    awaySkatersOnIce = liveStatus.AwaySkatersOnIce;
-                    homeStartersJson = liveStatus.HomeStartersJson;
-                    awayStartersJson = liveStatus.AwayStartersJson;
+                    await conn.ExecuteAsync(@"
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.GameLiveStatus') AND name = 'HomeSkatersOnIce')
+                            ALTER TABLE dbo.GameLiveStatus ADD HomeSkatersOnIce INT NULL;
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.GameLiveStatus') AND name = 'AwaySkatersOnIce')
+                            ALTER TABLE dbo.GameLiveStatus ADD AwaySkatersOnIce INT NULL;
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.GameLiveStatus') AND name = 'HomeStartersJson')
+                            ALTER TABLE dbo.GameLiveStatus ADD HomeStartersJson NVARCHAR(MAX) NULL;
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.GameLiveStatus') AND name = 'AwayStartersJson')
+                            ALTER TABLE dbo.GameLiveStatus ADD AwayStartersJson NVARCHAR(MAX) NULL;");
                 }
+                catch { /* Non-fatal; columns may already exist or may be unavailable. */ }
+
+                try
+                {
+                    var liveStatus = await conn.QueryFirstOrDefaultAsync<MobileLiveStatusRow>(
+                        "SELECT HomeOnPowerPlay, AwayOnPowerPlay, HomeSkatersOnIce, AwaySkatersOnIce, HomeStartersJson, AwayStartersJson FROM dbo.GameLiveStatus WHERE GameId = @GameId;",
+                        new { GameId = gameId });
+                    if (liveStatus != null)
+                    {
+                        homeOnPowerPlay = liveStatus.HomeOnPowerPlay;
+                        awayOnPowerPlay = liveStatus.AwayOnPowerPlay;
+                        homeSkatersOnIce = liveStatus.HomeSkatersOnIce;
+                        awaySkatersOnIce = liveStatus.AwaySkatersOnIce;
+                        homeStartersJson = liveStatus.HomeStartersJson;
+                        awayStartersJson = liveStatus.AwayStartersJson;
+                    }
+                }
+                catch { /* Fall through with null values; GameView falls back to penalty heuristic. */ }
             }
 
             // Deserialize starter ID arrays for the response

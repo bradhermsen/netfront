@@ -81,17 +81,21 @@ function inferPowerPlayStatusDetail(
   awayTeamName: string,
   isInProgress: boolean,
 ): string {
-  const statusDetail = extractStatusDetail(statusRaw);
-  if (statusDetail) return statusDetail;
   if (!isInProgress || !summary) return "";
 
+  // Explicit flags from the live-status endpoint take priority over any stale statusRaw text.
   const homeFlag = summary.homeOnPowerPlay;
   const awayFlag = summary.awayOnPowerPlay;
   if (typeof homeFlag === "boolean" || typeof awayFlag === "boolean") {
     if (homeFlag && !awayFlag) return `5v4 - PowerPlay - ${homeTeamName}`;
     if (awayFlag && !homeFlag) return `4v5 - PowerPlay - ${awayTeamName}`;
     if (homeFlag && awayFlag) return "4v4 - Special Teams";
+    return ""; // both false → even strength, do not show stale status text
   }
+
+  // No explicit flags – fall back to status text then penalty heuristic.
+  const statusDetail = extractStatusDetail(statusRaw);
+  if (statusDetail) return statusDetail;
 
   const latestPenalty = [...(summary.penalties || [])]
     .sort((a, b) => {

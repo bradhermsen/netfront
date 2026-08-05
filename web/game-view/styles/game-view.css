@@ -687,12 +687,14 @@
 
 
 .game-view-roster-grid-header span:nth-child(1),
+.game-view-roster-grid-header span:nth-child(2),
 .game-view-roster-grid-header span:nth-child(4),
 .game-view-roster-grid-header span:nth-child(5),
 .game-view-roster-grid-header span:nth-child(6),
 .game-view-roster-grid-header span:nth-child(7),
 .game-view-roster-grid-header span:nth-child(8),
 .game-view-roster-grid-row span:nth-child(1),
+.game-view-roster-grid-row span:nth-child(2),
 .game-view-roster-grid-row span:nth-child(4),
 .game-view-roster-grid-row span:nth-child(5),
 .game-view-roster-grid-row span:nth-child(6) {
@@ -954,10 +956,14 @@
     overflow-x: auto;
   }
 
-  .game-view-roster-grid {
-    column-gap: 4px;
-    grid-template-columns: 44px minmax(90px, 1fr) 42px 44px 48px 40px;
-    min-width: 430px;
+  .game-view-roster-grid--skaters {
+    grid-template-columns: 40px 40px minmax(90px, 1fr) 40px 40px 44px 38px;
+    min-width: 380px;
+  }
+
+  .game-view-roster-grid--goalies {
+    grid-template-columns: 40px 40px minmax(80px, 1fr) 54px 38px 46px 50px 40px;
+    min-width: 440px;
   }
 
   .game-view-roster-grid-header {

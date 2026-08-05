@@ -84,11 +84,11 @@ export function RosterTabs({
       ) : (
         <div className="game-view-roster-grid-wrap">
           <div className="game-view-roster-section">
-            <h3 className="game-view-roster-subtitle">F / D</h3>
+            <h3 className="game-view-roster-subtitle">Forward / Defenseman</h3>
             <div className="game-view-roster-grid game-view-roster-grid-header game-view-roster-grid--skaters">
-              <span>Jersey #</span>
-              <span>Position</span>
-              <span>Player Name</span>
+              <span>#</span>
+              <span>POS</span>
+              <span>PLAYER</span>
               <span>Grade</span>
               <span>Goals</span>
               <span>Assists</span>
@@ -117,9 +117,9 @@ export function RosterTabs({
               <div className="game-view-roster-separator" aria-hidden="true" />
               <h3 className="game-view-roster-subtitle">Goalies</h3>
               <div className="game-view-roster-grid game-view-roster-grid-header game-view-roster-grid--goalies">
-                <span>Jersey #</span>
-                <span>Position</span>
-                <span>Player Name</span>
+                <span>#</span>
+                <span>POS</span>
+                <span>PLAYER</span>
                 <span>Shot total</span>
                 <span>GA</span>
                 <span>GAA</span>
@@ -132,11 +132,11 @@ export function RosterTabs({
                   <span>{row.jerseyNumber || "-"}</span>
                   <span>{row.position || "G"}</span>
                   <span>{row.playerName}</span>
-                  <span>{row.shotsAgainst}</span>
-                  <span>{row.goalsAgainst}</span>
-                  <span>{row.goalsAgainstAverage.toFixed(2)}</span>
-                  <span>{row.savePercentage.toFixed(1)}%</span>
-                  <span>{row.minutesPlayed.toFixed(1)}</span>
+                  <span>{row.shotsAgainst || "-"}</span>
+                  <span>{row.minutesPlayed > 0 ? (Math.round(row.goalsAgainst * 10) / 10).toFixed(1) : "-"}</span>
+                  <span>{row.minutesPlayed > 0 ? row.goalsAgainstAverage.toFixed(2) : "-"}</span>
+                  <span>{row.minutesPlayed > 0 && row.shotsAgainst > 0 ? `${row.savePercentage.toFixed(1)}%` : "-"}</span>
+                  <span>{row.minutesPlayed > 0 ? row.minutesPlayed.toFixed(1) : "-"}</span>
                 </div>
               ))}
             </div>

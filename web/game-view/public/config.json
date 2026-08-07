@@ -1,5 +1,5 @@
 {
-  "apiBase": "http://localhost:7071/api",
+  "apiBase": "https://api-dev.netfrontscoring.com/api",
   "name": "game-view",
   "seasonScope": "current",
   "filters": ["organization", "team", "teamType"]

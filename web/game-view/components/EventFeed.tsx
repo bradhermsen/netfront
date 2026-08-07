@@ -3,7 +3,8 @@ import React from "react";
 export interface GameEventRow {
   eventId: string;
   eventType: "goal" | "penalty" | "shot";
-  description: string;
+  title: string;
+  subtitle?: string;
   createdAtIso: string;
 }
 
@@ -15,12 +16,6 @@ interface Props {
 }
 
 export function EventFeed({ events, currentPage, totalPages, onPageChange }: Props) {
-  function getIcon(eventType: GameEventRow["eventType"]) {
-    if (eventType === "goal") return "G";
-    if (eventType === "penalty") return "P";
-    return "S";
-  }
-
   return (
     <section className="game-view-events-card">
       <h2 className="game-view-section-title">Event Feed</h2>
@@ -31,12 +26,12 @@ export function EventFeed({ events, currentPage, totalPages, onPageChange }: Pro
         <ul className="game-view-events-list">
           {events.map((event) => (
             <li key={event.eventId} className="game-view-event-row">
-              <span className={`game-view-event-icon is-${event.eventType}`} aria-hidden="true">
-                {getIcon(event.eventType)}
-              </span>
               <div>
-                <p className="game-view-event-description">{event.description}</p>
                 <p className="game-view-event-time">{event.createdAtIso}</p>
+                <p className="game-view-event-description">{event.title}</p>
+                {event.subtitle ? (
+                  <p className="game-view-event-subtitle">{event.subtitle}</p>
+                ) : null}
               </div>
             </li>
           ))}

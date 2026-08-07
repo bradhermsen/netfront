@@ -1,15 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { EventFeed } from "../components/EventFeed";
 import { MiniScoreboard } from "../components/MiniScoreboard";
 import { RosterTabs, type RosterPlayerRow } from "../components/RosterTabs";
+import type { GameEventRow } from "../components/EventFeed";
 import {
   getGameById,
+  getPublicGameCoaches,
+  getPublicGameRosters,
   getGameSummaryReport,
-  getGameShotTotalsFromStats,
   getGameSummaryMobile,
-  getTeamCoachesMobile,
   getTeams,
-  getTeamRosterMobile,
 } from "../api/gameViewApi";
 import type { ApiGameSummary, ApiGameSummaryReport, ApiTeamCoach } from "../types/gameView";
 import "../styles/game-view.css";
@@ -114,169 +114,6 @@ function buildScoreFromSummary(
   return { homeScore, awayScore };
 }
 
-function buildRosterRows(
-  roster: Awaited<ReturnType<typeof getTeamRosterMobile>>,
-  summary: ApiGameSummary | null,
-  report: ApiGameSummaryReport | null,
-  starterIds?: string[],
-): RosterPlayerRow[] {
-  const goalsByPlayer = new Map<string, number>();
-  const assistsByPlayer = new Map<string, number>();
-  const penaltyByPlayer = new Map<string, number>();
-  const goalieStatsByPlayer = new Map<
-    string,
-    {
-      shotsAgainst: number;
-      goalsAgainst: number;
-      goalsAgainstAverage: number;
-      savePercentage: number;
-      minutesPlayed: number;
-    }
-  >();
-
-  function normalizeName(value: string): string {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function extractLastName(value: string): string {
-    const tokens = normalizeName(value).split(" ").filter(Boolean);
-    return tokens.length ? tokens[tokens.length - 1] : "";
-  }
-
-  const goalieStatsRows: Array<{
-    rawName: string;
-    normalizedName: string;
-    lastName: string;
-    stats: {
-      shotsAgainst: number;
-      goalsAgainst: number;
-      goalsAgainstAverage: number;
-      savePercentage: number;
-      minutesPlayed: number;
-    };
-  }> = [];
-
-  for (const goal of summary?.goals || []) {
-    const scorer = String(goal.scorerName || "").trim().toLowerCase();
-    if (scorer) {
-      goalsByPlayer.set(scorer, (goalsByPlayer.get(scorer) || 0) + 1);
-    }
-
-    const assist1 = String(goal.assist1Name || "").trim().toLowerCase();
-    if (assist1) {
-      assistsByPlayer.set(assist1, (assistsByPlayer.get(assist1) || 0) + 1);
-    }
-
-    const assist2 = String(goal.assist2Name || "").trim().toLowerCase();
-    if (assist2) {
-      assistsByPlayer.set(assist2, (assistsByPlayer.get(assist2) || 0) + 1);
-    }
-  }
-
-  for (const penalty of summary?.penalties || []) {
-    const key = String(penalty.playerName || "").trim().toLowerCase();
-    if (!key) continue;
-    const minutes = Number(penalty.durationMinutes || 0);
-    penaltyByPlayer.set(key, (penaltyByPlayer.get(key) || 0) + minutes);
-  }
-
-  for (const goalie of report?.goalies || []) {
-    const rawName = String(goalie.goalieName || "").trim();
-    const key = normalizeName(rawName);
-    if (!key) continue;
-
-    const shotsAgainst = Number(goalie.total || 0);
-    const goalsAgainst = Number(goalie.goalsAgainstEstimate || 0);
-    const timeInNetSeconds = Number(goalie.timeInNetSeconds || 0);
-    const goalsAgainstAverage =
-      timeInNetSeconds > 0 ? (goalsAgainst * 3600) / timeInNetSeconds : 0;
-    const minutesPlayed = timeInNetSeconds > 0 ? timeInNetSeconds / 60 : 0;
-    const savePercentage =
-      shotsAgainst > 0
-        ? Number(goalie.savePctEstimate || ((Number(goalie.savesEstimate || 0) * 100) / shotsAgainst))
-        : 0;
-
-    const stats = {
-      shotsAgainst,
-      goalsAgainst,
-      goalsAgainstAverage,
-      savePercentage,
-      minutesPlayed,
-    };
-
-    goalieStatsByPlayer.set(key, stats);
-    goalieStatsRows.push({
-      rawName,
-      normalizedName: key,
-      lastName: extractLastName(rawName),
-      stats,
-    });
-  }
-
-  return roster
-    .filter((player) => player.isActive !== false)
-    .map((player) => {
-      const fullName = String(player.fullName || "").trim();
-      const key = normalizeName(fullName);
-      let goalieStats = goalieStatsByPlayer.get(key);
-
-      // Fallback for slight naming differences between roster and goalie summary payloads.
-      if (!goalieStats && key) {
-        const lastName = extractLastName(fullName);
-        if (lastName) {
-          const sameLastName = goalieStatsRows.filter((row) => row.lastName === lastName);
-          if (sameLastName.length === 1) {
-            goalieStats = sameLastName[0].stats;
-          } else {
-            const loose = goalieStatsRows.find(
-              (row) => row.normalizedName.includes(key) || key.includes(row.normalizedName),
-            );
-            if (loose) goalieStats = loose.stats;
-          }
-        }
-      }
-      const normalizedPosition = String(player.position || "").trim().toUpperCase();
-      const isGoalie = Boolean(player.isGoalie) || normalizedPosition === "G";
-      const isStarter = starterIds ? starterIds.includes(String(player.playerId)) : false;
-      return {
-        playerId: String(player.playerId),
-        playerName: String(player.fullName || "Player"),
-        jerseyNumber:
-          typeof player.jerseyNumber === "number" ? String(player.jerseyNumber) : "",
-        position: String(player.position || "").trim(),
-        grade:
-          typeof player.grade === "number"
-            ? String(player.grade)
-            : String(player.grade || "").trim(),
-        isGoalie,
-        isStarter,
-        goals: goalsByPlayer.get(key) || 0,
-        assists: assistsByPlayer.get(key) || 0,
-        penaltyMinutes: penaltyByPlayer.get(key) || 0,
-        shotsAgainst: goalieStats?.shotsAgainst || 0,
-        goalsAgainst: goalieStats?.goalsAgainst || 0,
-        goalsAgainstAverage: goalieStats?.goalsAgainstAverage || 0,
-        savePercentage: goalieStats?.savePercentage || 0,
-        minutesPlayed: goalieStats?.minutesPlayed || 0,
-      };
-    })
-    .sort((a, b) => {
-      if (a.isGoalie !== b.isGoalie) return a.isGoalie ? 1 : -1;
-
-      const aNumber = Number(a.jerseyNumber);
-      const bNumber = Number(b.jerseyNumber);
-      const aHasNumber = Number.isFinite(aNumber);
-      const bHasNumber = Number.isFinite(bNumber);
-      if (aHasNumber && bHasNumber && aNumber !== bNumber) return aNumber - bNumber;
-      if (aHasNumber !== bHasNumber) return aHasNumber ? -1 : 1;
-      return a.playerName.localeCompare(b.playerName);
-    });
-}
-
 function isFinalStatus(status?: string): boolean {
   const key = String(status || "")
     .trim()
@@ -328,11 +165,10 @@ export function GameDetailScreen() {
   const [awayCoaches, setAwayCoaches] = useState<ApiTeamCoach[]>([]);
   const [eventPage, setEventPage] = useState(1);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [events, setEvents] = useState<
-    Array<{ eventId: string; eventType: "goal" | "penalty" | "shot"; description: string; createdAtIso: string }>
-  >([]);
+  const [events, setEvents] = useState<GameEventRow[]>([]);
   const [summaryReport, setSummaryReport] = useState<ApiGameSummaryReport | null>(null);
   const [goalieStatsNotice, setGoalieStatsNotice] = useState("");
+  const rosterTabInitializedRef = useRef(false);
 
   const gameId = useMemo(() => readGameIdFromLocation(), []);
   const selectedTeamId = useMemo(() => readSelectedTeamIdFromLocation(), []);
@@ -367,20 +203,14 @@ export function GameDetailScreen() {
         const [
           summary,
           teams,
-          shotTotalsFromStats,
-          homeRosterRaw,
-          awayRosterRaw,
-          homeCoachesRaw,
-          awayCoachesRaw,
+          rosterBundle,
+          coachesBundle,
           reportResult,
         ] = await Promise.all([
           getGameSummaryMobile(gameId),
           getTeams(),
-          getGameShotTotalsFromStats(gameId).catch(() => null),
-          getTeamRosterMobile(String(game.homeTeamId)),
-          getTeamRosterMobile(String(game.awayTeamId)),
-          getTeamCoachesMobile(String(game.homeTeamId)).catch(() => []),
-          getTeamCoachesMobile(String(game.awayTeamId)).catch(() => []),
+          getPublicGameRosters(gameId),
+          getPublicGameCoaches(gameId).catch(() => ({ homeCoaches: [], awayCoaches: [] })),
           getGameSummaryReport(gameId)
             .then((report) => ({ ok: true as const, report }))
             .catch(() => ({ ok: false as const, report: null })),
@@ -444,9 +274,10 @@ export function GameDetailScreen() {
 
         const currentFromStatus = inferCurrentPeriodFromStatus(statusRaw);
         const resolvedCurrentPeriod =
-          maxPeriodFromEvents ||
-          maxPeriodFromShots ||
+          summary?.currentPeriod ||
           currentFromStatus ||
+          maxPeriodFromShots ||
+          maxPeriodFromEvents ||
           (isInProgress ? 1 : undefined);
         setCurrentPeriodNumber(resolvedCurrentPeriod);
         setPeriodLabel(toPeriodToken(resolvedCurrentPeriod));
@@ -458,16 +289,12 @@ export function GameDetailScreen() {
         setHomeShots(
           typeof summary?.homeShots === "number"
             ? summary.homeShots
-            : typeof shotTotalsFromStats?.homeShots === "number"
-              ? shotTotalsFromStats.homeShots
-              : score.homeScore,
+            : score.homeScore,
         );
         setAwayShots(
           typeof summary?.awayShots === "number"
             ? summary.awayShots
-            : typeof shotTotalsFromStats?.awayShots === "number"
-              ? shotTotalsFromStats.awayShots
-              : score.awayScore,
+            : score.awayScore,
         );
         setHomeShotsP1(summary?.homeShotsP1);
         setHomeShotsP2(summary?.homeShotsP2);
@@ -476,7 +303,7 @@ export function GameDetailScreen() {
         setAwayShotsP2(summary?.awayShotsP2);
         setAwayShotsP3(summary?.awayShotsP3);
 
-        if (selectedTeamId) {
+        if (!rosterTabInitializedRef.current) {
           const selected = selectedTeamId.trim().toLowerCase();
           const homeId = String(game.homeTeamId || "").trim().toLowerCase();
           const awayId = String(game.awayTeamId || "").trim().toLowerCase();
@@ -484,39 +311,34 @@ export function GameDetailScreen() {
             setActiveRosterTab("away");
           } else if (selected === homeId) {
             setActiveRosterTab("home");
+          } else {
+            setActiveRosterTab("home");
           }
+          rosterTabInitializedRef.current = true;
         }
 
         const report = reportResult.report;
-        setHomeRoster(buildRosterRows(homeRosterRaw, summary, report, summary?.homeStarterIds));
-        setAwayRoster(buildRosterRows(awayRosterRaw, summary, report, summary?.awayStarterIds));
-        setHomeCoaches(homeCoachesRaw);
-        setAwayCoaches(awayCoachesRaw);
+        setHomeRoster(rosterBundle.homeRoster);
+        setAwayRoster(rosterBundle.awayRoster);
+        setHomeCoaches(coachesBundle.homeCoaches);
+        setAwayCoaches(coachesBundle.awayCoaches);
         setSummaryReport(report);
-
-        if (!reportResult.ok) {
-          setGoalieStatsNotice("Goalie stats are unavailable right now because the game summary report could not be loaded.");
-        } else if (!report) {
-          setGoalieStatsNotice("Goalie stats are unavailable for this game because no saved game summary report was found.");
-        } else if ((report.goalies || []).length === 0) {
-          setGoalieStatsNotice("Goalie stats are unavailable for this game because no goalie summary data was submitted.");
-        } else {
-          setGoalieStatsNotice("");
-        }
+        setGoalieStatsNotice(rosterBundle.goalieStatsNotice || "");
 
         const mappedEvents = [
           ...(summary?.goals || []).map((goal) => ({
             eventId: `goal-${goal.eventId}`,
             eventType: "goal" as const,
-            description: (() => {
-              const scorer = goal.scorerName || "Goal";
-              const assists = [goal.assist1Name, goal.assist2Name]
-                .map((name) => String(name || "").trim())
-                .filter((name) => Boolean(name));
-              if (assists.length === 0) {
-                return `${goal.teamName}: ${scorer}`;
+            title: `${goal.teamName} GOAL - ${goal.scorerName || "Goal"}`,
+            subtitle: (() => {
+              const details = [goal.strength || "EV"];
+              if (goal.assist1Name) {
+                details.push(`A1: ${goal.assist1Name}`);
               }
-              return `${goal.teamName}: ${scorer} (A: ${assists.join(", ")})`;
+              if (goal.assist2Name) {
+                details.push(`A2: ${goal.assist2Name}`);
+              }
+              return details.join(" • ");
             })(),
             createdAtIso: formatEventTime(goal.period, goal.timeInPeriod),
             sortPeriod: Number(goal.period) || 0,
@@ -525,7 +347,8 @@ export function GameDetailScreen() {
           ...(summary?.penalties || []).map((penalty) => ({
             eventId: `penalty-${penalty.eventId}`,
             eventType: "penalty" as const,
-            description: `${penalty.teamName}: ${penalty.playerName} (${penalty.infraction})`,
+            title: `${penalty.teamName} PENALTY - ${penalty.playerName}`,
+            subtitle: `${penalty.durationMinutes} min • ${penalty.infraction}`,
             createdAtIso: formatEventTime(penalty.period, penalty.timeInPeriod),
             sortPeriod: Number(penalty.period) || 0,
             sortTimeSeconds: parseClockToSeconds(penalty.timeInPeriod),

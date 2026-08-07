@@ -121,6 +121,7 @@ export interface ApiSummaryGoal {
   scorerName?: string;
   assist1Name?: string | null;
   assist2Name?: string | null;
+  strength?: string | null;
 }
 
 export interface ApiSummaryPenalty {
@@ -135,6 +136,7 @@ export interface ApiSummaryPenalty {
 
 export interface ApiGameSummary {
   gameId: string;
+  currentPeriod?: number;
   goals: ApiSummaryGoal[];
   penalties: ApiSummaryPenalty[];
   homeShotsP1?: number;
@@ -269,4 +271,33 @@ export interface ApiTeamCoach {
   roleName: string;
   coachName: string;
   coachEmail?: string | null;
+}
+
+export interface ApiPublicRosterRow {
+  playerId: string;
+  playerName: string;
+  jerseyNumber: string;
+  position: string;
+  grade: string;
+  isGoalie: boolean;
+  isStarter: boolean;
+  goals: number;
+  assists: number;
+  penaltyMinutes: number;
+  shotsAgainst: number;
+  goalsAgainst: number;
+  goalsAgainstAverage: number;
+  savePercentage: number;
+  minutesPlayed: number;
+}
+
+export interface ApiPublicRosterBundle {
+  homeRoster: ApiPublicRosterRow[];
+  awayRoster: ApiPublicRosterRow[];
+  goalieStatsNotice?: string | null;
+}
+
+export interface ApiPublicCoachBundle {
+  homeCoaches: ApiTeamCoach[];
+  awayCoaches: ApiTeamCoach[];
 }

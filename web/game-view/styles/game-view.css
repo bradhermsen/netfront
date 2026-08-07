@@ -113,39 +113,30 @@
   font-size: 1.2rem;
 }
 
-.game-view-filter-panel {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: 1fr;
-  margin: 12px 0;
+.game-view-event-row {
+  display: block;
 }
 
-.game-view-filter-field {
-  display: grid;
-  gap: 6px;
+.game-view-event-time {
+  color: #b9d4fb;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 3px;
+  text-transform: uppercase;
 }
 
-.game-view-filter-field span {
+.game-view-event-description {
+  color: #f2f6ff;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
+  margin: 0;
 }
 
-.game-view-filter-field select {
-  background: #102c53;
-  border: 1px solid #2b5388;
-  border-radius: 10px;
-  color: #f2f6ff;
-  min-height: 44px;
-  padding: 8px 10px;
-}
-
-.game-view-token-input {
-  background: #102c53;
-  border: 1px solid #2b5388;
-  border-radius: 10px;
-  color: #f2f6ff;
-  min-height: 44px;
-  padding: 8px 10px;
+.game-view-event-subtitle {
+  color: #d6e4fb;
+  font-size: 0.8rem;
+  margin: 3px 0 0;
 }
 
 .game-view-token-actions {
@@ -638,16 +629,18 @@
   margin: 10px 0 0;
 }
 
-.game-view-starter-badge {
+.game-view-roster-grid-row span.game-view-starter-badge {
   background: #1a6e3a;
   border: 1px solid #2bc66e;
-  border-radius: 3px;
+  border-radius: 999px;
   color: #ffffff;
-  font-size: 0.58rem;
+  display: inline-flex;
+  font-size: 0.5rem;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.03em;
-  margin-left: 5px;
-  padding: 1px 4px;
+  margin-left: 4px;
+  padding: 0 4px;
   text-transform: uppercase;
   vertical-align: middle;
 }
@@ -736,39 +729,6 @@
 .game-view-roster-meta,
 .game-view-event-time {
   margin: 4px 0 0;
-}
-
-.game-view-event-row {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: auto 1fr;
-}
-
-.game-view-event-icon {
-  align-items: center;
-  border-radius: 999px;
-  display: inline-flex;
-  font-size: 0.75rem;
-  font-weight: 700;
-  height: 22px;
-  justify-content: center;
-  margin-top: 2px;
-  width: 22px;
-}
-
-.game-view-event-icon.is-goal {
-  background: #ecf5ff;
-  color: #0d4f9a;
-}
-
-.game-view-event-icon.is-penalty {
-  background: #fff0f0;
-  color: #9b2f2f;
-}
-
-.game-view-event-icon.is-shot {
-  background: #fff8e8;
-  color: #8a5b00;
 }
 
 .game-view-error {

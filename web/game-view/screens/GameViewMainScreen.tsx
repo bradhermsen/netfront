@@ -55,16 +55,6 @@ function syncFiltersToLocation(filters: GameViewFilters) {
 
 function mapUiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : "";
-  const lowered = message.toLowerCase();
-
-  if (
-    lowered.includes("no authorization token") ||
-    lowered.includes("invalid or expired token") ||
-    lowered.includes("request failed (401)")
-  ) {
-    return "Sign in to NetFront Admin Portal first, then reopen GameView.";
-  }
-
   return message || "Unable to load GameView data.";
 }
 
@@ -72,12 +62,6 @@ export function GameViewMainScreen() {
   const [filters, setFilters] = useState<GameViewFilters>(() => readFiltersFromLocation());
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [tokenDraft, setTokenDraft] = useState(
-    typeof window !== "undefined"
-      ? localStorage.getItem("nf_gameview_token") || ""
-      : "",
-  );
-  const [reloadNonce, setReloadNonce] = useState(0);
   const [filterData, setFilterData] = useState<GameViewFilterData>({
     organizations: [],
     teams: [],
@@ -144,7 +128,7 @@ export function GameViewMainScreen() {
     return () => {
       cancelled = true;
     };
-  }, [filters, reloadNonce]);
+  }, [filters]);
 
   const filteredTeams = useMemo(() => {
     if (!filters.teamType) return filterData.teams;
@@ -242,21 +226,6 @@ export function GameViewMainScreen() {
     window.location.assign(nextUrl);
   }
 
-  function handleSaveToken() {
-    if (typeof window === "undefined") return;
-    localStorage.setItem("nf_gameview_token", tokenDraft.trim());
-    setReloadNonce((prev) => prev + 1);
-    setErrorMessage("");
-  }
-
-  function handleClearToken() {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem("nf_gameview_token");
-    setTokenDraft("");
-    setReloadNonce((prev) => prev + 1);
-    setErrorMessage("");
-  }
-
   return (
     <main className="game-view-root">
       <header className="game-view-header">
@@ -301,26 +270,6 @@ export function GameViewMainScreen() {
             </div>
 
             <section className="game-view-filter-panel">
-              <label className="game-view-filter-field">
-                <span>Auth Token (optional override)</span>
-                <input
-                  type="password"
-                  value={tokenDraft}
-                  onChange={(event) => setTokenDraft(event.target.value)}
-                  placeholder="Paste Bearer token"
-                  className="game-view-token-input"
-                />
-              </label>
-
-              <div className="game-view-token-actions">
-                <button type="button" className="game-view-tab" onClick={handleSaveToken}>
-                  Save Token
-                </button>
-                <button type="button" className="game-view-tab" onClick={handleClearToken}>
-                  Clear Token
-                </button>
-              </div>
-
               <label className="game-view-filter-field">
                 <span>Organization</span>
                 <select

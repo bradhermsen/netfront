@@ -136,10 +136,7 @@ namespace NetFrontAPI.Functions
                                     'POSTPONED',
                                     'PPD'
                               )
-                              AND (
-                                CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date)
-                                OR g.GameDateTime >= SYSUTCDATETIME()
-                              )
+                                                            AND g.GameDateTime >= DATEADD(HOUR, -12, SYSUTCDATETIME())
                             ORDER BY
                                 CASE
                                     WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date) THEN 0
@@ -251,10 +248,7 @@ namespace NetFrontAPI.Functions
                                                 'POSTPONED',
                                                 'PPD'
                                     )
-                                    AND (
-                                        CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date)
-                                        OR g.GameDateTime >= SYSUTCDATETIME()
-                                    )
+                                    AND g.GameDateTime >= DATEADD(HOUR, -12, SYSUTCDATETIME())
                                 ORDER BY
                                         CASE
                                                 WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date) THEN 0

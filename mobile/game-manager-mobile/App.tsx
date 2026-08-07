@@ -5552,7 +5552,10 @@ export default function App() {
     });
   }
 
-  async function loadNextGame(userId: string, refreshing = false) {
+  async function loadNextGame(
+    userId: string,
+    refreshing = false,
+  ): Promise<"games" | "no_games" | "invalid" | "error"> {
     trace("nextgame.load.start", { userId, refreshing });
 
     if (refreshing) {
@@ -5571,6 +5574,14 @@ export default function App() {
         totalTeams: teams.length,
         resolvedTeamIds: teamIds,
       });
+
+      if (teamIds.length === 0) {
+        trace("nextgame.load.invalid_code", { userId });
+        setNextGame(null);
+        setIsClosedGameNotice(false);
+        setNextGameMessage("Invalid access code. Try a different code.");
+        return "invalid";
+      }
 
       const lookupResults = await Promise.all(
         teamIds.map((teamId) => fetchNextGameForTeam(teamId)),
@@ -5596,9 +5607,11 @@ export default function App() {
           setNextGameMessage(closedMessages[0]);
         } else {
           setIsClosedGameNotice(false);
-          setNextGameMessage("No Scheduled Games Found");
+          setNextGameMessage(
+            "Access code is valid, but no games are scheduled right now.",
+          );
         }
-        return;
+        return "no_games";
       }
 
       const earliest = [...games].sort(
@@ -5648,8 +5661,9 @@ export default function App() {
       setNextGameMessage(
         isNetworkError
           ? `Unable to reach API at ${activeApiBase}. Verify API host/network settings.`
-          : "No Scheduled Games Found",
+          : "Access code is valid, but no games are scheduled right now.",
       );
+      return isNetworkError ? "error" : "no_games";
     } finally {
       trace("nextgame.load.complete", { refreshing });
       setIsNextGameLoading(false);
@@ -5760,7 +5774,13 @@ export default function App() {
     }
 
     setRestoreStatus("none");
-    await loadNextGame(response.userId);
+    const nextGameStatus = await loadNextGame(response.userId);
+
+    if (nextGameStatus === "invalid") {
+      setError("Invalid access code. Try a different code.");
+      setStage("login");
+      return;
+    }
 
     setSession((prev) => prev ?? defaultSession);
     setStage("verifyGame");
@@ -6692,6 +6712,10 @@ export default function App() {
             <Text style={styles.restoreStatusText}>
               Restore status: {restoreStatus}
             </Text>
+
+            {nextGameMessage ? (
+              <Text style={styles.restoreStatusText}>{nextGameMessage}</Text>
+            ) : null}
           </View>
         ) : null}
 

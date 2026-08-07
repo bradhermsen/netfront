@@ -652,10 +652,28 @@ namespace NetFrontAPI.Functions
                         GameId            UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
                         HomeOnPowerPlay   BIT NOT NULL CONSTRAINT DF_GameLiveStatus_HomeOnPowerPlay DEFAULT 0,
                         AwayOnPowerPlay   BIT NOT NULL CONSTRAINT DF_GameLiveStatus_AwayOnPowerPlay DEFAULT 0,
+                        CurrentPeriod     INT NULL,
                         HomeSkatersOnIce  INT NULL,
                         AwaySkatersOnIce  INT NULL,
+                        HomeStartersJson  NVARCHAR(MAX) NULL,
+                        AwayStartersJson  NVARCHAR(MAX) NULL,
                         UpdatedAt         DATETIME2 NOT NULL CONSTRAINT DF_GameLiveStatus_UpdatedAt DEFAULT SYSUTCDATETIME()
                     );
+                END;
+
+                IF COL_LENGTH('dbo.GameLiveStatus', 'CurrentPeriod') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.GameLiveStatus ADD CurrentPeriod INT NULL;
+                END;
+
+                IF COL_LENGTH('dbo.GameLiveStatus', 'HomeStartersJson') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.GameLiveStatus ADD HomeStartersJson NVARCHAR(MAX) NULL;
+                END;
+
+                IF COL_LENGTH('dbo.GameLiveStatus', 'AwayStartersJson') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.GameLiveStatus ADD AwayStartersJson NVARCHAR(MAX) NULL;
                 END;";
 
             const string upsertSql = @"
@@ -665,14 +683,15 @@ namespace NetFrontAPI.Functions
                     UPDATE SET
                         HomeOnPowerPlay  = @HomeOnPowerPlay,
                         AwayOnPowerPlay  = @AwayOnPowerPlay,
+                        CurrentPeriod    = @CurrentPeriod,
                         HomeSkatersOnIce = @HomeSkatersOnIce,
                         AwaySkatersOnIce = @AwaySkatersOnIce,
                         HomeStartersJson = @HomeStartersJson,
                         AwayStartersJson = @AwayStartersJson,
                         UpdatedAt        = SYSUTCDATETIME()
                 WHEN NOT MATCHED THEN
-                    INSERT (GameId, HomeOnPowerPlay, AwayOnPowerPlay, HomeSkatersOnIce, AwaySkatersOnIce, HomeStartersJson, AwayStartersJson)
-                    VALUES (@GameId, @HomeOnPowerPlay, @AwayOnPowerPlay, @HomeSkatersOnIce, @AwaySkatersOnIce, @HomeStartersJson, @AwayStartersJson);";
+                    INSERT (GameId, HomeOnPowerPlay, AwayOnPowerPlay, CurrentPeriod, HomeSkatersOnIce, AwaySkatersOnIce, HomeStartersJson, AwayStartersJson)
+                    VALUES (@GameId, @HomeOnPowerPlay, @AwayOnPowerPlay, @CurrentPeriod, @HomeSkatersOnIce, @AwaySkatersOnIce, @HomeStartersJson, @AwayStartersJson);";
 
             await conn.ExecuteAsync(ensureTableSql);
             await conn.ExecuteAsync(upsertSql, new
@@ -680,6 +699,7 @@ namespace NetFrontAPI.Functions
                 GameId = gameId,
                 HomeOnPowerPlay = payload.HomeOnPowerPlay ? 1 : 0,
                 AwayOnPowerPlay = payload.AwayOnPowerPlay ? 1 : 0,
+                CurrentPeriod = payload.CurrentPeriod,
                 HomeSkatersOnIce = payload.HomeSkatersOnIce,
                 AwaySkatersOnIce = payload.AwaySkatersOnIce,
                 HomeStartersJson = payload.HomeStarterIds == null ? null : System.Text.Json.JsonSerializer.Serialize(payload.HomeStarterIds),
@@ -687,7 +707,7 @@ namespace NetFrontAPI.Functions
             });
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(new { GameId = gameId, payload.HomeOnPowerPlay, payload.AwayOnPowerPlay });
+            await ok.WriteAsJsonAsync(new { GameId = gameId, payload.HomeOnPowerPlay, payload.AwayOnPowerPlay, payload.CurrentPeriod });
             return ok;
         }
 
@@ -1846,6 +1866,7 @@ namespace NetFrontAPI.Functions
         {
             public bool HomeOnPowerPlay { get; set; }
             public bool AwayOnPowerPlay { get; set; }
+            public int? CurrentPeriod { get; set; }
             public int? HomeSkatersOnIce { get; set; }
             public int? AwaySkatersOnIce { get; set; }
             public List<string>? HomeStarterIds { get; set; }
@@ -1856,6 +1877,7 @@ namespace NetFrontAPI.Functions
         {
             public bool HomeOnPowerPlay { get; set; }
             public bool AwayOnPowerPlay { get; set; }
+            public int? CurrentPeriod { get; set; }
             public int? HomeSkatersOnIce { get; set; }
             public int? AwaySkatersOnIce { get; set; }
             public string? HomeStartersJson { get; set; }

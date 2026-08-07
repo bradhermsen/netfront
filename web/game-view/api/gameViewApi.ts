@@ -1,6 +1,8 @@
 import type {
   ApiGameDetail,
   ApiGameListItem,
+  ApiPublicCoachBundle,
+  ApiPublicRosterBundle,
   ApiGameSummaryReport,
   ApiRosterPlayer,
   ApiGameSummary,
@@ -232,6 +234,7 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
     awayShotsP3: pickOptionalNumber(obj, "awayShotsP3", "AwayShotsP3"),
     awayShotsOT: pickOptionalNumber(obj, "awayShotsOT", "AwayShotsOT"),
     awayShots: pickOptionalNumber(obj, "awayShots", "AwayShots"),
+    currentPeriod: pickOptionalNumber(obj, "currentPeriod", "CurrentPeriod"),
     homeOnPowerPlay: pickOptionalBoolean(
       obj,
       "homeOnPowerPlay",
@@ -412,6 +415,45 @@ function normalizeTeamCoaches(payload: unknown): ApiTeamCoach[] {
   });
 }
 
+function normalizePublicRosterRow(row: unknown) {
+  const obj = asObject(row) || {};
+  return {
+    playerId: pickString(obj, "playerId", "PlayerId"),
+    playerName: pickString(obj, "playerName", "PlayerName"),
+    jerseyNumber: pickString(obj, "jerseyNumber", "JerseyNumber"),
+    position: pickString(obj, "position", "Position"),
+    grade: pickString(obj, "grade", "Grade"),
+    isGoalie: pickBoolean(obj, "isGoalie", "IsGoalie"),
+    isStarter: pickBoolean(obj, "isStarter", "IsStarter"),
+    goals: pickNumber(obj, "goals", "Goals"),
+    assists: pickNumber(obj, "assists", "Assists"),
+    penaltyMinutes: pickNumber(obj, "penaltyMinutes", "PenaltyMinutes"),
+    shotsAgainst: pickNumber(obj, "shotsAgainst", "ShotsAgainst"),
+    goalsAgainst: pickNumber(obj, "goalsAgainst", "GoalsAgainst"),
+    goalsAgainstAverage: pickNumber(obj, "goalsAgainstAverage", "GoalsAgainstAverage"),
+    savePercentage: pickNumber(obj, "savePercentage", "SavePercentage"),
+    minutesPlayed: pickNumber(obj, "minutesPlayed", "MinutesPlayed"),
+  };
+}
+
+function normalizePublicRosterBundle(payload: unknown): ApiPublicRosterBundle {
+  const obj = asObject(payload) || {};
+  return {
+    homeRoster: extractListPayload(obj.homeRoster ?? obj.HomeRoster ?? [], "home roster").map(normalizePublicRosterRow),
+    awayRoster: extractListPayload(obj.awayRoster ?? obj.AwayRoster ?? [], "away roster").map(normalizePublicRosterRow),
+    goalieStatsNotice:
+      pickString(obj, "goalieStatsNotice", "GoalieStatsNotice") || null,
+  };
+}
+
+function normalizePublicCoachBundle(payload: unknown): ApiPublicCoachBundle {
+  const obj = asObject(payload) || {};
+  return {
+    homeCoaches: normalizeTeamCoaches(obj.homeCoaches ?? obj.HomeCoaches ?? []),
+    awayCoaches: normalizeTeamCoaches(obj.awayCoaches ?? obj.AwayCoaches ?? []),
+  };
+}
+
 function resolveApiBase() {
   const globalBase =
     typeof window !== "undefined" && typeof window.apiBase === "string"
@@ -469,34 +511,34 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export async function getOrganizations(): Promise<ApiOrganization[]> {
-  const payload = await getJson<unknown>("/organizations");
+  const payload = await getJson<unknown>("/public/gameview/organizations");
   return extractListPayload(payload, "organizations").map(normalizeOrganization);
 }
 
 export async function getTeams(): Promise<ApiTeam[]> {
-  const payload = await getJson<unknown>("/teams");
+  const payload = await getJson<unknown>("/public/gameview/teams");
   return extractListPayload(payload, "teams").map(normalizeTeam);
 }
 
 export async function getTeamsByOrganization(
   organizationId: string,
 ): Promise<ApiTeam[]> {
-  const payload = await getJson<unknown>(`/teams/by-organization/${organizationId}`);
+  const payload = await getJson<unknown>(`/public/gameview/teams?organizationId=${encodeURIComponent(organizationId)}`);
   return extractListPayload(payload, "teams").map(normalizeTeam);
 }
 
 export async function getSeasons(): Promise<ApiSeason[]> {
-  const payload = await getJson<unknown>("/seasons");
+  const payload = await getJson<unknown>("/public/gameview/seasons");
   return extractListPayload(payload, "seasons").map(normalizeSeason);
 }
 
 export async function getGames(): Promise<ApiGameListItem[]> {
-  const payload = await getJson<unknown>("/games");
+  const payload = await getJson<unknown>("/public/gameview/games");
   return extractListPayload(payload, "games").map(normalizeGameListItem);
 }
 
 export async function getGameById(gameId: string): Promise<ApiGameDetail> {
-  const payload = await getJson<unknown>(`/games/${gameId}`);
+  const payload = await getJson<unknown>(`/public/gameview/games/${gameId}`);
   return normalizeGameDetail(payload);
 }
 
@@ -517,12 +559,12 @@ export async function getTeamNextGame(teamId: string): Promise<ApiNextGame | nul
 export async function getGameSummaryMobile(
   gameId: string,
 ): Promise<ApiGameSummary | null> {
-  const res = await authFetch(`/games/${gameId}/summary-mobile`);
+  const res = await authFetch(`/public/gameview/games/${gameId}/summary`);
   if (res.status === 404) {
     return null;
   }
   if (!res.ok) {
-    throw new Error(`Request failed (${res.status}) for /games/${gameId}/summary-mobile`);
+    throw new Error(`Request failed (${res.status}) for /public/gameview/games/${gameId}/summary`);
   }
   return normalizeGameSummary(await res.json());
 }
@@ -530,14 +572,28 @@ export async function getGameSummaryMobile(
 export async function getGameSummaryReport(
   gameId: string,
 ): Promise<ApiGameSummaryReport | null> {
-  const res = await authFetch(`/games/${gameId}/summary-report`);
+  const res = await authFetch(`/public/gameview/games/${gameId}/summary-report`);
   if (res.status === 404) {
     return null;
   }
   if (!res.ok) {
-    throw new Error(`Request failed (${res.status}) for /games/${gameId}/summary-report`);
+    throw new Error(`Request failed (${res.status}) for /public/gameview/games/${gameId}/summary-report`);
   }
   return normalizeGameSummaryReport(await res.json());
+}
+
+export async function getPublicGameRosters(
+  gameId: string,
+): Promise<ApiPublicRosterBundle> {
+  const payload = await getJson<unknown>(`/public/gameview/games/${gameId}/rosters`);
+  return normalizePublicRosterBundle(payload);
+}
+
+export async function getPublicGameCoaches(
+  gameId: string,
+): Promise<ApiPublicCoachBundle> {
+  const payload = await getJson<unknown>(`/public/gameview/games/${gameId}/coaches`);
+  return normalizePublicCoachBundle(payload);
 }
 
 export async function getGameShotTotalsFromStats(

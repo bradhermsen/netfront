@@ -5782,6 +5782,12 @@ export default function App() {
       return;
     }
 
+    if (nextGameStatus === "no_games") {
+      setError("No game is scheduled for this team right now.");
+      setStage("login");
+      return;
+    }
+
     setSession((prev) => prev ?? defaultSession);
     setStage("verifyGame");
   }

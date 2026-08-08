@@ -1619,6 +1619,10 @@ export default function App() {
   const scoreboardClockSyncActiveRef = useRef(false);
   const gatewayLastClockSecondsRef = useRef<number | null>(null);
   const scoreboardLastMessageAtRef = useRef<number | null>(null);
+  const periodControllerStateRef = useRef<PeriodController["state"]>(
+    "NOT_STARTED",
+  );
+  const periodExpiryHandledRef = useRef(false);
   const stageRef = useRef<Stage>(stage);
   const sessionPeriodRef = useRef(1);
   const sessionPeriodLengthRef = useRef("17");
@@ -1636,13 +1640,23 @@ export default function App() {
   );
   const lastLiveShotSyncSignatureRef = useRef("");
 
+  function handleClockExpired() {
+    if (
+      periodExpiryHandledRef.current ||
+      periodControllerStateRef.current !== "IN_PROGRESS"
+    ) {
+      return;
+    }
+
+    periodExpiryHandledRef.current = true;
+    setIsClockRunning(false);
+    setShowPeriodOverVerify(true);
+  }
+
   const gameClock = useHockeyGameClock({
     initialPeriodDurationMs: 17 * 60 * 1000,
     tickIntervalMs: 100,
-    onExpire: () => {
-      setIsClockRunning(false);
-      setShowPeriodOverVerify(true);
-    },
+    onExpire: handleClockExpired,
   });
 
   const activeApiBase = useMemo(
@@ -1894,6 +1908,16 @@ export default function App() {
   useEffect(() => {
     sessionPeriodLengthRef.current = session?.periodLength ?? "17";
   }, [session?.periodLength]);
+
+  useEffect(() => {
+    periodControllerStateRef.current = periodController.state;
+  }, [periodController.state]);
+
+  useEffect(() => {
+    if (gameClock.remainingTimeMs > 0) {
+      periodExpiryHandledRef.current = false;
+    }
+  }, [gameClock.remainingTimeMs]);
 
   useEffect(() => {
     gameClockControlsRef.current = {
@@ -2484,6 +2508,10 @@ export default function App() {
       nextRemainingMs,
       periodDurationMs,
     );
+
+    if (!didPeriodChange && nextRemainingMs === 0) {
+      handleClockExpired();
+    }
 
     if (payloadClockRunning === true) {
       gameClockControlsRef.current.resume();

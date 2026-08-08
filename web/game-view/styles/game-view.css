@@ -1,5 +1,13 @@
 /* NetFront GameView styles should consume existing theme tokens. */
 
+html,
+body,
+#root {
+  background: #071a33;
+  margin: 0;
+  min-height: 100%;
+}
+
 .game-view-root {
   background: #071a33;
   box-sizing: border-box;

@@ -126,7 +126,7 @@ namespace NetFrontAPI.Functions
                             SELECT TOP 1
                                 g.GameDateTime AS StartTime
                             FROM Games g
-                            WHERE (g.HomeTeamId = t.Id OR g.AwayTeamId = t.Id)
+                                                        WHERE g.HomeTeamId = t.Id
                               AND UPPER(ISNULL(g.Status, 'SCHEDULED')) NOT IN (
                                     'COMPLETED',
                                     'CLOSED',
@@ -136,7 +136,10 @@ namespace NetFrontAPI.Functions
                                     'POSTPONED',
                                     'PPD'
                               )
-                                                            AND g.GameDateTime >= DATEADD(HOUR, -12, SYSUTCDATETIME())
+                                AND (
+                                    UPPER(ISNULL(g.Status, 'SCHEDULED')) IN ('IN PROGRESS', 'IN_PROGRESS', 'ACTIVE')
+                                    OR g.GameDateTime BETWEEN DATEADD(HOUR, -6, SYSUTCDATETIME()) AND DATEADD(HOUR, 48, SYSUTCDATETIME())
+                                )
                             ORDER BY
                                 CASE
                                     WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date) THEN 0
@@ -220,6 +223,7 @@ namespace NetFrontAPI.Functions
                         ELSE ht.Name
                     END AS OpponentName,
                     g.GameDateTime AS StartTime,
+                    g.Status,
                     g.ArenaName,
                     g.RinkName,
                     gt.Name AS GameTypeName,
@@ -238,7 +242,7 @@ namespace NetFrontAPI.Functions
                 LEFT JOIN GameTypes gt ON g.GameTypeId = gt.GameTypeId
                 LEFT JOIN ConferenceDistricts cd ON t.ConferenceDistrictId = cd.Id
                 LEFT JOIN SectionRegions sr ON t.SectionRegionId = sr.Id
-                WHERE (g.HomeTeamId = @TeamId OR g.AwayTeamId = @TeamId)
+                WHERE g.HomeTeamId = @TeamId
                                     AND UPPER(ISNULL(g.Status, 'SCHEDULED')) NOT IN (
                                                 'COMPLETED',
                                                 'CLOSED',
@@ -248,8 +252,15 @@ namespace NetFrontAPI.Functions
                                                 'POSTPONED',
                                                 'PPD'
                                     )
-                                    AND g.GameDateTime >= DATEADD(HOUR, -12, SYSUTCDATETIME())
+                                            AND (
+                                                UPPER(ISNULL(g.Status, 'SCHEDULED')) IN ('IN PROGRESS', 'IN_PROGRESS', 'ACTIVE')
+                                                OR g.GameDateTime BETWEEN DATEADD(HOUR, -6, SYSUTCDATETIME()) AND DATEADD(HOUR, 48, SYSUTCDATETIME())
+                                            )
                                 ORDER BY
+                                            CASE
+                                                WHEN UPPER(ISNULL(g.Status, 'SCHEDULED')) IN ('IN PROGRESS', 'IN_PROGRESS', 'ACTIVE') THEN 0
+                                                ELSE 1
+                                            END,
                                         CASE
                                                 WHEN CAST(g.GameDateTime AS date) = CAST(SYSDATETIME() AS date) THEN 0
                                                 ELSE 1
@@ -282,7 +293,7 @@ namespace NetFrontAPI.Functions
                     FROM Games g
                     LEFT JOIN Teams ht ON g.HomeTeamId = ht.Id
                     LEFT JOIN Teams at ON g.AwayTeamId = at.Id
-                    WHERE (g.HomeTeamId = @TeamId OR g.AwayTeamId = @TeamId)
+                                        WHERE g.HomeTeamId = @TeamId
                       AND UPPER(ISNULL(g.Status, '')) IN ('COMPLETED', 'CLOSED', 'FINAL')
                     ORDER BY g.GameDateTime DESC;";
 
@@ -302,6 +313,20 @@ namespace NetFrontAPI.Functions
                 }
 
                 return req.CreateResponse(HttpStatusCode.NotFound);
+            }
+
+            var normalizedStatus = (nextGame.Status ?? "SCHEDULED").Trim().ToUpperInvariant();
+            var isActive = normalizedStatus is "IN PROGRESS" or "IN_PROGRESS" or "ACTIVE";
+            if (!isActive && nextGame.StartTime > DateTime.UtcNow.AddHours(4))
+            {
+                var tooEarly = req.CreateResponse((HttpStatusCode)425);
+                await tooEarly.WriteAsJsonAsync(new
+                {
+                    error = "login_too_early",
+                    message = $"Login opens four hours before the scheduled game time ({nextGame.StartTime:u}).",
+                    nextGame.StartTime
+                });
+                return tooEarly;
             }
 
             var response = req.CreateResponse(HttpStatusCode.OK);
@@ -1665,6 +1690,7 @@ namespace NetFrontAPI.Functions
             public string? AwayTeamMascot { get; set; }
             public string OpponentName { get; set; } = string.Empty;
             public DateTime StartTime { get; set; }
+            public string? Status { get; set; }
             public string ArenaName { get; set; } = string.Empty;
             public string RinkName { get; set; } = string.Empty;
             public string? GameTypeName { get; set; }

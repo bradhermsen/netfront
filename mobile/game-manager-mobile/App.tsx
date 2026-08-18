@@ -65,6 +65,7 @@ type NextGame = {
   teamType?: string;
   sectionRegion?: string;
   conferenceDistrict?: string;
+  status?: string;
 };
 
 type NextGameLookupResult = {
@@ -745,14 +746,6 @@ const ROLE_LABELS: Record<AccessRole, string> = {
   AD: "Admin",
 };
 
-const ROLE_DESCRIPTIONS: Record<AccessRole, string> = {
-  GM: "Control live game flow and scoreboard",
-  SM: "Record stats and verify events",
-  CA: "Read-only coach view",
-  AD: "Full access and override",
-};
-
-const roleOrder: AccessRole[] = ["GM", "SM", "CA", "AD"];
 const NF_LOGO = require("./assets/NF_Logo_Default.png");
 
 function toOfficialRoleLabel(role: string) {
@@ -773,23 +766,11 @@ function buildMobileSignatureToken(role: string, officialName: string) {
 
 function parseRoleFromAccessCode(code: string): AccessRole | null {
   const normalized = code.trim().toUpperCase();
-  if (normalized.startsWith("GM-")) return "GM";
-  if (normalized.startsWith("SM-")) return "SM";
-  if (normalized.startsWith("CA-")) return "CA";
-  if (normalized.startsWith("AD-")) return "AD";
-  if (
-    normalized === "GM" ||
-    normalized === "SM" ||
-    normalized === "CA" ||
-    normalized === "AD"
-  ) {
-    return normalized;
-  }
-  return null;
+  return /^GM-[A-Z0-9]{6}$/.test(normalized) ? "GM" : null;
 }
 
 function formatAccessCodeInput(value: string): string {
-  const sanitized = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const sanitized = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
   if (sanitized.length <= 2) {
     return sanitized;
   }
@@ -1106,6 +1087,37 @@ function shouldRefreshFarFutureNextGame(nextGame: NextGame | null | undefined) {
   return daysAhead > 30;
 }
 
+function getGameLoginUnavailableMessage(game: NextGame, teamId: string) {
+  const normalizedStatus = (game.status || "SCHEDULED").trim().toUpperCase();
+  if (["COMPLETED", "CLOSED", "FINAL"].includes(normalizedStatus)) {
+    return "This game has been finalized and can no longer be managed.";
+  }
+
+  if (!game.homeTeamId || game.homeTeamId !== teamId) {
+    return "This access code is not authorized for the game's home team.";
+  }
+
+  if (["IN PROGRESS", "IN_PROGRESS", "ACTIVE"].includes(normalizedStatus)) {
+    return null;
+  }
+
+  const startTime = new Date(game.startTime).getTime();
+  if (!Number.isFinite(startTime)) return "The scheduled game time is invalid.";
+
+  const hoursUntilStart = (startTime - Date.now()) / (60 * 60 * 1000);
+  if (hoursUntilStart > 48) {
+    return "Access code is valid, but no home game is scheduled within the next 48 hours.";
+  }
+  if (hoursUntilStart > 4) {
+    return `Login opens four hours before the scheduled game time (${formatStartTime(game.startTime)}).`;
+  }
+  if (hoursUntilStart < -6) {
+    return "The login window for this game has closed.";
+  }
+
+  return null;
+}
+
 function formatPlayerPickerLabel(player: RosterPlayer) {
   const jersey = player.jerseyNumber ?? "-";
   const position = player.isGoalie ? "G" : player.position?.trim() || "-";
@@ -1412,6 +1424,10 @@ function normalizeNextGame(
         game.conferenceDistrictName) ||
       (typeof game.ConferenceDistrictName === "string" &&
         game.ConferenceDistrictName) ||
+      undefined,
+    status:
+      (typeof game.status === "string" && game.status) ||
+      (typeof game.Status === "string" && game.Status) ||
       undefined,
   };
 }
@@ -5059,19 +5075,39 @@ export default function App() {
     const payload = (await response.json()) as Record<string, unknown> | null;
     trace("nextgame.fetch.payload", summarizePayload(payload));
 
-    if (!response.ok) {
-      if (response.status === 410) {
+    const payloadIsClosed =
+      payload?.isClosed === true ||
+      payload?.IsClosed === true ||
+      ["COMPLETED", "CLOSED", "FINAL"].includes(
+        String(payload?.status ?? payload?.Status ?? "").toUpperCase(),
+      );
+
+    if (!response.ok || payloadIsClosed) {
+      if (response.status === 410 || response.status === 425) {
         const closedMessage =
           (typeof payload?.Message === "string" && payload.Message) ||
           (typeof payload?.message === "string" && payload.message) ||
           "The scheduled game is closed.";
         return { nextGame: null, closedMessage };
       }
+      if (payloadIsClosed) {
+        const closedMessage =
+          (typeof payload?.Message === "string" && payload.Message) ||
+          (typeof payload?.message === "string" && payload.message) ||
+          "This game has been finalized and can no longer be managed.";
+        return { nextGame: null, closedMessage };
+      }
       return { nextGame: null };
     }
 
     if (!payload || typeof payload !== "object") return { nextGame: null };
-    return { nextGame: normalizeNextGame(teamId, payload) };
+    const nextGame = normalizeNextGame(teamId, payload);
+    if (!nextGame) return { nextGame: null };
+
+    const unavailableMessage = getGameLoginUnavailableMessage(nextGame, teamId);
+    return unavailableMessage
+      ? { nextGame: null, closedMessage: unavailableMessage }
+      : { nextGame };
   }
 
   async function fetchRosterForTeam(teamId: string) {
@@ -5583,7 +5619,10 @@ export default function App() {
   async function loadNextGame(
     userId: string,
     refreshing = false,
-  ): Promise<"games" | "no_games" | "invalid" | "error"> {
+  ): Promise<{
+    status: "games" | "no_games" | "invalid" | "error";
+    message?: string;
+  }> {
     trace("nextgame.load.start", { userId, refreshing });
 
     if (refreshing) {
@@ -5607,8 +5646,9 @@ export default function App() {
         trace("nextgame.load.invalid_code", { userId });
         setNextGame(null);
         setIsClosedGameNotice(false);
-        setNextGameMessage("Invalid access code. Try a different code.");
-        return "invalid";
+        const message = "That access code is not valid. Check the code and try again.";
+        setNextGameMessage(message);
+        return { status: "invalid", message };
       }
 
       const lookupResults = await Promise.all(
@@ -5632,14 +5672,16 @@ export default function App() {
         setNextGame(null);
         if (closedMessages.length > 0) {
           setIsClosedGameNotice(true);
-          setNextGameMessage(closedMessages[0]);
+          const message = closedMessages[0];
+          setNextGameMessage(message);
+          return { status: "no_games", message };
         } else {
           setIsClosedGameNotice(false);
-          setNextGameMessage(
-            "Access code is valid, but no games are scheduled right now.",
-          );
+          const message =
+            "Access code is valid, but no home game is scheduled within the next 48 hours.";
+          setNextGameMessage(message);
+          return { status: "no_games", message };
         }
-        return "no_games";
       }
 
       const earliest = [...games].sort(
@@ -5678,6 +5720,7 @@ export default function App() {
 
       updateSession(setupPatch);
       await loadRosterAndCoaches(earliest);
+      return { status: "games" };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const isNetworkError = /network request failed/i.test(message);
@@ -5686,12 +5729,14 @@ export default function App() {
       });
       setNextGame(null);
       setIsClosedGameNotice(false);
-      setNextGameMessage(
-        isNetworkError
-          ? `Unable to reach API at ${activeApiBase}. Verify API host/network settings.`
-          : "Access code is valid, but no games are scheduled right now.",
-      );
-      return isNetworkError ? "error" : "no_games";
+      const failureMessage = isNetworkError
+        ? `Unable to reach API at ${activeApiBase}. Verify API host/network settings.`
+        : "Access code is valid, but no home game is scheduled within the next 48 hours.";
+      setNextGameMessage(failureMessage);
+      return {
+        status: isNetworkError ? "error" : "no_games",
+        message: failureMessage,
+      };
     } finally {
       trace("nextgame.load.complete", { refreshing });
       setIsNextGameLoading(false);
@@ -5737,7 +5782,7 @@ export default function App() {
     setSession(defaultSession);
     setGameStartedAtIso(null);
     setGameHasEnded(false);
-    setStage("verifyGame");
+    setStage("login");
     setRestoreStatus("checking");
 
     const snapshot = await loadActiveGameSnapshot();
@@ -5747,10 +5792,32 @@ export default function App() {
           startTime: snapshot.nextGame?.startTime ?? null,
         });
         await clearActiveGameSnapshot();
+      } else if (
+        snapshot.accessCode.trim().toUpperCase() === accessCode &&
+        snapshot.nextGame?.gameId &&
+        snapshot.nextGame.homeTeamId === snapshot.nextGame.teamId
+      ) {
+        const authorizedTeams = await fetchTeamsForUser(accessCode);
+        const ownsHomeTeam = authorizedTeams.some(
+          (team) => getTeamId(team) === snapshot.nextGame?.homeTeamId,
+        );
+        const activeGame = ownsHomeTeam
+          ? await fetchNextGameForTeam(snapshot.nextGame.homeTeamId)
+          : { nextGame: null };
+        if (activeGame.nextGame?.gameId === snapshot.nextGame.gameId) {
+          setRestoreStatus("restored-snapshot");
+          restoreActiveGameSnapshot(snapshot, accessCode);
+          return;
+        }
+        trace("activegame.snapshot.unauthorized", {
+          enteredCode: accessCode,
+          gameId: snapshot.nextGame.gameId,
+        });
       } else {
-        setRestoreStatus("restored-snapshot");
-        restoreActiveGameSnapshot(snapshot, accessCode);
-        return;
+        trace("activegame.snapshot.code_mismatch", {
+          enteredCode: accessCode,
+          gameId: snapshot.nextGame?.gameId ?? null,
+        });
       }
     }
 
@@ -5761,57 +5828,77 @@ export default function App() {
           startTime: resumeSnapshot.nextGame?.startTime ?? null,
         });
         await clearActiveGameSnapshot();
-      } else {
-        setRestoreStatus("restored-resume");
-        setSession({
-          ...resumeSnapshot.session,
-          code: accessCode,
-          apiBase: activeApiBase,
-        });
-        setGameStartedAtIso(resumeSnapshot.gameStartedAtIso ?? null);
-        setNextGame(resumeSnapshot.nextGame ?? null);
-        setGameHasEnded(false);
-        setStage("gameDashboard");
-        if (resumeSnapshot.nextGame) {
+      } else if (
+        resumeSnapshot.session.code.trim().toUpperCase() === accessCode &&
+        resumeSnapshot.nextGame?.gameId &&
+        resumeSnapshot.nextGame.homeTeamId === resumeSnapshot.nextGame.teamId
+      ) {
+        const authorizedTeams = await fetchTeamsForUser(accessCode);
+        const ownsHomeTeam = authorizedTeams.some(
+          (team) => getTeamId(team) === resumeSnapshot.nextGame?.homeTeamId,
+        );
+        const activeGame = ownsHomeTeam
+          ? await fetchNextGameForTeam(resumeSnapshot.nextGame.homeTeamId)
+          : { nextGame: null };
+        if (activeGame.nextGame?.gameId === resumeSnapshot.nextGame.gameId) {
+          setRestoreStatus("restored-resume");
+          setSession({
+            ...resumeSnapshot.session,
+            code: accessCode,
+            apiBase: activeApiBase,
+          });
+          setGameStartedAtIso(resumeSnapshot.gameStartedAtIso ?? null);
+          setNextGame(resumeSnapshot.nextGame);
+          setGameHasEnded(false);
+          setStage("gameDashboard");
           void loadRosterAndCoaches(resumeSnapshot.nextGame);
+          trace("activegame.resume.restored", {
+            gameId: resumeSnapshot.nextGame.gameId,
+          });
+          return;
         }
-        trace("activegame.resume.restored", {
+        trace("activegame.resume.unauthorized", {
+          enteredCode: accessCode,
+          gameId: resumeSnapshot.nextGame.gameId,
+        });
+      } else {
+        trace("activegame.resume.code_mismatch", {
+          enteredCode: accessCode,
           gameId: resumeSnapshot.nextGame?.gameId ?? null,
         });
-        return;
       }
     }
 
-    const hasMarker = await hasActiveGameMarker();
-    if (hasMarker) {
-      setRestoreStatus("restored-marker");
-      setSession((prev) =>
-        prev
-          ? {
-              ...prev,
-              code: accessCode,
-              apiBase: activeApiBase,
-            }
-          : defaultSession,
-      );
-      setGameHasEnded(false);
-      setStage("gameDashboard");
-      void loadNextGame(response.userId);
-      trace("activegame.marker.restored", { userId: response.userId });
-      return;
+    // A marker has no game or code ownership data, so it cannot authorize dashboard access.
+    if (await hasActiveGameMarker()) {
+      trace("activegame.marker.ignored_without_authorization", {
+        userId: response.userId,
+      });
     }
 
     setRestoreStatus("none");
-    const nextGameStatus = await loadNextGame(response.userId);
+    const nextGameResult = await loadNextGame(response.userId);
 
-    if (nextGameStatus === "invalid") {
-      setError("Invalid access code. Try a different code.");
+    if (nextGameResult.status === "invalid") {
+      setError(nextGameResult.message || "That access code is not valid.");
       setStage("login");
       return;
     }
 
-    if (nextGameStatus === "no_games") {
-      setError("No game is scheduled for this team right now.");
+    if (nextGameResult.status === "no_games") {
+      setError(
+        nextGameResult.message ||
+          "No home game is scheduled for this team within the next 48 hours.",
+      );
+      setStage("login");
+      return;
+    }
+
+    if (nextGameResult.status === "error") {
+      setError(
+        nextGameResult.message ||
+          "Unable to contact the game service. Check the network and try again.",
+      );
       setStage("login");
       return;
     }
@@ -5830,10 +5917,8 @@ export default function App() {
       apiBase: activeApiBase,
     });
 
-    if (!role || normalized.length < 2) {
-      setError(
-        "Enter a valid access code (GM, SM, CA, AD or prefixed code like GM-1234).",
-      );
+    if (!role) {
+      setError("Enter a 9-character code in the format GM-9813SP.");
       trace("login.invalid_code", { enteredCode: normalized });
       return;
     }
@@ -6681,6 +6766,8 @@ export default function App() {
                 style={styles.codeInputFigma}
                 value={accessCodeInput}
                 autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={9}
                 placeholder="GM-1A2B3C"
                 placeholderTextColor="#5E7290"
                 onChangeText={(value) => {
@@ -6713,8 +6800,6 @@ export default function App() {
               />
             </View>
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
             <Pressable
               style={styles.primaryButtonFigma}
               onPress={handleAccessCodeContinue}
@@ -6722,27 +6807,16 @@ export default function App() {
               <Text style={styles.primaryButtonText}>Continue</Text>
             </Pressable>
 
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ACCESS ROLES</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.rolesWrapFigma}>
-              {roleOrder.map((role) => (
-                <View key={role} style={styles.roleCardFigma}>
-                  <Text style={styles.roleIcon}>•</Text>
-                  <Text style={styles.roleLabelFigma}>{ROLE_LABELS[role]}</Text>
-                  <Text style={styles.roleDescFigma}>
-                    {ROLE_DESCRIPTIONS[role]}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            <Text style={styles.loginFooter}>
-              Your code determines your role automatically
-            </Text>
+            {error ? (
+              <View
+                style={styles.loginErrorPanel}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="assertive"
+              >
+                <Text style={styles.loginErrorTitle}>Unable to Continue</Text>
+                <Text style={styles.loginErrorText}>{error}</Text>
+              </View>
+            ) : null}
             <Text style={styles.restoreStatusText}>
               Restore status: {restoreStatus}
             </Text>
@@ -11137,6 +11211,28 @@ const styles = StyleSheet.create({
     color: "#D4183D",
     fontSize: 12,
     fontWeight: "700",
+    textAlign: "center",
+  },
+  loginErrorPanel: {
+    backgroundColor: "#3A1018",
+    borderColor: "#FF496A",
+    borderWidth: 2,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  loginErrorTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  loginErrorText: {
+    color: "#FFD6DE",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
     textAlign: "center",
   },
   toggleRow: {

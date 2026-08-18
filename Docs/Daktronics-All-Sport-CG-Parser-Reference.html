@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NetFront ESP32 Hardware and Daktronics Parser Reference</title>
+  <style>
+    @page { size: letter; margin: 0.55in; }
+    :root {
+      --navy: #10233f;
+      --blue: #176b9b;
+      --orange: #e96d24;
+      --ink: #182230;
+      --muted: #566477;
+      --line: #bcc9d8;
+      --soft: #eef4f8;
+      --code: #f4f6f8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      color: var(--ink);
+      font-family: "Segoe UI", Calibri, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.35;
+      margin: 0;
+    }
+    header {
+      border-bottom: 3px solid var(--orange);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+    }
+    h1 {
+      color: var(--navy);
+      font-size: 22pt;
+      line-height: 1.1;
+      margin: 0 0 5px;
+    }
+    .subtitle { color: var(--muted); font-size: 10.5pt; margin: 0; }
+    h2 {
+      border-bottom: 1px solid var(--line);
+      color: var(--blue);
+      font-size: 14pt;
+      margin: 18px 0 8px;
+      padding-bottom: 3px;
+    }
+    h3 { color: var(--navy); font-size: 11pt; margin: 13px 0 6px; }
+    p { margin: 5px 0 8px; }
+    table {
+      border-collapse: collapse;
+      margin: 7px 0 12px;
+      page-break-inside: avoid;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 5px 7px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--navy); color: white; font-weight: 650; }
+    tbody tr:nth-child(even) { background: var(--soft); }
+    code, pre { font-family: Consolas, "Courier New", monospace; }
+    code { background: var(--code); border-radius: 3px; padding: 1px 4px; }
+    pre {
+      background: var(--navy);
+      color: #eaf6ff;
+      font-size: 8.6pt;
+      line-height: 1.45;
+      margin: 7px 0 12px;
+      overflow-wrap: anywhere;
+      padding: 10px 12px;
+      white-space: pre-wrap;
+    }
+    .callout {
+      background: #fff5ec;
+      border-left: 4px solid var(--orange);
+      margin: 9px 0 12px;
+      padding: 8px 10px;
+    }
+    .two-column {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1fr 1fr;
+    }
+    ul { margin: 5px 0 10px; padding-left: 20px; }
+    li { margin: 2px 0; }
+    .page-break { break-before: page; }
+    footer {
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 8pt;
+      margin-top: 18px;
+      padding-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NetFront ESP32 Hardware and Daktronics Parser Reference</h1>
+    <p class="subtitle">Scoreboard bridge pinout, power, interfaces, and All Sport CG CONTROL feed mapping</p>
+  </header>
+
+  <h2>Serial Configuration</h2>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Purpose</td><td>Read clock, running state, scores, shots, period, and penalties</td></tr>
+      <tr><td>Source port</td><td>Daktronics All Sport CG CONTROL port (DB-9)</td></tr>
+      <tr><td>Electrical interface</td><td>RS-232 through MAX3232 level converter; do not connect DB-9 RS-232 directly to ESP GPIO</td></tr>
+      <tr><td>UART</td><td><code>9600 baud, 8 data bits, no parity, 1 stop bit (8N1)</code></td></tr>
+      <tr><td>Flow control</td><td>None</td></tr>
+      <tr><td>ESP32 pins</td><td>RX GPIO16, TX GPIO17</td></tr>
+    </tbody>
+  </table>
+
+    <h2>ESP32 Hardware Pin Inventory</h2>
+    <table>
+      <thead><tr><th>ESP32 pin</th><th>Direction / mode</th><th>Current function</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><code>GPIO0 / BOOT</code></td><td>Input with internal pull-up; active LOW</td><td>Hold BOOT for 7 seconds while firmware is running to clear NetFront preferences and Wi-Fi credentials, then restart. Holding BOOT during reset enters the ESP32 ROM bootloader instead.</td><td>Explicit firmware configuration</td></tr>
+        <tr><td><code>GPIO1 / U0TXD</code></td><td>UART0 transmit</td><td>USB serial console output, boot messages, logs, and PlatformIO monitoring at 115200 baud.</td><td>ESP32 Dev Module default used by <code>Serial</code></td></tr>
+        <tr><td><code>GPIO3 / U0RXD</code></td><td>UART0 receive</td><td>USB serial console input and firmware upload/debug connection through the development board USB-to-serial interface.</td><td>ESP32 Dev Module default used by <code>Serial</code></td></tr>
+        <tr><td><code>GPIO16 / UART1 RX</code></td><td>Input, 3.3V TTL UART</td><td>Receives the level-shifted Daktronics All Sport CG serial stream from the MAX3232 receiver output.</td><td>Explicit firmware configuration</td></tr>
+        <tr><td><code>GPIO17 / UART1 TX</code></td><td>Output, 3.3V TTL UART</td><td>UART1 transmit path toward the MAX3232 transmitter input. The current scoreboard parser is receive-driven and does not normally send CG commands.</td><td>Explicit firmware configuration</td></tr>
+        <tr><td><code>EN / RESET</code></td><td>Hardware reset input; active LOW</td><td>Restarts the ESP32 immediately. It does not erase settings or perform a factory reset.</td><td>ESP32 development board hardware</td></tr>
+        <tr><td>Other GPIO</td><td>Not configured by this application</td><td>No application status LEDs, relays, or additional buttons are currently assigned.</td><td>Confirmed by firmware inventory</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Power and Electrical Requirements</h2>
+    <table>
+      <thead><tr><th>Connection</th><th>Requirement</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>ESP32 power</td><td>Use the development board USB connector or a regulated supply appropriate for its labeled <code>5V/VIN</code> input.</td><td>The firmware cannot identify the physical supply source. Do not apply an unregulated source or exceed the specific board manufacturer's rating.</td></tr>
+        <tr><td>ESP32 GPIO logic</td><td><strong>3.3V only</strong></td><td>GPIO16 and GPIO17 are not RS-232 tolerant and are not 5V tolerant. Never connect the Daktronics DB-9 directly to either GPIO.</td></tr>
+        <tr><td>MAX3232 power</td><td>Power the module at a voltage supported by that exact module.</td><td>The MAX3232 IC commonly supports 3.0-5.5V, but breakout modules vary. Verify the module label/datasheet. Its TTL output to GPIO16 must not exceed 3.3V.</td></tr>
+        <tr><td>Ground</td><td>ESP32 and MAX3232 TTL-side grounds must be common.</td><td>The DB-9 signal ground must also be connected according to the confirmed Daktronics CONTROL-port cable/pinout.</td></tr>
+        <tr><td>Wi-Fi</td><td>2.4 GHz ESP32 Wi-Fi</td><td>Firmware disables Wi-Fi power saving for stable bridge communication and retries station reconnection every 10 seconds.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Power information requiring physical verification:</strong> the repository does not record the exact ESP32 board revision, MAX3232 breakout model, its VCC connection, or the installed DB-9 conductor pinout. Confirm those items on the assembled device before using this document as a fabrication drawing.
+    </div>
+
+    <h2>Scoreboard Interface Wiring</h2>
+    <table>
+      <thead><tr><th>Signal path</th><th>Connection</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td>Daktronics transmit</td><td>CG CONTROL-port TX conductor &rarr; MAX3232 RS-232 receiver input</td><td>Accepts the positive/negative RS-232 waveform from the scoreboard device.</td></tr>
+        <tr><td>Bridge receive</td><td>MAX3232 receiver TTL output &rarr; ESP32 <code>GPIO16</code></td><td>Delivers the converted 3.3V-compatible 9600 8N1 stream to UART1 RX.</td></tr>
+        <tr><td>Bridge transmit</td><td>ESP32 <code>GPIO17</code> &rarr; MAX3232 transmitter TTL input</td><td>Provides a return transmit path if required later; current production parsing is receive-only.</td></tr>
+        <tr><td>Daktronics receive</td><td>MAX3232 RS-232 transmitter output &rarr; CG CONTROL-port RX conductor</td><td>Optional return path; physical DB-9 assignment must be confirmed.</td></tr>
+        <tr><td>Common</td><td>ESP32 GND &harr; MAX3232 GND; DB-9 signal common per confirmed cable</td><td>Establishes the required voltage reference.</td></tr>
+      </tbody>
+    </table>
+
+    <pre>Daktronics CG DB-9 (RS-232)           MAX3232                 ESP32 Dev Module
+  TX  ----------------------------&gt;  R1IN  |  R1OUT  --------&gt;  GPIO16 (UART1 RX)
+  RX  &lt;----------------------------  T1OUT |  T1IN   &lt;--------  GPIO17 (UART1 TX)
+  Signal common ----------------------  GND  -------------------  GND</pre>
+
+    <div class="callout">
+      <strong>DB-9 pin numbers are intentionally not asserted.</strong> DTE/DCE orientation can swap pins 2 and 3, and the repository does not prove the installed cable pinout. Verify CG TX, CG RX, and signal common from the Daktronics documentation or with a meter before wiring.
+    </div>
+
+    <h2>Boot, Reset, and Upload Behavior</h2>
+    <table>
+      <thead><tr><th>Action</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Press <code>EN</code></td><td>Immediate hardware reboot; settings remain stored.</td></tr>
+        <tr><td>Hold <code>BOOT</code> for at least 7 seconds while running</td><td>Firmware factory reset: clears the <code>netfront</code> NVS namespace and cached Wi-Fi credentials, then reboots into default AP mode.</td></tr>
+        <tr><td>Hold <code>BOOT</code>, press/release <code>EN</code></td><td>Enters ROM download/flash mode; this does not execute the application factory-reset routine.</td></tr>
+        <tr><td>PlatformIO upload</td><td>USB UART upload at a configured speed of 921600 baud.</td></tr>
+        <tr><td>PlatformIO serial monitor</td><td>UART0 console at 115200 baud.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Board, Flash, and Storage Configuration</h2>
+    <table>
+      <thead><tr><th>Item</th><th>Current configuration</th></tr></thead>
+      <tbody>
+        <tr><td>PlatformIO board</td><td><code>esp32dev</code> using the Arduino framework</td></tr>
+        <tr><td>Filesystem</td><td>LittleFS; stores the Admin, Simulator, Serial Analyzer, WebSocket Diagnostics, and Debug JSON pages</td></tr>
+        <tr><td>Persistent settings</td><td>ESP32 NVS/Preferences namespace <code>netfront</code>: admin password, WebSocket token, SSID/password, DHCP/static IP, gateway, and subnet</td></tr>
+        <tr><td>Flash / partitions</td><td>PlatformIO <code>esp32dev</code> defaults; no custom partition table is declared</td></tr>
+        <tr><td>PSRAM</td><td>Not enabled in the project configuration</td></tr>
+        <tr><td>OTA upload</td><td>Not configured; current firmware deployment uses USB serial</td></tr>
+      </tbody>
+    </table>
+
+  <h2>Frame Structure</h2>
+  <pre>&lt;01&gt;[fixed-width payload]&lt;04&gt;</pre>
+  <table>
+    <thead><tr><th>Element</th><th>Hex</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Start marker</td><td><code>0x01</code></td><td>SOH; resets frame capture and starts a new payload</td></tr>
+      <tr><td>End marker</td><td><code>0x04</code></td><td>EOT; completes the frame and invokes parsing</td></tr>
+    </tbody>
+  </table>
+  <p>All column numbers below are zero-based offsets within the payload, excluding SOH and EOT.</p>
+
+  <h2>Main Mapped Fields</h2>
+  <table>
+    <thead><tr><th>Columns</th><th>Width</th><th>Mapped field</th><th>Parser behavior</th></tr></thead>
+    <tbody>
+      <tr><td><code>0-4</code></td><td>5</td><td>Game clock</td><td><code>MM:SS</code>; minutes at 0-1, colon at 2, seconds at 3-4</td></tr>
+      <tr><td><code>5-6</code></td><td>2</td><td>Reserved / spacing</td><td>Ignored</td></tr>
+      <tr><td><code>7</code></td><td>1</td><td>Clock state</td><td><code>s</code> or <code>S</code> = stopped; blank = running</td></tr>
+      <tr><td><code>8-9</code></td><td>2</td><td>Home score</td><td>Integer, clamped to 0-199</td></tr>
+      <tr><td><code>10-11</code></td><td>2</td><td>Away score</td><td>Integer, clamped to 0-199</td></tr>
+      <tr><td><code>12</code></td><td>1</td><td>Reserved / spacing</td><td>Ignored</td></tr>
+      <tr><td><code>13-15</code></td><td>3</td><td>Home shots</td><td>Integer, clamped to 0-199</td></tr>
+      <tr><td><code>16-17</code></td><td>2</td><td>Away shots</td><td>Integer, clamped to 0-199</td></tr>
+      <tr><td><code>18</code></td><td>1</td><td>Period</td><td>Integer, clamped to 1-9</td></tr>
+      <tr><td><code>19</code></td><td>1</td><td>Separator</td><td>Ignored</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Penalty Mapped Fields</h2>
+  <p>Each penalty slot is exactly seven characters with the format <code>PP M:SS</code>.</p>
+  <table>
+    <thead><tr><th>Columns</th><th>Mapped slot</th><th>Example player</th><th>Example remaining time</th></tr></thead>
+    <tbody>
+      <tr><td><code>20-26</code></td><td>Home Penalty 1</td><td>25</td><td>1:34</td></tr>
+      <tr><td><code>27-33</code></td><td>Home Penalty 2</td><td>36</td><td>1:38</td></tr>
+      <tr><td><code>34-40</code></td><td>Away Penalty 1</td><td>54</td><td>1:45</td></tr>
+      <tr><td><code>41-47</code></td><td>Away Penalty 2</td><td>55</td><td>1:50</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Penalty Slot Subfields</h3>
+  <table>
+    <thead><tr><th>Relative columns</th><th>Meaning</th><th>Validation</th></tr></thead>
+    <tbody>
+      <tr><td><code>0-1</code></td><td>Player number</td><td>Must contain a player number greater than zero</td></tr>
+      <tr><td><code>2</code></td><td>Separator</td><td>Normally a space</td></tr>
+      <tr><td><code>3</code></td><td>Minutes remaining</td><td>Single digit in current observed format</td></tr>
+      <tr><td><code>4</code></td><td>Colon</td><td>Must be <code>:</code></td></tr>
+      <tr><td><code>5-6</code></td><td>Seconds remaining</td><td>Must be 00-59</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    A valid slot with remaining time above <code>0:00</code> is active. A blank, malformed, or zero-time slot is cleared/inactive. The CG feed remains authoritative for penalty time in hardware mode.
+  </div>
+
+  <h2>Observed Example</h2>
+  <pre>&lt;01&gt;16:33  s 2 211    1 25 1:3436 1:3854 1:4555 1:500&lt;04&gt;</pre>
+  <table>
+    <thead><tr><th>Mapped value</th><th>Decoded result</th></tr></thead>
+    <tbody>
+      <tr><td>Clock</td><td>16:33, stopped</td></tr>
+      <tr><td>Home Penalty 1</td><td>Player 25, 1:34 remaining</td></tr>
+      <tr><td>Home Penalty 2</td><td>Player 36, 1:38 remaining</td></tr>
+      <tr><td>Away Penalty 1</td><td>Player 54, 1:45 remaining</td></tr>
+      <tr><td>Away Penalty 2</td><td>Player 55, 1:50 remaining</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>Unknown trailing field:</strong> payload data at column <code>48+</code> has included values such as <code>0</code> and <code>16</code>. It is likely a control or checksum field and is intentionally ignored until its definition is confirmed.
+  </div>
+
+  <div class="page-break"></div>
+  <h2>ESP Output Fields</h2>
+  <p>The full state and WebSocket payload expose these mapped properties:</p>
+  <div class="two-column">
+    <ul>
+      <li><code>clock</code></li>
+      <li><code>clockFormatted</code></li>
+      <li><code>clockRunning</code></li>
+      <li><code>clockMin</code></li>
+      <li><code>clockSec</code></li>
+      <li><code>clockTenths</code></li>
+      <li><code>homeScore</code></li>
+      <li><code>awayScore</code></li>
+      <li><code>homeShots</code></li>
+      <li><code>awayShots</code></li>
+      <li><code>period</code></li>
+    </ul>
+    <ul>
+      <li><code>homePen1Player</code></li>
+      <li><code>homePen1Time</code></li>
+      <li><code>homePen2Player</code></li>
+      <li><code>homePen2Time</code></li>
+      <li><code>awayPen1Player</code></li>
+      <li><code>awayPen1Time</code></li>
+      <li><code>awayPen2Player</code></li>
+      <li><code>awayPen2Time</code></li>
+    </ul>
+  </div>
+
+  <h3>Serial Analyzer Penalty Array</h3>
+  <pre>{
+  "team": 0,
+  "slot": 1,
+  "player": 25,
+  "minutes": 1,
+  "seconds": 34
+}</pre>
+  <table>
+    <thead><tr><th>Value</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>team: 0</code></td><td>Home</td></tr>
+      <tr><td><code>team: 1</code></td><td>Away</td></tr>
+      <tr><td><code>slot: 1</code></td><td>First penalty slot for that team</td></tr>
+      <tr><td><code>slot: 2</code></td><td>Second penalty slot for that team</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Parser Behavior</h2>
+  <ul>
+    <li>UART bytes are captured between SOH and EOT into a fixed-capacity buffer.</li>
+    <li>Native production frames use fixed column offsets and do not rely on whitespace tokenization.</li>
+    <li>Incomplete or malformed penalty slots are cleared rather than retaining stale values.</li>
+    <li>Clock tenths are set to zero because the observed CG hardware feed provides whole seconds only.</li>
+    <li>The unknown trailing control/checksum field is not validated.</li>
+    <li>The Serial Analyzer presents escaped control bytes such as <code>&lt;01&gt;</code> and <code>&lt;04&gt;</code>.</li>
+  </ul>
+
+  <h2>Text Test-Feed Fallback</h2>
+  <p>The firmware retains a line-oriented key/value parser for simulator and diagnostic feeds. Supported keys are:</p>
+  <table>
+    <thead><tr><th>Mapped value</th><th>Accepted keys</th></tr></thead>
+    <tbody>
+      <tr><td>Clock</td><td><code>CLK</code>, <code>CLOCK</code>, <code>TIME</code></td></tr>
+      <tr><td>Period</td><td><code>PER</code>, <code>PERIOD</code></td></tr>
+      <tr><td>Home score</td><td><code>HOME</code>, <code>HOM</code>, <code>HSCORE</code></td></tr>
+      <tr><td>Away score</td><td><code>AWAY</code>, <code>AWY</code>, <code>ASCORE</code></td></tr>
+      <tr><td>Home shots</td><td><code>HSHOTS</code>, <code>SHOTH</code>, <code>HSH</code></td></tr>
+      <tr><td>Away shots</td><td><code>ASHOTS</code>, <code>SHOTA</code>, <code>ASH</code></td></tr>
+      <tr><td>Clock running</td><td><code>RUN</code>, <code>CLOCKRUN</code>, <code>RUNNING</code></td></tr>
+      <tr><td>Penalty slots</td><td><code>HP1</code>, <code>HP2</code>, <code>AP1</code>, <code>AP2</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Relevant ESP Endpoints</h2>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/state</code></td><td>Current full gateway state</td></tr>
+      <tr><td><code>/api/state/clock</code></td><td>Clock and period payload</td></tr>
+      <tr><td><code>/api/state/full</code></td><td>Explicit full scoreboard payload</td></tr>
+      <tr><td><code>/serial.json</code></td><td>Legacy serial state, penalty array, RX diagnostics, and raw trace</td></tr>
+      <tr><td><code>/admin.json</code></td><td>Admin/debug representation of full state</td></tr>
+      <tr><td><code>/ws</code></td><td>Authenticated WebSocket state stream</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    NetFront ESP32 Scoreboard Bridge documentation. Generated 2026-08-10 from the confirmed Daktronics All Sport CG feed mapping.
+  </footer>
+</body>
+</html>

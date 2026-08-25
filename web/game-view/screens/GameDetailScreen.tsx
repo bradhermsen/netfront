@@ -353,6 +353,15 @@ export function GameDetailScreen() {
             sortPeriod: Number(penalty.period) || 0,
             sortTimeSeconds: parseClockToSeconds(penalty.timeInPeriod),
           })),
+          ...(summary?.shots || []).map((shot) => ({
+            eventId: `shot-${shot.eventId}`,
+            eventType: "shot" as const,
+            title: `${shot.teamName} SHOT`,
+            subtitle: "Shot on goal",
+            createdAtIso: formatEventTime(shot.period, shot.timeInPeriod),
+            sortPeriod: Number(shot.period) || 0,
+            sortTimeSeconds: parseClockToSeconds(shot.timeInPeriod),
+          })),
         ]
           .sort((a, b) => {
             const periodDiff = b.sortPeriod - a.sortPeriod;

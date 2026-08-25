@@ -333,7 +333,7 @@ type ScoreboardGatewaySettings = {
 type GameFeedEvent = {
   localId: string;
   gameId: string;
-  eventType: "Goal" | "Penalty" | "Goalie" | "Timeout";
+  eventType: "Goal" | "Penalty" | "Goalie" | "Timeout" | "Shot";
   teamId: string;
   teamName: string;
   playerId?: string;
@@ -466,6 +466,7 @@ function isValidEmailAddress(value: string) {
 
 const DEFAULT_LAN_API_BASE = getDefaultLanApiBase();
 const GOAL_OFFLINE_QUEUE_KEY = "netfront.goalOfflineQueue";
+const SHOT_OFFLINE_QUEUE_KEY = "netfront.shotOfflineQueue";
 const PENALTY_OFFLINE_QUEUE_KEY = "netfront.penaltyOfflineQueue";
 const GOALIE_OFFLINE_QUEUE_KEY = "netfront.goalieOfflineQueue";
 const FINALIZE_OFFLINE_QUEUE_KEY = "netfront.finalizeOfflineQueue";
@@ -3491,6 +3492,8 @@ export default function App() {
     const queueKey =
       event.eventType === "Penalty"
         ? PENALTY_OFFLINE_QUEUE_KEY
+        : event.eventType === "Shot"
+          ? SHOT_OFFLINE_QUEUE_KEY
         : event.eventType === "Goalie"
           ? GOALIE_OFFLINE_QUEUE_KEY
           : GOAL_OFFLINE_QUEUE_KEY;
@@ -3582,9 +3585,10 @@ export default function App() {
   }
 
   async function getPendingQueueCount() {
-    const [goalQueue, penaltyQueue, goalieQueue, finalizeQueue] =
+    const [goalQueue, shotQueue, penaltyQueue, goalieQueue, finalizeQueue] =
       await Promise.all([
         getQueuedEventsForKey(GOAL_OFFLINE_QUEUE_KEY),
+        getQueuedEventsForKey(SHOT_OFFLINE_QUEUE_KEY),
         getQueuedEventsForKey(PENALTY_OFFLINE_QUEUE_KEY),
         getQueuedEventsForKey(GOALIE_OFFLINE_QUEUE_KEY),
         getPendingFinalizeRequests(),
@@ -3592,6 +3596,7 @@ export default function App() {
 
     return (
       goalQueue.length +
+      shotQueue.length +
       penaltyQueue.length +
       goalieQueue.length +
       finalizeQueue.length
@@ -3753,6 +3758,7 @@ export default function App() {
 
       setSyncState("syncing");
       await flushOfflineGoalQueue();
+      await flushOfflineShotQueue();
       await flushOfflinePenaltyQueue();
       await flushOfflineGoalieQueue();
       await flushPendingFinalizeQueue();
@@ -3814,6 +3820,77 @@ export default function App() {
       trace("goal.sync.failed", { localId: event.localId, message });
       await offlineQueue(event);
       setGoalModalError("Offline: goal queued for later sync.");
+    }
+  }
+
+  async function postShotToBackend(event: GameFeedEvent) {
+    if (!event.gameId) {
+      throw new Error("Missing gameId for shot sync.");
+    }
+
+    if (event.eventType !== "Shot") {
+      throw new Error("Invalid shot event payload.");
+    }
+
+    const response = await fetch(
+      `${activeApiBase}/games/${event.gameId}/shots/events`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          TeamId: event.teamId,
+          Period: event.period,
+          TimeInPeriod: event.timeInPeriod,
+          ClientEventId: event.localId,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Shot event sync failed (${response.status}).`);
+    }
+  }
+
+  async function syncShotEvent(event: GameFeedEvent) {
+    setSyncState("syncing");
+    try {
+      await postShotToBackend(event);
+      trace("shot.event.sync.success", { localId: event.localId });
+      await refreshSyncStateFromQueue();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      trace("shot.event.sync.failed", { localId: event.localId, message });
+      await offlineQueue(event);
+    }
+  }
+
+  async function flushOfflineShotQueue() {
+    try {
+      const queued = await getQueuedEventsForKey(SHOT_OFFLINE_QUEUE_KEY);
+      if (queued.length === 0) return;
+
+      const unsent: GameFeedEvent[] = [];
+      for (const item of queued) {
+        try {
+          await postShotToBackend(item);
+        } catch {
+          unsent.push(item);
+        }
+      }
+
+      if (unsent.length === 0) {
+        await storageRemoveItem(SHOT_OFFLINE_QUEUE_KEY);
+      } else {
+        await storageSetItem(SHOT_OFFLINE_QUEUE_KEY, JSON.stringify(unsent));
+      }
+
+      trace("shot.event.offline.flush", {
+        attempted: queued.length,
+        remaining: unsent.length,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      trace("shot.event.offline.flush.error", { message });
     }
   }
 
@@ -4102,7 +4179,11 @@ export default function App() {
 
     updateScore(goalModal.scoringTeamId);
     addEventToFeed(goalEvent);
-    adjustShots(goalModal.scoringTeamId === homeTeamId ? "home" : "away", 1);
+    adjustShots(
+      goalModal.scoringTeamId === homeTeamId ? "home" : "away",
+      1,
+      false,
+    );
     autoReturnPulledGoalieIfNeeded(goalModal.scoringTeamId);
 
     const isHomeScoring = goalModal.scoringTeamId === homeTeamId;
@@ -5019,6 +5100,12 @@ export default function App() {
           { method: "DELETE" },
         );
       }
+      if (event.eventType === "Shot") {
+        await fetch(
+          `${activeApiBase}/games/${event.gameId}/shots/events/${event.localId}`,
+          { method: "DELETE" },
+        );
+      }
     } catch {
       // Backend delete is best-effort to keep local editing responsive.
     }
@@ -5035,6 +5122,24 @@ export default function App() {
     if (event.eventType === "Penalty") {
       setActivePenalties((prev) =>
         prev.filter((penalty) => penalty.id !== event.localId),
+      );
+    }
+
+    if (event.eventType === "Shot") {
+      const team = event.teamId === homeTeamId ? "home" : "away";
+      const transitioned = transitionShotTotals(
+        homeShotsByPeriod,
+        awayShotsByPeriod,
+        { team, period: event.period, delta: -1 },
+      );
+      setHomeShotsByPeriod(transitioned.home);
+      setAwayShotsByPeriod(transitioned.away);
+      const queuedShots = await getQueuedEventsForKey(SHOT_OFFLINE_QUEUE_KEY);
+      await storageSetItem(
+        SHOT_OFFLINE_QUEUE_KEY,
+        JSON.stringify(
+          queuedShots.filter((queued) => queued.localId !== event.localId),
+        ),
       );
     }
 
@@ -6025,7 +6130,11 @@ export default function App() {
     }
   }
 
-  function adjustShots(team: "home" | "away", delta: 1 | -1) {
+  function adjustShots(
+    team: "home" | "away",
+    delta: 1 | -1,
+    recordShotEvent = true,
+  ) {
     if (!session || !canControlGame(session.role)) return;
     const transitioned = transitionShotTotals(
       homeShotsByPeriod,
@@ -6052,6 +6161,48 @@ export default function App() {
       : goalieId
         ? findPlayerName(goalieTeamId, goalieId)
         : "Unknown Goalie";
+
+    if (recordShotEvent && nextGame?.gameId) {
+      if (delta === 1) {
+        const periodLengthMinutes = getPeriodLengthMinutes(session.periodLength);
+        const shotEvent: GameFeedEvent = {
+          localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          gameId: nextGame.gameId,
+          eventType: "Shot",
+          teamId: shootingTeamId,
+          teamName: shootingTeamName,
+          period: session.period,
+          timeInPeriod: computeElapsedTime(periodLengthMinutes, session.clock),
+          strength: "Even Strength",
+          createdAtIso: new Date().toISOString(),
+        };
+        addEventToFeed(shotEvent);
+        void syncShotEvent(shotEvent);
+      } else {
+        const shotToRemove = eventFeed.find(
+          (event) =>
+            event.eventType === "Shot" &&
+            event.teamId === shootingTeamId &&
+            event.period === session.period,
+        );
+        if (shotToRemove) {
+          setEventFeed((prev) =>
+            prev.filter((event) => event.localId !== shotToRemove.localId),
+          );
+          void getQueuedEventsForKey(SHOT_OFFLINE_QUEUE_KEY).then((queued) =>
+            storageSetItem(
+              SHOT_OFFLINE_QUEUE_KEY,
+              JSON.stringify(
+                queued.filter(
+                  (event) => event.localId !== shotToRemove.localId,
+                ),
+              ),
+            ),
+          );
+          void deleteEventFromBackend(shotToRemove);
+        }
+      }
+    }
 
     setShotHistory((prev) => [
       ...prev,
@@ -8524,7 +8675,8 @@ export default function App() {
                   Edit or delete selected event.
                 </Text>
                 <View style={styles.rowButtons}>
-                  {eventActionModal.event.eventType !== "Timeout" ? (
+                  {eventActionModal.event.eventType !== "Timeout" &&
+                  eventActionModal.event.eventType !== "Shot" ? (
                     <Pressable
                       style={styles.secondaryButton}
                       onPress={() => openEventEditModal(eventActionModal.event)}
@@ -10112,6 +10264,15 @@ export default function App() {
                             <Text style={styles.eventSubtitle}>
                               {event.penaltyType} • {event.infraction} •{" "}
                               {event.durationMinutes} min
+                            </Text>
+                          </>
+                        ) : event.eventType === "Shot" ? (
+                          <>
+                            <Text style={styles.eventTitle}>
+                              {event.teamName} SHOT
+                            </Text>
+                            <Text style={styles.eventSubtitle}>
+                              Shot on goal
                             </Text>
                           </>
                         ) : event.eventType === "Timeout" ? (

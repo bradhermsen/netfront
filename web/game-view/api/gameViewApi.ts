@@ -192,6 +192,7 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
     obj.penalties ?? obj.Penalties ?? [],
     "penalties",
   );
+  const shotsRaw = extractListPayload(obj.shots ?? obj.Shots ?? [], "shots");
 
   return {
     gameId: pickString(obj, "gameId", "GameId"),
@@ -222,6 +223,16 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
           "durationMinutes",
           "DurationMinutes",
         ),
+      };
+    }),
+    shots: shotsRaw.map((row) => {
+      const shot = asObject(row) || {};
+      return {
+        eventId: pickString(shot, "eventId", "EventId"),
+        period: pickNumber(shot, "period", "Period") || undefined,
+        timeInPeriod:
+          pickString(shot, "timeInPeriod", "TimeInPeriod") || undefined,
+        teamName: pickString(shot, "teamName", "TeamName"),
       };
     }),
     homeShotsP1: pickOptionalNumber(obj, "homeShotsP1", "HomeShotsP1"),

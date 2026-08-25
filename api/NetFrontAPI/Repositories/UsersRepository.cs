@@ -168,7 +168,8 @@ namespace NetFrontAPI.Repositories
                     t.Name AS TeamName,
                     t.Abbreviation,
                     t.LevelId,
-                    l.Name AS LevelName
+                    l.Name AS LevelName,
+                    t.TeamType
 
                 FROM Users u
                 LEFT JOIN AuthUsers au ON au.Id = u.Id
@@ -219,7 +220,8 @@ namespace NetFrontAPI.Repositories
                             Name AS TeamName,
                             Abbreviation,
                             LevelId,
-                            (SELECT Name FROM Levels WHERE Id = LevelId) AS LevelName
+                            (SELECT Name FROM Levels WHERE Id = LevelId) AS LevelName,
+                            TeamType
                         FROM Teams
                         WHERE OrganizationId = @OrgId;",
                         new { OrgId = user.OrganizationId }
@@ -258,7 +260,8 @@ namespace NetFrontAPI.Repositories
                     t.Name AS TeamName,
                     t.Abbreviation,
                     t.LevelId,
-                    l.Name AS LevelName
+                    l.Name AS LevelName,
+                    t.TeamType
 
                 FROM Users u
                 LEFT JOIN AuthUsers au ON au.Id = u.Id

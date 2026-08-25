@@ -8,6 +8,7 @@ namespace NetFrontAPI.DTOs
         public string TeamName { get; set; }
         public string? Abbreviation { get; set; }
         public string LevelName { get; set; }
+        public string? TeamType { get; set; }
 
     }
 }

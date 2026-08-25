@@ -214,12 +214,28 @@ function populateGameTeamTypeFilter(selectedTeamType = "") {
   }
 }
 
+function populateGameOrganizationDropdowns(selectedHomeTeamId = "", selectedAwayTeamId = "") {
+  const organizations = getOrganizations();
+  const homeOrganizationId = allTeams.find((team) => team.teamId === selectedHomeTeamId)?.organizationId || organizations[0]?.organizationId || "";
+  const awayOrganizationId = allTeams.find((team) => team.teamId === selectedAwayTeamId)?.organizationId || homeOrganizationId;
+
+  [["game-home-organization", homeOrganizationId], ["game-away-organization", awayOrganizationId]].forEach(([id, selectedId]) => {
+    const select = document.getElementById(id);
+    select.innerHTML = organizations.map((org) => `<option value="${org.organizationId}">${org.organizationName}</option>`).join("");
+    select.value = selectedId;
+  });
+}
+
 function populateGameTeamDropdowns({ selectedTeamType = "", selectedHomeTeamId = "", selectedAwayTeamId = "" } = {}) {
-  const sorted = getTeamsForModalTypeFilter(selectedTeamType)
-    .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
+  const typeFilteredTeams = getTeamsForModalTypeFilter(selectedTeamType);
 
   ["game-home-team", "game-away-team"].forEach((id) => {
     const el = document.getElementById(id);
+    const organizationSelectId = id === "game-home-team" ? "game-home-organization" : "game-away-organization";
+    const organizationId = document.getElementById(organizationSelectId)?.value || "";
+    const sorted = typeFilteredTeams
+      .filter((team) => !organizationId || team.organizationId === organizationId)
+      .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
     el.innerHTML = "";
     sorted.forEach((t) => {
       el.innerHTML += `<option value="${t.teamId}">${teamLabel(t)}</option>`;
@@ -250,11 +266,25 @@ function wireGameTeamTypeModalFilter() {
     });
 
     autoDefaultPeriodLengthFromHomeTeam();
+    loadManagedVenues();
   };
+
+  [["game-home-organization", "game-home-team"], ["game-away-organization", "game-away-team"]].forEach(([organizationId, teamId]) => {
+    document.getElementById(organizationId).onchange = () => {
+      populateGameTeamDropdowns({
+        selectedTeamType: teamTypeSelect.value,
+        selectedHomeTeamId: teamId === "game-home-team" ? "" : document.getElementById("game-home-team").value,
+        selectedAwayTeamId: teamId === "game-away-team" ? "" : document.getElementById("game-away-team").value,
+      });
+      autoDefaultPeriodLengthFromHomeTeam();
+      loadManagedVenues();
+    };
+  });
 }
 
 function populateScheduleDropdowns({ selectedTeamType = "", selectedHomeTeamId = "", selectedAwayTeamId = "" } = {}) {
   populateGameTeamTypeFilter(selectedTeamType);
+  populateGameOrganizationDropdowns(selectedHomeTeamId, selectedAwayTeamId);
   populateGameTeamDropdowns({ selectedTeamType, selectedHomeTeamId, selectedAwayTeamId });
   wireGameTeamTypeModalFilter();
 
@@ -1091,6 +1121,8 @@ async function openEditGame(id) {
 
     const g = await res.json();
 
+    populateGameOrganizationDropdowns(g.homeTeamId, g.awayTeamId);
+    populateGameTeamDropdowns({ selectedHomeTeamId: g.homeTeamId, selectedAwayTeamId: g.awayTeamId });
     document.getElementById("game-home-team").value = g.homeTeamId;
     document.getElementById("game-away-team").value = g.awayTeamId;
     setGameDateInputValue(formatInputDate(g.gameDateTime));

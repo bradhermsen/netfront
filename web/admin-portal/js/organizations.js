@@ -4,6 +4,25 @@
 
 const ORG_GROUP_PAGE_SIZE = 10;
 const orgGroupPaginationState = {};
+const orgFacilityEscape = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
+
+async function loadOrganizationFacilities(organizationId) {
+  const section = document.getElementById("org-facilities-section");
+  const divider = document.getElementById("org-facilities-divider");
+  const list = document.getElementById("org-facilities-list");
+  section.classList.remove("hidden");
+  divider.classList.remove("hidden");
+  document.getElementById("org-manage-facilities").href = `facilities.html?organizationId=${encodeURIComponent(organizationId)}`;
+  list.innerHTML = '<div class="org-facility-rinks">Loading arenas...</div>';
+  try {
+    const arenas = await FacilityApi.getForOrganization(organizationId);
+    list.innerHTML = arenas.length
+      ? arenas.map((arena) => `<div class="org-facility-row"><strong>${orgFacilityEscape(arena.name)} · ${orgFacilityEscape(arena.accessLevel)}</strong><div class="org-facility-rinks">${arena.rinks?.length ? arena.rinks.map((rink) => orgFacilityEscape(rink.name)).join(" · ") : "No rinks configured"}</div></div>`).join("")
+      : '<div class="org-facility-rinks">No Arenas are associated with this organization.</div>';
+  } catch (error) {
+    list.innerHTML = `<div class="org-facility-rinks">${orgFacilityEscape(error.message)}</div>`;
+  }
+}
 
 function resetOrgGroupPagination() {
   Object.keys(orgGroupPaginationState).forEach((k) => delete orgGroupPaginationState[k]);
@@ -372,6 +391,8 @@ function openAddOrganization() {
   AdminPage.editingId = null;
   AdminPage.config.clearForm();
   document.getElementById("orgModalTitle").textContent = "Add Organization";
+  document.getElementById("org-facilities-section").classList.add("hidden");
+  document.getElementById("org-facilities-divider").classList.add("hidden");
 
   document.getElementById("orgModalOverlay").classList.add("active");
 }
@@ -386,6 +407,7 @@ async function openEditOrganization(id) {
     AdminPage.config.populateForm(org);
 
     document.getElementById("orgModalTitle").textContent = "Edit Organization";
+    void loadOrganizationFacilities(id);
 
     document.getElementById("orgModal").classList.add("active");
   } catch (err) {

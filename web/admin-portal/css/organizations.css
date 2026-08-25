@@ -82,3 +82,11 @@
   color: var(--nf-text-muted);
   font-size: 0.8rem;
 }
+
+.org-facilities-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.org-facilities-heading .section-header { margin: 0; }
+.org-facilities-list { display: grid; gap: 8px; }
+.org-facility-row { padding: 10px 12px; border: 1px solid var(--nf-border-light); border-radius: var(--nf-radius-md); background: #111b30; }
+.org-facility-row strong { display: block; margin-bottom: 3px; }
+.org-facility-rinks { color: var(--nf-text-muted); font-size: 13px; }
+@media (max-width: 680px) { .org-facilities-heading { align-items: flex-start; flex-direction: column; } }

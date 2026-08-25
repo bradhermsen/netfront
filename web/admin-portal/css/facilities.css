@@ -1,0 +1,34 @@
+.facility-header-actions { display: flex; gap: 8px; }
+.facility-toolbar { display: grid; grid-template-columns: auto minmax(240px, 420px) 1fr; gap: 12px; align-items: center; margin-bottom: 18px; }
+.facility-toolbar label { font-weight: 700; }
+.facility-status { color: var(--nf-text-muted); text-align: right; }
+.facility-list { border-top: 1px solid var(--nf-border-light); }
+.facility-arena { padding: 18px 0 22px; border-bottom: 1px solid var(--nf-border-light); }
+.facility-arena-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
+.facility-arena h2 { margin: 0 0 4px; font-size: 20px; }
+.facility-meta { color: var(--nf-text-muted); font-size: 13px; }
+.facility-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.facility-rinks { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.facility-rinks th, .facility-rinks td { padding: 10px 12px; border-bottom: 1px solid var(--nf-border-light); text-align: left; vertical-align: middle; overflow-wrap: anywhere; }
+.facility-rinks th { color: var(--nf-text-muted); font-size: 12px; text-transform: uppercase; }
+.facility-rinks th:last-child, .facility-rinks td:last-child { width: 240px; text-align: right; }
+.facility-access, .facility-mode { display: inline-block; padding: 3px 7px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+.facility-access { background: #203e66; color: #d4e8ff; }
+.facility-mode.gateway { background: #14532d; color: #bbf7d0; }
+.facility-mode.manual { background: #374151; color: #e5e7eb; }
+.facility-empty { padding: 28px 0; color: var(--nf-text-muted); text-align: center; }
+.facility-checkboxes { display: flex; gap: 18px; align-items: center; padding-top: 24px; }
+.facility-checkboxes label, .facility-inline-check { display: flex; gap: 8px; align-items: center; }
+.facility-inline-check { margin-top: 14px; }
+.facility-readonly { opacity: 0.7; }
+@media (max-width: 760px) {
+  .facility-toolbar { grid-template-columns: 1fr; }
+  .facility-status { text-align: left; }
+  .facility-arena-header { flex-direction: column; }
+  .facility-actions { justify-content: flex-start; }
+  .facility-rinks, .facility-rinks tbody, .facility-rinks tr, .facility-rinks td { display: block; width: 100%; }
+  .facility-rinks thead { display: none; }
+  .facility-rinks tr { padding: 10px 0; border-bottom: 1px solid var(--nf-border-light); }
+  .facility-rinks td { border: 0; padding: 4px 0; }
+  .facility-rinks th:last-child, .facility-rinks td:last-child { width: 100%; text-align: left; }
+}

@@ -49,7 +49,7 @@ namespace NetFrontAPI.Functions
                 return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
 
             // SuperAdmin and OrgAdmin can view all games; other roles can view their team's games
-            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "TeamManager", "Coach", "Viewer"))
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "OrgOwner", "TeamManager", "Coach", "Viewer"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view games");
 
             var games = await _service.GetAllAsync();
@@ -84,7 +84,7 @@ namespace NetFrontAPI.Functions
             }
 
             // Other roles can view games
-            if (!_authorizationService.HasAnyRole(role, "OrgAdmin", "TeamManager", "Coach", "Viewer"))
+            if (!_authorizationService.HasAnyRole(role, "OrgAdmin", "OrgOwner", "TeamManager", "Coach", "Viewer"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to view game details");
 
             var gameData = await _service.GetByIdAsync(id);
@@ -109,12 +109,27 @@ namespace NetFrontAPI.Functions
                 return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
 
             // Only SuperAdmin and OrgAdmin can create games
-            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "OrgOwner"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Only SuperAdmin or OrgAdmin can create games");
 
             var dto = await req.ReadFromJsonAsync<GameCreateUpdateDto>();
-            await _service.CreateAsync(dto);
-            return req.CreateResponse(HttpStatusCode.Created);
+            if (dto == null)
+            {
+                var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badRequest.WriteAsJsonAsync(new { error = "Game details are required." });
+                return badRequest;
+            }
+            try
+            {
+                await _service.CreateAsync(dto);
+                return req.CreateResponse(HttpStatusCode.Created);
+            }
+            catch (ArgumentException ex)
+            {
+                var response = req.CreateResponse(HttpStatusCode.BadRequest);
+                await response.WriteAsJsonAsync(new { error = ex.Message });
+                return response;
+            }
         }
 
         [Function("UpdateGame")]
@@ -132,15 +147,30 @@ namespace NetFrontAPI.Functions
                 return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
 
             // SuperAdmin/OrgAdmin can update any game; Coach/TeamManager must be assigned to a team
-            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "OrgOwner"))
             {
                 if (!_authorizationService.HasAnyRole(role, "Coach", "TeamManager"))
                     return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient permissions to update games");
             }
 
             var dto = await req.ReadFromJsonAsync<GameCreateUpdateDto>();
-            await _service.UpdateAsync(id, dto);
-            return req.CreateResponse(HttpStatusCode.NoContent);
+            if (dto == null)
+            {
+                var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badRequest.WriteAsJsonAsync(new { error = "Game details are required." });
+                return badRequest;
+            }
+            try
+            {
+                await _service.UpdateAsync(id, dto);
+                return req.CreateResponse(HttpStatusCode.NoContent);
+            }
+            catch (ArgumentException ex)
+            {
+                var response = req.CreateResponse(HttpStatusCode.BadRequest);
+                await response.WriteAsJsonAsync(new { error = ex.Message });
+                return response;
+            }
         }
 
         [Function("DeleteGame")]
@@ -158,7 +188,7 @@ namespace NetFrontAPI.Functions
                 return await AuthorizationHelper.UnauthorizedResponse(req, "Invalid or expired token");
 
             // Only SuperAdmin and OrgAdmin can delete games
-            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
+            if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin", "OrgOwner"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Only SuperAdmin or OrgAdmin can delete games");
 
             await _service.DeleteAsync(id);

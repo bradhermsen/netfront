@@ -57,8 +57,11 @@ type NextGame = {
   homeTeamMascot?: string;
   awayTeamName?: string;
   awayTeamMascot?: string;
+  arenaId?: string;
+  rinkId?: string;
   arenaName?: string;
   rinkName: string;
+  gatewayAvailable?: boolean;
   gameTypeName?: string;
   periodLengthMinutes?: number;
   levelName?: string;
@@ -1393,11 +1396,25 @@ function normalizeNextGame(
       (typeof game.awayTeamMascot === "string" && game.awayTeamMascot) ||
       (typeof game.AwayTeamMascot === "string" && game.AwayTeamMascot) ||
       undefined,
+    arenaId:
+      (typeof game.arenaId === "string" && game.arenaId) ||
+      (typeof game.ArenaId === "string" && game.ArenaId) ||
+      undefined,
+    rinkId:
+      (typeof game.rinkId === "string" && game.rinkId) ||
+      (typeof game.RinkId === "string" && game.RinkId) ||
+      undefined,
     arenaName:
       (typeof game.arenaName === "string" && game.arenaName) ||
       (typeof game.ArenaName === "string" && game.ArenaName) ||
       undefined,
     rinkName,
+    gatewayAvailable:
+      typeof game.gatewayAvailable === "boolean"
+        ? game.gatewayAvailable
+        : typeof game.GatewayAvailable === "boolean"
+          ? game.GatewayAvailable
+          : false,
     gameTypeName:
       (typeof game.gameTypeName === "string" && game.gameTypeName) ||
       (typeof game.GameTypeName === "string" && game.GameTypeName) ||
@@ -5721,6 +5738,59 @@ export default function App() {
     });
   }
 
+  async function applyScheduledGatewayConfiguration(
+    game: NextGame,
+    accessCode: string,
+  ) {
+    if (!game.gameId) return;
+
+    try {
+      const response = await fetch(
+        `${activeApiBase}/games/${game.gameId}/gateway-mobile`,
+        { headers: { "x-netfront-access-code": accessCode } },
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const payload = (await response.json()) as {
+        gatewayAvailable?: boolean;
+        host?: string;
+        port?: number;
+        tokenSecret?: string;
+      };
+      const settings: ScoreboardGatewaySettings = payload.gatewayAvailable
+        ? {
+            enabled: true,
+            host: normalizeScoreboardHost(payload.host || ""),
+            port: normalizeScoreboardPort(String(payload.port || 80)),
+            tokenSecret: String(payload.tokenSecret || "").trim(),
+          }
+        : {
+            enabled: false,
+            host: scoreboardGatewaySettings.host,
+            port: scoreboardGatewaySettings.port,
+            tokenSecret: scoreboardGatewaySettings.tokenSecret,
+          };
+
+      setScoreboardGatewaySettings(settings);
+      setScoreboardSettingsDraft(settings);
+      await storageSetItem(
+        SCOREBOARD_GATEWAY_SETTINGS_KEY,
+        JSON.stringify(settings),
+      );
+      trace("scoreboard.gateway.schedule.applied", {
+        gameId: game.gameId,
+        mode: payload.gatewayAvailable ? "gateway" : "manual",
+        host: payload.gatewayAvailable ? settings.host : null,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      trace("scoreboard.gateway.schedule.failed", {
+        gameId: game.gameId,
+        message,
+      });
+    }
+  }
+
   async function loadNextGame(
     userId: string,
     refreshing = false,
@@ -5796,6 +5866,7 @@ export default function App() {
 
       // Required app state storage for next game.
       setNextGame(earliest);
+      await applyScheduledGatewayConfiguration(earliest, userId);
       setIsClosedGameNotice(false);
       setNextGameMessage("");
       trace("nextgame.load.selected", {

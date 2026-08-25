@@ -10,12 +10,9 @@ export interface GameEventRow {
 
 interface Props {
   events: GameEventRow[];
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
 }
 
-export function EventFeed({ events, currentPage, totalPages, onPageChange }: Props) {
+export function EventFeed({ events }: Props) {
   return (
     <section className="game-view-events-card">
       <h2 className="game-view-section-title">Event Feed</h2>
@@ -23,7 +20,7 @@ export function EventFeed({ events, currentPage, totalPages, onPageChange }: Pro
       {events.length === 0 ? (
         <p className="game-view-empty-text">No game events found.</p>
       ) : (
-        <ul className="game-view-events-list">
+        <ul className="game-view-events-list" aria-label="Game events" tabIndex={0}>
           {events.map((event) => (
             <li key={event.eventId} className="game-view-event-row">
               <div>
@@ -38,29 +35,6 @@ export function EventFeed({ events, currentPage, totalPages, onPageChange }: Pro
         </ul>
       )}
 
-      {totalPages > 1 ? (
-        <div className="game-view-pagination game-view-detail-pagination">
-          <button
-            className="game-view-pagination-btn"
-            type="button"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage <= 1}
-          >
-            Prev
-          </button>
-          <span className="game-view-pagination-label">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="game-view-pagination-btn"
-            type="button"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-          >
-            Next
-          </button>
-        </div>
-      ) : null}
     </section>
   );
 }

@@ -395,7 +395,10 @@ function openAddOrganization() {
   document.getElementById("org-facilities-section").classList.add("hidden");
   document.getElementById("org-facilities-divider").classList.add("hidden");
 
-  document.getElementById("orgModalOverlay").classList.add("active");
+  const overlay = document.getElementById("orgModalOverlay");
+  overlay.classList.remove("hidden");
+  overlay.classList.add("active");
+  document.getElementById("orgModal").classList.add("active");
 }
 
 // =========================================================
@@ -410,6 +413,9 @@ async function openEditOrganization(id) {
     document.getElementById("orgModalTitle").textContent = "Edit Organization";
     void loadOrganizationFacilities(id);
 
+    const overlay = document.getElementById("orgModalOverlay");
+    overlay.classList.remove("hidden");
+    overlay.classList.add("active");
     document.getElementById("orgModal").classList.add("active");
   } catch (err) {
     console.error("Failed to load organization:", err);

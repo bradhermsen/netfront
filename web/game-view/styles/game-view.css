@@ -681,6 +681,18 @@ body,
   padding: 0;
 }
 
+.game-view-events-list {
+  max-height: 24rem;
+  overflow-y: auto;
+  padding-right: 8px;
+  scrollbar-gutter: stable;
+}
+
+.game-view-events-list:focus-visible {
+  outline: 2px solid #f26f21;
+  outline-offset: 4px;
+}
+
 .game-view-roster-grid-wrap {
   margin-top: 12px;
   overflow-x: auto;

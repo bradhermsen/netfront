@@ -140,6 +140,22 @@ function setVenueMode(mode) {
   document.getElementById("game-venue-external").classList.toggle("active", venueMode === "external");
 }
 
+function managedArenaAddress(arena) {
+  return [arena?.streetAddress, arena?.city, arena?.state, arena?.postalCode].filter(Boolean).join(", ");
+}
+
+function updateVenueManagerActions() {
+  const organizationId = document.getElementById("game-organization")?.value || "";
+  const arenaId = document.getElementById("game-arena-id")?.value || "";
+  const addArena = document.getElementById("game-add-arena");
+  const addRink = document.getElementById("game-add-rink");
+  addArena.href = `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addArena`;
+  addRink.href = arenaId
+    ? `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addRink&arenaId=${encodeURIComponent(arenaId)}`
+    : "facilities.html";
+  addRink.setAttribute("aria-disabled", arenaId ? "false" : "true");
+}
+
 async function loadManagedVenues(selectedArenaId = "", selectedRinkId = "") {
   const organizationId = document.getElementById("game-organization").value;
   const results = organizationId ? [await FacilityApi.getForOrganization(organizationId).catch(() => [])] : [];
@@ -150,6 +166,9 @@ async function loadManagedVenues(selectedArenaId = "", selectedRinkId = "") {
   const arenaSelect = document.getElementById("game-arena-id");
   arenaSelect.innerHTML = `<option value="">Select Arena</option>${managedArenas.map((arena) => `<option value="${arena.arenaId}">${arena.name}</option>`).join("")}`;
   if (selectedArenaId && byId.has(selectedArenaId)) arenaSelect.value = selectedArenaId;
+  if (!selectedArenaId && document.getElementById("game-organization-team-side")?.value === "home") {
+    arenaSelect.value = managedArenas.find((arena) => arena.isPrimary)?.arenaId || "";
+  }
   populateManagedRinks(selectedRinkId);
 }
 
@@ -159,6 +178,9 @@ function populateManagedRinks(selectedRinkId = "") {
   const rinkSelect = document.getElementById("game-rink-id");
   rinkSelect.innerHTML = `<option value="">Select Rink</option>${rinks.map((rink) => `<option value="${rink.rinkId}">${rink.name}</option>`).join("")}`;
   if (selectedRinkId && rinks.some((rink) => rink.rinkId === selectedRinkId)) rinkSelect.value = selectedRinkId;
+  if (!selectedRinkId && arena && rinks.length) rinkSelect.value = rinks[0].rinkId;
+  document.getElementById("game-managed-arena-address").value = managedArenaAddress(arena);
+  updateVenueManagerActions();
   updateManagedGatewayStatus();
 }
 
@@ -188,6 +210,17 @@ function populateGameOrganizationDropdown(selectedTeamId = "") {
   select.value = selectedOrganizationId;
 }
 
+function populateOpponentOrganizationDropdown(selectedOpponentId = "") {
+  const select = document.getElementById("game-opponent-organization");
+  const selectedOpponent = allTeams.find((team) => team.teamId === selectedOpponentId);
+  select.innerHTML = `<option value="">All Organizations</option>${getOrganizations()
+    .map((org) => `<option value="${org.organizationId}">${org.organizationName}</option>`)
+    .join("")}<option value="external">External Teams</option>`;
+  select.value = selectedOpponent?.isExternal || !selectedOpponent?.organizationId
+    ? "external"
+    : selectedOpponent?.organizationId || "";
+}
+
 function populateGameTeamDropdowns({ selectedHomeTeamId = "", selectedAwayTeamId = "" } = {}) {
   const organizationId = document.getElementById("game-organization")?.value || "";
   const organizationTeamSide = document.getElementById("game-organization-team-side")?.value === "away" ? "away" : "home";
@@ -204,10 +237,14 @@ function populateGameTeamDropdowns({ selectedHomeTeamId = "", selectedAwayTeamId
 
   const organizationTeam = allTeams.find((team) => team.teamId === organizationSelect.value);
   const organizationTeamType = normalizeTeamTypeValue(organizationTeam?.teamType) || normalizeTeamTypeValue(organizationTeam?.gender);
+  const opponentOrganization = document.getElementById("game-opponent-organization")?.value || "";
   const opponents = allTeams
     .filter((team) => team.teamId !== organizationTeam?.teamId)
     .filter((team) => (normalizeTeamTypeValue(team.teamType) || normalizeTeamTypeValue(team.gender)) === organizationTeamType)
     .filter((team) => organizationTeam?.levelId ? team.levelId === organizationTeam.levelId : team.levelName === organizationTeam?.levelName)
+    .filter((team) => opponentOrganization === "external"
+      ? team.isExternal || !team.organizationId
+      : !opponentOrganization || team.organizationId === opponentOrganization)
     .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
   opponentSelect.innerHTML = opponents.map((team) => `<option value="${team.teamId}">${teamLabel(team)}</option>`).join("");
   if (selectedOpponentId && opponents.some((team) => team.teamId === selectedOpponentId)) opponentSelect.value = selectedOpponentId;
@@ -218,11 +255,21 @@ function wireGameOrganizationFilter() {
     populateGameTeamDropdowns();
     autoDefaultPeriodLengthFromHomeTeam();
     await loadManagedVenues();
+    setVenueMode(document.getElementById("game-arena-id").value ? "managed" : "external");
   };
-  document.getElementById("game-organization-team-side").onchange = () => {
+  document.getElementById("game-organization-team-side").onchange = async () => {
     populateGameTeamDropdowns();
     wireOrganizationTeamChange();
     autoDefaultPeriodLengthFromHomeTeam();
+    await loadManagedVenues();
+    setVenueMode(document.getElementById("game-arena-id").value ? "managed" : "external");
+  };
+  document.getElementById("game-opponent-organization").onchange = () => {
+    const organizationTeamSide = document.getElementById("game-organization-team-side")?.value === "away" ? "away" : "home";
+    populateGameTeamDropdowns({
+      selectedHomeTeamId: organizationTeamSide === "home" ? document.getElementById("game-home-team").value : "",
+      selectedAwayTeamId: organizationTeamSide === "away" ? document.getElementById("game-away-team").value : "",
+    });
   };
 }
 
@@ -240,7 +287,9 @@ function wireOrganizationTeamChange() {
 }
 
 function populateScheduleDropdowns({ selectedHomeTeamId = "", selectedAwayTeamId = "" } = {}) {
-  populateGameOrganizationDropdown(selectedHomeTeamId);
+  const organizationTeamSide = document.getElementById("game-organization-team-side")?.value === "away" ? "away" : "home";
+  populateGameOrganizationDropdown(organizationTeamSide === "home" ? selectedHomeTeamId : selectedAwayTeamId);
+  populateOpponentOrganizationDropdown(organizationTeamSide === "home" ? selectedAwayTeamId : selectedHomeTeamId);
   populateGameTeamDropdowns({ selectedHomeTeamId, selectedAwayTeamId });
   wireGameOrganizationFilter();
   wireOrganizationTeamChange();
@@ -1038,7 +1087,7 @@ async function openAddGame(options = {}) {
   document.getElementById("game-status").value = "Scheduled";
 
   await loadManagedVenues();
-  setVenueMode(managedArenas.length ? "managed" : "external");
+  setVenueMode(document.getElementById("game-arena-id").value ? "managed" : "external");
   wireVenueControls();
 
   wirePeriodLengthControls();

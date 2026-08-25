@@ -1351,6 +1351,11 @@ window.PageContentRegistry.schedulesModals = () => `
                 <option value="away">Away Team</option>
               </select>
             </div>
+
+            <div>
+              <label>Opponent Organization</label>
+              <select id="game-opponent-organization" class="nf-input"></select>
+            </div>
           </div>
 
           <div class="two-col">
@@ -1392,20 +1397,26 @@ window.PageContentRegistry.schedulesModals = () => `
           <h3 class="section-header">Location</h3>
 
           <div class="venue-mode-control" role="group" aria-label="Venue type">
-            <button id="game-venue-managed" type="button" class="venue-mode-button">Managed NetFront Venue</button>
-            <button id="game-venue-external" type="button" class="venue-mode-button active">External / Away Venue</button>
+            <button id="game-venue-managed" type="button" class="venue-mode-button">Arena Manager</button>
+            <button id="game-venue-external" type="button" class="venue-mode-button active">Other / One-time Arena</button>
           </div>
 
           <div id="game-managed-venue-fields" class="two-col hidden">
             <div><label>Arena</label><select id="game-arena-id" class="nf-input"><option value="">Select Arena</option></select></div>
             <div><label>Rink</label><select id="game-rink-id" class="nf-input"><option value="">Select Rink</option></select></div>
+            <div class="full-width-section"><label>Arena address</label><input id="game-managed-arena-address" class="nf-input" type="text" readonly placeholder="No address configured" /></div>
             <div class="full-width-section"><span id="game-gateway-status" class="venue-gateway-status">Select a rink to view scoreboard mode.</span></div>
           </div>
 
           <div id="game-external-venue-fields" class="two-col">
-            <div><label>Arena / Venue</label><input id="game-arena-custom" type="text" class="nf-input" placeholder="Arena or venue name" /></div>
+            <div><label>Arena</label><input id="game-arena-custom" type="text" class="nf-input" placeholder="Arena name" /></div>
             <div><label>Rink</label><input id="game-rink-custom" type="text" class="nf-input" placeholder="Optional rink name" /></div>
-            <div class="full-width-section"><label>Venue address</label><input id="game-venue-address" type="text" class="nf-input" placeholder="Optional address" /></div>
+            <div class="full-width-section"><label>Arena address</label><input id="game-venue-address" type="text" class="nf-input" placeholder="Optional address" /></div>
+          </div>
+
+          <div class="venue-manager-actions">
+            <a id="game-add-arena" class="nf-btn nf-btn-secondary" href="facilities.html" target="_blank" rel="noopener">Add Arena</a>
+            <a id="game-add-rink" class="nf-btn nf-btn-secondary" href="facilities.html" target="_blank" rel="noopener">Add Rink</a>
           </div>
         </div>
 

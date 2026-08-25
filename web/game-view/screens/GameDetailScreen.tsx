@@ -14,7 +14,6 @@ import {
 import type { ApiGameSummary, ApiGameSummaryReport, ApiTeamCoach } from "../types/gameView";
 import "../styles/game-view.css";
 
-const EVENTS_PAGE_SIZE = 5;
 const FINAL_STATUS_KEYS = new Set(["final", "completed", "closed"]);
 
 function readGameIdFromLocation() {
@@ -163,7 +162,6 @@ export function GameDetailScreen() {
   const [awayRoster, setAwayRoster] = useState<RosterPlayerRow[]>([]);
   const [homeCoaches, setHomeCoaches] = useState<ApiTeamCoach[]>([]);
   const [awayCoaches, setAwayCoaches] = useState<ApiTeamCoach[]>([]);
-  const [eventPage, setEventPage] = useState(1);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [events, setEvents] = useState<GameEventRow[]>([]);
   const [summaryReport, setSummaryReport] = useState<ApiGameSummaryReport | null>(null);
@@ -371,9 +369,6 @@ export function GameDetailScreen() {
           .map(({ sortPeriod: _sortPeriod, sortTimeSeconds: _sortTimeSeconds, ...event }) => event);
 
         setEvents(mappedEvents);
-        if (!isBackgroundRefresh) {
-          setEventPage(1);
-        }
       } catch (error) {
         if (cancelled) return;
         if (!isBackgroundRefresh) {
@@ -408,17 +403,6 @@ export function GameDetailScreen() {
 
     return () => clearInterval(timer);
   }, [gameId, isInProgress]);
-
-  const eventTotalPages = Math.max(1, Math.ceil(events.length / EVENTS_PAGE_SIZE));
-  const pagedEvents = useMemo(() => {
-    const safePage = Math.min(eventPage, eventTotalPages);
-    const start = (safePage - 1) * EVENTS_PAGE_SIZE;
-    return events.slice(start, start + EVENTS_PAGE_SIZE);
-  }, [eventPage, eventTotalPages, events]);
-
-  useEffect(() => {
-    setEventPage((prev) => Math.min(prev, eventTotalPages));
-  }, [eventTotalPages]);
 
   return (
     <main className="game-view-root">
@@ -474,12 +458,7 @@ export function GameDetailScreen() {
           </section>
 
           <section className="game-view-section">
-            <EventFeed
-              events={pagedEvents}
-              currentPage={Math.min(eventPage, eventTotalPages)}
-              totalPages={eventTotalPages}
-              onPageChange={(page) => setEventPage(Math.max(1, Math.min(page, eventTotalPages)))}
-            />
+            <EventFeed events={events} />
           </section>
 
           {summaryReport && isFinalStatus(summaryReport.status) ? (

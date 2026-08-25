@@ -22,6 +22,14 @@ async function initializeFacilities() {
   facilityState.organizationId = select.value;
   bindFacilityEvents();
   await loadFacilities();
+
+  const requestedAction = new URLSearchParams(window.location.search).get("action");
+  if (requestedAction === "addArena") openArenaModal();
+  if (requestedAction === "addRink") {
+    const requestedArenaId = new URLSearchParams(window.location.search).get("arenaId");
+    facilityState.arena = facilityState.arenas.find((arena) => arena.arenaId === requestedArenaId && arena.accessLevel === "Manage") || null;
+    if (facilityState.arena) openRinkModal();
+  }
 }
 
 async function loadFacilities() {

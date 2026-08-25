@@ -13,11 +13,12 @@ async function loadOrganizationFacilities(organizationId) {
   section.classList.remove("hidden");
   divider.classList.remove("hidden");
   document.getElementById("org-manage-facilities").href = `facilities.html?organizationId=${encodeURIComponent(organizationId)}`;
+  document.getElementById("org-add-arena").href = `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addArena`;
   list.innerHTML = '<div class="org-facility-rinks">Loading arenas...</div>';
   try {
     const arenas = await FacilityApi.getForOrganization(organizationId);
     list.innerHTML = arenas.length
-      ? arenas.map((arena) => `<div class="org-facility-row"><strong>${orgFacilityEscape(arena.name)} · ${orgFacilityEscape(arena.accessLevel)}</strong><div class="org-facility-rinks">${arena.rinks?.length ? arena.rinks.map((rink) => orgFacilityEscape(rink.name)).join(" · ") : "No rinks configured"}</div></div>`).join("")
+      ? arenas.map((arena) => `<div class="org-facility-row"><div><strong>${orgFacilityEscape(arena.name)} · ${orgFacilityEscape(arena.accessLevel)}</strong><div class="org-facility-rinks">${arena.rinks?.length ? arena.rinks.map((rink) => orgFacilityEscape(rink.name)).join(" · ") : "No rinks configured"}</div></div>${arena.accessLevel === "Manage" ? `<a class="nf-btn nf-btn-secondary" href="facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addRink&arenaId=${encodeURIComponent(arena.arenaId)}">Add Rink</a>` : ""}</div>`).join("")
       : '<div class="org-facility-rinks">No Arenas are associated with this organization.</div>';
   } catch (error) {
     list.innerHTML = `<div class="org-facility-rinks">${orgFacilityEscape(error.message)}</div>`;

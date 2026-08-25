@@ -1343,6 +1343,14 @@ window.PageContentRegistry.schedulesModals = () => `
               <label>Organization</label>
               <select id="game-organization" class="nf-input"></select>
             </div>
+
+            <div>
+              <label>Organization Team Is</label>
+              <select id="game-organization-team-side" class="nf-input">
+                <option value="home">Home Team</option>
+                <option value="away">Away Team</option>
+              </select>
+            </div>
           </div>
 
           <div class="two-col">

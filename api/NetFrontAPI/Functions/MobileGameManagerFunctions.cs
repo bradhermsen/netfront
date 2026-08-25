@@ -18,15 +18,21 @@ namespace NetFrontAPI.Functions
         private readonly ISqlConnectionFactory _connectionFactory;
         private readonly IEmailService _emailService;
         private readonly IGameSummaryReportService _gameSummaryReportService;
+        private readonly IGatewaySecretProtector _gatewaySecretProtector;
+        private readonly IAccessCodeService _accessCodeService;
 
         public MobileGameManagerFunctions(
             ISqlConnectionFactory connectionFactory,
             IEmailService emailService,
-            IGameSummaryReportService gameSummaryReportService)
+            IGameSummaryReportService gameSummaryReportService,
+            IGatewaySecretProtector gatewaySecretProtector,
+            IAccessCodeService accessCodeService)
         {
             _connectionFactory = connectionFactory;
             _emailService = emailService;
             _gameSummaryReportService = gameSummaryReportService;
+            _gatewaySecretProtector = gatewaySecretProtector;
+            _accessCodeService = accessCodeService;
         }
 
         [Function("GetUserTeamsForMobile")]
@@ -224,8 +230,14 @@ namespace NetFrontAPI.Functions
                     END AS OpponentName,
                     g.GameDateTime AS StartTime,
                     g.Status,
+                    g.ArenaId,
+                    g.RinkId,
                     g.ArenaName,
                     g.RinkName,
+                    CAST(CASE WHEN EXISTS (
+                        SELECT 1 FROM dbo.ScoreboardGateways sg
+                        WHERE sg.RinkId = g.RinkId AND sg.IsPrimary = 1 AND sg.IsActive = 1
+                    ) THEN 1 ELSE 0 END AS bit) AS GatewayAvailable,
                     gt.Name AS GameTypeName,
                     g.PeriodLengthMinutes,
                     l.Name AS LevelName,
@@ -331,6 +343,66 @@ namespace NetFrontAPI.Functions
 
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(nextGame);
+            return response;
+        }
+
+        [Function("GetGameGatewayForMobile")]
+        public async Task<HttpResponseData> GetGameGatewayForMobile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "games/{gameId:guid}/gateway-mobile")] HttpRequestData req,
+            Guid gameId)
+        {
+            var accessCode = req.Headers.TryGetValues("x-netfront-access-code", out var values)
+                ? values.FirstOrDefault()?.Trim().ToUpperInvariant()
+                : null;
+            if (string.IsNullOrWhiteSpace(accessCode) || !accessCode.StartsWith("GM-", StringComparison.OrdinalIgnoreCase))
+            {
+                var unauthorized = req.CreateResponse(HttpStatusCode.Unauthorized);
+                await unauthorized.WriteAsJsonAsync(new { error = "A valid Game Manager access code is required." });
+                return unauthorized;
+            }
+
+            var codeWithoutPrefix = accessCode[3..];
+            using var conn = _connectionFactory.CreateConnection();
+                        var authorization = await conn.QueryFirstOrDefaultAsync<MobileGatewayAuthorizationRow>(@"
+                                SELECT TOP 1 g.GameDateTime
+                                FROM dbo.Games g
+                                INNER JOIN dbo.Teams t ON t.Id IN (g.HomeTeamId, g.AwayTeamId)
+                                WHERE g.GameId = @GameId
+                                    AND (UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCode
+                                             OR UPPER(ISNULL(t.ScorekeeperCode, '')) = @CodeWithoutPrefix
+                                             OR 'GM-' + UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCode);",
+                new { GameId = gameId, AccessCode = accessCode, CodeWithoutPrefix = codeWithoutPrefix });
+                        if (authorization == null || !_accessCodeService.IsValidGameDay(authorization.GameDateTime))
+            {
+                var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
+                await forbidden.WriteAsJsonAsync(new { error = "The access code is not valid for this game." });
+                return forbidden;
+            }
+
+            var gateway = await conn.QueryFirstOrDefaultAsync<MobileGatewayRow>(@"
+                SELECT TOP 1 sg.GatewayId, sg.Name, sg.Host, sg.Port, sg.WebSocketSecretEncrypted
+                FROM dbo.Games g
+                INNER JOIN dbo.ScoreboardGateways sg ON sg.RinkId = g.RinkId
+                WHERE g.GameId = @GameId AND sg.IsPrimary = 1 AND sg.IsActive = 1
+                ORDER BY sg.UpdatedAt DESC;", new { GameId = gameId });
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            if (gateway == null)
+            {
+                await response.WriteAsJsonAsync(new { mode = "manual", gatewayAvailable = false });
+                return response;
+            }
+
+            await response.WriteAsJsonAsync(new
+            {
+                mode = "gateway",
+                gatewayAvailable = true,
+                gateway.GatewayId,
+                gateway.Name,
+                gateway.Host,
+                gateway.Port,
+                tokenSecret = _gatewaySecretProtector.Unprotect(gateway.WebSocketSecretEncrypted)
+            });
             return response;
         }
 
@@ -1793,8 +1865,11 @@ namespace NetFrontAPI.Functions
             public string OpponentName { get; set; } = string.Empty;
             public DateTime StartTime { get; set; }
             public string? Status { get; set; }
+            public Guid? ArenaId { get; set; }
+            public Guid? RinkId { get; set; }
             public string ArenaName { get; set; } = string.Empty;
             public string RinkName { get; set; } = string.Empty;
+            public bool GatewayAvailable { get; set; }
             public string? GameTypeName { get; set; }
             public int? PeriodLengthMinutes { get; set; }
             public string? LevelName { get; set; }
@@ -1809,6 +1884,20 @@ namespace NetFrontAPI.Functions
             public DateTime StartTime { get; set; }
             public string Status { get; set; } = string.Empty;
             public string OpponentName { get; set; } = "Opponent";
+        }
+
+        private class MobileGatewayRow
+        {
+            public Guid GatewayId { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string Host { get; set; } = string.Empty;
+            public int Port { get; set; }
+            public string WebSocketSecretEncrypted { get; set; } = string.Empty;
+        }
+
+        private class MobileGatewayAuthorizationRow
+        {
+            public DateTime GameDateTime { get; set; }
         }
 
         private class MobileSummaryGoalRow

@@ -6,6 +6,7 @@
 window.ROLES = {
   SuperAdmin: "SuperAdmin",
   OrgAdmin: "OrgAdmin",
+  OrgOwner: "OrgOwner",
   TeamManager: "TeamManager",
   Coach: "Coach",
   Viewer: "Viewer",
@@ -137,6 +138,7 @@ window.Auth = {
       window.ROLES.TeamManager,
       window.ROLES.SuperAdmin,
       window.ROLES.OrgAdmin,
+      window.ROLES.OrgOwner,
     );
   },
 
@@ -171,6 +173,14 @@ window.Auth = {
   // Check if user can manage users (SuperAdmin, OrgAdmin)
   canManageUsers() {
     return this.hasRole(window.ROLES.SuperAdmin, window.ROLES.OrgAdmin);
+  },
+
+  canManageFacilities() {
+    return this.hasRole(
+      window.ROLES.SuperAdmin,
+      window.ROLES.OrgAdmin,
+      window.ROLES.OrgOwner,
+    );
   },
 
   // Check if user can manage permissions (SuperAdmin only)

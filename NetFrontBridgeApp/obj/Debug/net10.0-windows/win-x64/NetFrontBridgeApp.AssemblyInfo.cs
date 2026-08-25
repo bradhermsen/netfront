@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NetFrontBridgeApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aa8474fd89227838d15a9deb8ae0b3cfd3d3beed")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ba58766c153b61f9c4e02ae9b699c53ce3e136de")]
 [assembly: System.Reflection.AssemblyProductAttribute("NetFrontBridgeApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NetFrontBridgeApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

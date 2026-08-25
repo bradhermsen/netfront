@@ -18,6 +18,8 @@ let allGameTypes = [];
 let allGameRounds = [];
 let allOfficials = [];
 let allGames = [];
+let managedArenas = [];
+let venueMode = "external";
 
 let currentGameId = null;
 let gameDatePicker = null;
@@ -128,6 +130,55 @@ function getTeamsForOrganization(organizationId) {
   }
 
   return allTeams.filter((team) => team.organizationId === organizationId);
+}
+
+function setVenueMode(mode) {
+  venueMode = mode === "managed" ? "managed" : "external";
+  document.getElementById("game-managed-venue-fields").classList.toggle("hidden", venueMode !== "managed");
+  document.getElementById("game-external-venue-fields").classList.toggle("hidden", venueMode !== "external");
+  document.getElementById("game-venue-managed").classList.toggle("active", venueMode === "managed");
+  document.getElementById("game-venue-external").classList.toggle("active", venueMode === "external");
+}
+
+async function loadManagedVenues(selectedArenaId = "", selectedRinkId = "") {
+  const teamIds = [document.getElementById("game-home-team").value, document.getElementById("game-away-team").value];
+  const organizationIds = [...new Set(teamIds.map((teamId) => allTeams.find((team) => team.teamId === teamId)?.organizationId).filter(Boolean))];
+  const results = await Promise.all(organizationIds.map((organizationId) => FacilityApi.getForOrganization(organizationId).catch(() => [])));
+  const byId = new Map();
+  results.flat().filter((arena) => arena.isActive).forEach((arena) => byId.set(arena.arenaId, arena));
+  managedArenas = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+  const arenaSelect = document.getElementById("game-arena-id");
+  arenaSelect.innerHTML = `<option value="">Select Arena</option>${managedArenas.map((arena) => `<option value="${arena.arenaId}">${arena.name}</option>`).join("")}`;
+  if (selectedArenaId && byId.has(selectedArenaId)) arenaSelect.value = selectedArenaId;
+  populateManagedRinks(selectedRinkId);
+}
+
+function populateManagedRinks(selectedRinkId = "") {
+  const arena = managedArenas.find((item) => item.arenaId === document.getElementById("game-arena-id").value);
+  const rinks = (arena?.rinks || []).filter((rink) => rink.isActive);
+  const rinkSelect = document.getElementById("game-rink-id");
+  rinkSelect.innerHTML = `<option value="">Select Rink</option>${rinks.map((rink) => `<option value="${rink.rinkId}">${rink.name}</option>`).join("")}`;
+  if (selectedRinkId && rinks.some((rink) => rink.rinkId === selectedRinkId)) rinkSelect.value = selectedRinkId;
+  updateManagedGatewayStatus();
+}
+
+function updateManagedGatewayStatus() {
+  const arena = managedArenas.find((item) => item.arenaId === document.getElementById("game-arena-id").value);
+  const rink = arena?.rinks.find((item) => item.rinkId === document.getElementById("game-rink-id").value);
+  const gateway = rink?.gateways?.find((item) => item.isPrimary && item.isActive);
+  document.getElementById("game-gateway-status").textContent = !rink
+    ? "Select a rink to view scoreboard mode."
+    : gateway || rink.gatewayAvailable
+      ? "NetFront Gateway configured for this rink."
+      : "No gateway configured. Game Manager will use manual scoreboard mode.";
+}
+
+function wireVenueControls() {
+  document.getElementById("game-venue-managed").onclick = () => setVenueMode("managed");
+  document.getElementById("game-venue-external").onclick = () => setVenueMode("external");
+  document.getElementById("game-arena-id").onchange = () => populateManagedRinks();
+  document.getElementById("game-rink-id").onchange = updateManagedGatewayStatus;
 }
 
 function getTeamsForModalTypeFilter(teamType) {
@@ -977,7 +1028,7 @@ async function downloadFinalPdf(gameId) {
 // =========================================================
 // MODALS: OPEN ADD / EDIT
 // =========================================================
-function openAddGame(options = {}) {
+async function openAddGame(options = {}) {
   currentGameId = null;
 
   initDateTimePickers();
@@ -990,10 +1041,9 @@ function openAddGame(options = {}) {
   document.getElementById("game-away-team").value = "";
   setGameDateInputValue("");
   setGameTimeInputValue("");
-  document.getElementById("game-arena-select").value = "";
   document.getElementById("game-arena-custom").value = "";
-  document.getElementById("game-rink-select").value = "";
   document.getElementById("game-rink-custom").value = "";
+  document.getElementById("game-venue-address").value = "";
   document.getElementById("game-type").value = "";
   document.getElementById("game-round").value = "";
   document.getElementById("game-referee-1").value = "";
@@ -1012,8 +1062,13 @@ function openAddGame(options = {}) {
     document.getElementById("game-away-team").value = options.selectedAwayTeamId;
   }
 
+  await loadManagedVenues();
+  setVenueMode(managedArenas.length ? "managed" : "external");
+  wireVenueControls();
+
   wirePeriodLengthControls();
-  document.getElementById("game-home-team").onchange = autoDefaultPeriodLengthFromHomeTeam;
+  document.getElementById("game-home-team").onchange = async () => { autoDefaultPeriodLengthFromHomeTeam(); await loadManagedVenues(); };
+  document.getElementById("game-away-team").onchange = () => loadManagedVenues();
   autoDefaultPeriodLengthFromHomeTeam();
 
   setGameModalBackgroundScrollLock(true);
@@ -1041,10 +1096,12 @@ async function openEditGame(id) {
     setGameDateInputValue(formatInputDate(g.gameDateTime));
     setGameTimeInputValue(formatInputTime(g.gameDateTime));
 
-    document.getElementById("game-arena-select").value = g.arenaName;
-    document.getElementById("game-arena-custom").value = "";
-    document.getElementById("game-rink-select").value = g.rinkName;
-    document.getElementById("game-rink-custom").value = "";
+    document.getElementById("game-arena-custom").value = g.arenaId ? "" : (g.arenaName || "");
+    document.getElementById("game-rink-custom").value = g.rinkId ? "" : (g.rinkName || "");
+    document.getElementById("game-venue-address").value = g.venueAddress || "";
+    await loadManagedVenues(g.arenaId || "", g.rinkId || "");
+    setVenueMode(g.arenaId && g.rinkId ? "managed" : "external");
+    wireVenueControls();
 
     document.getElementById("game-type").value = g.gameTypeId;
     document.getElementById("game-round").value = g.gameRoundId ?? "";
@@ -1057,7 +1114,8 @@ async function openEditGame(id) {
     document.getElementById("game-status").value = g.status;
 
     wirePeriodLengthControls();
-    document.getElementById("game-home-team").onchange = autoDefaultPeriodLengthFromHomeTeam;
+    document.getElementById("game-home-team").onchange = async () => { autoDefaultPeriodLengthFromHomeTeam(); await loadManagedVenues(); };
+    document.getElementById("game-away-team").onchange = () => loadManagedVenues();
   } catch (err) {
     console.error("Failed to load game for edit:", err);
     showMessage("Unable to load game details for editing", "error");
@@ -1081,12 +1139,11 @@ async function saveGame() {
     homeTeamId: document.getElementById("game-home-team").value,
     awayTeamId: document.getElementById("game-away-team").value,
     gameDateTime,
-    arenaName:
-      document.getElementById("game-arena-custom").value ||
-      document.getElementById("game-arena-select").value,
-    rinkName:
-      document.getElementById("game-rink-custom").value ||
-      document.getElementById("game-rink-select").value,
+    arenaId: venueMode === "managed" ? document.getElementById("game-arena-id").value || null : null,
+    rinkId: venueMode === "managed" ? document.getElementById("game-rink-id").value || null : null,
+    arenaName: venueMode === "external" ? document.getElementById("game-arena-custom").value : "",
+    rinkName: venueMode === "external" ? document.getElementById("game-rink-custom").value : "",
+    venueAddress: venueMode === "external" ? document.getElementById("game-venue-address").value || null : null,
     gameTypeId: parseInt(document.getElementById("game-type").value),
     gameRoundId: document.getElementById("game-round").value
       ? parseInt(document.getElementById("game-round").value)
@@ -1099,6 +1156,16 @@ async function saveGame() {
     notes: document.getElementById("game-notes").value,
     status: document.getElementById("game-status").value,
   };
+
+  if (venueMode === "managed" && (!payload.arenaId || !payload.rinkId)) {
+    showMessage("Select both a managed arena and rink", "error");
+    return;
+  }
+
+  if (venueMode === "external" && !payload.arenaName.trim()) {
+    showMessage("Enter an external arena or venue name", "error");
+    return;
+  }
 
   if (!payload.periodLengthMinutes) {
     showMessage("Please select a valid period length", "error");

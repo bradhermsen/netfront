@@ -2,34 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Organizations | NetFront Admin</title>
-    <!-- 🔐 AUTH + ROUTE PROTECTION (MUST LOAD FIRST) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arenas &amp; Gateways | NetFront Admin</title>
     <script src="../js/auth.js"></script>
     <script src="../js/guard.js"></script>
-
     <link rel="stylesheet" href="../css/global.css" />
     <link rel="stylesheet" href="../css/layout.css" />
     <link rel="stylesheet" href="../css/admin-shared.css" />
     <link rel="stylesheet" href="../css/modal.css" />
-    <link rel="stylesheet" href="../css/organizations.css" />
+    <link rel="stylesheet" href="../css/facilities.css" />
   </head>
-
   <body>
     <div id="layoutContainer"></div>
-
-    <!-- Shared System Scripts -->
     <script src="../js/layout-loader.js"></script>
     <script src="../js/page-content.js"></script>
-
-    <script>
-      loadLayout("organizations");
-    </script>
-
-    <!-- Page Scripts -->
+    <script>loadLayout("facilities");</script>
     <script src="../js/config-loader.js"></script>
-    <script src="../api/org-api.js"></script>
     <script src="../api/facility-api.js"></script>
-    <script src="../js/admin-page.js"></script>
-    <script src="../js/organizations.js"></script>
+    <script src="../js/facilities.js"></script>
   </body>
 </html>

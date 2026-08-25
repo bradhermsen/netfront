@@ -243,6 +243,17 @@ window.PageContentRegistry.teamsModals = () => `
         <!-- SEPARATOR -->
         <hr class="section-divider full-width-section" />
 
+        <!-- ARENAS & RINKS -->
+        <div id="org-facilities-section" class="full-width-section hidden">
+          <div class="org-facilities-heading">
+            <h3 class="section-header">Arenas &amp; Rinks</h3>
+            <a id="org-manage-facilities" class="nf-btn nf-btn-secondary" href="facilities.html">Manage Arenas &amp; Gateways</a>
+          </div>
+          <div id="org-facilities-list" class="org-facilities-list"></div>
+        </div>
+
+        <hr id="org-facilities-divider" class="section-divider full-width-section hidden" />
+
         <!-- SETTINGS -->
         <div class="full-width-section">
           <h3 class="section-header">Settings</h3>
@@ -1371,44 +1382,21 @@ window.PageContentRegistry.schedulesModals = () => `
         <div class="full-width-section">
           <h3 class="section-header">Location</h3>
 
-          <div class="two-col">
-            <div>
-              <label>Arena (select or type)</label>
-              <select id="game-arena-select" class="nf-input">
-                <option value="">Select Arena</option>
-                <option value="Four Seasons Centre">Four Seasons Centre</option>
-                <option value="Bud King Ice Arena">Bud King Ice Arena</option>
-                <option value="Riverside Arena">Riverside Arena</option>
-                <option value="Northfield Ice Arena">Northfield Ice Arena</option>
-                <option value="Albert Lea City Arena">Albert Lea City Arena</option>
-                <option value="Mankato All Seasons Arena">Mankato All Seasons Arena</option>
-                <option value="Faribault Ice Arena">Faribault Ice Arena</option>
-                <option value="Budking">Budking</option>
-              </select>
-            </div>
+          <div class="venue-mode-control" role="group" aria-label="Venue type">
+            <button id="game-venue-managed" type="button" class="venue-mode-button">Managed NetFront Venue</button>
+            <button id="game-venue-external" type="button" class="venue-mode-button active">External / Away Venue</button>
+          </div>
 
-            <div>
-              <label>Custom Arena</label>
-              <input id="game-arena-custom" type="text" class="nf-input" placeholder="Override arena name" />
-            </div>
+          <div id="game-managed-venue-fields" class="two-col hidden">
+            <div><label>Arena</label><select id="game-arena-id" class="nf-input"><option value="">Select Arena</option></select></div>
+            <div><label>Rink</label><select id="game-rink-id" class="nf-input"><option value="">Select Rink</option></select></div>
+            <div class="full-width-section"><span id="game-gateway-status" class="venue-gateway-status">Select a rink to view scoreboard mode.</span></div>
+          </div>
 
-            <div>
-              <label>Rink (select or type)</label>
-              <select id="game-rink-select" class="nf-input">
-                <option value="">Select Rink</option>
-                <option value="Rink 1">Rink 1</option>
-                <option value="Rink 2">Rink 2</option>
-                <option value="North">North</option>
-                <option value="South">South</option>
-                <option value="Main">Main</option>
-                <option value="West">West</option>
-              </select>
-            </div>
-
-            <div>
-              <label>Custom Rink</label>
-              <input id="game-rink-custom" type="text" class="nf-input" placeholder="Override rink name" />
-            </div>
+          <div id="game-external-venue-fields" class="two-col">
+            <div><label>Arena / Venue</label><input id="game-arena-custom" type="text" class="nf-input" placeholder="Arena or venue name" /></div>
+            <div><label>Rink</label><input id="game-rink-custom" type="text" class="nf-input" placeholder="Optional rink name" /></div>
+            <div class="full-width-section"><label>Venue address</label><input id="game-venue-address" type="text" class="nf-input" placeholder="Optional address" /></div>
           </div>
         </div>
 
@@ -1964,6 +1952,92 @@ window.PageContentRegistry.users = () => `
         <button id="userDeleteCancel" class="nf-btn nf-btn-secondary">Cancel</button>
         <button id="userDeleteConfirm" class="nf-btn nf-btn-danger">Delete</button>
       </div>
+    </div>
+  </div>
+`;
+
+//=================================================================
+// ARENAS, RINKS & GATEWAYS
+//=================================================================
+window.PageContentRegistry.facilities = () => `
+  <div class="page-header-block">
+    <div class="page-header-row">
+      <div class="page-header-text">
+        <h1 class="page-header">Arenas &amp; Gateways</h1>
+        <p class="page-subtext">Manage organization venues, rink surfaces, and optional scoreboard gateways</p>
+      </div>
+      <div class="page-header-actions facility-header-actions">
+        <button id="btnAssociateArena" class="nf-btn nf-btn-secondary">Associate Arena</button>
+        <button id="btnAddArena" class="nf-btn nf-btn-primary">Add Arena</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="facility-toolbar">
+    <label for="facilityOrganization">Organization</label>
+    <select id="facilityOrganization" class="nf-select"></select>
+    <span id="facilityStatus" class="facility-status" aria-live="polite"></span>
+  </div>
+
+  <div id="facilityList" class="facility-list"></div>
+`;
+
+window.PageContentRegistry.facilitiesModals = () => `
+  <div id="arenaModalOverlay" class="nf-modal-overlay">
+    <div class="nf-modal medium">
+      <div class="nf-modal-header"><h2 id="arenaModalTitle">Add Arena</h2><button class="modal-close" data-close-modal="arenaModalOverlay">×</button></div>
+      <div class="nf-modal-body">
+        <div class="full-width-section"><div class="two-col">
+          <div><label>Arena name</label><input id="arenaName" class="nf-input" /></div>
+          <div><label>Street address</label><input id="arenaStreet" class="nf-input" /></div>
+          <div><label>City</label><input id="arenaCity" class="nf-input" /></div>
+          <div><label>State</label><input id="arenaState" class="nf-input" /></div>
+          <div><label>Postal code</label><input id="arenaPostalCode" class="nf-input" /></div>
+          <div class="facility-checkboxes"><label><input id="arenaPrimary" type="checkbox" /> Primary arena</label><label><input id="arenaActive" type="checkbox" checked /> Active</label></div>
+        </div></div>
+      </div>
+      <div class="nf-modal-footer"><button class="nf-btn nf-btn-secondary" data-close-modal="arenaModalOverlay">Cancel</button><button id="saveArena" class="nf-btn nf-btn-primary">Save Arena</button></div>
+    </div>
+  </div>
+
+  <div id="associateArenaModalOverlay" class="nf-modal-overlay">
+    <div class="nf-modal small">
+      <div class="nf-modal-header"><h2>Associate Existing Arena</h2><button class="modal-close" data-close-modal="associateArenaModalOverlay">×</button></div>
+      <div class="nf-modal-body full">
+        <label>Arena</label><select id="associateArenaId" class="nf-input"></select>
+        <label>Organization access</label><select id="associateAccessLevel" class="nf-input"><option value="Use">Use</option><option value="Manage">Manage</option></select>
+        <label class="facility-inline-check"><input id="associatePrimary" type="checkbox" /> Primary arena</label>
+      </div>
+      <div class="nf-modal-footer"><button class="nf-btn nf-btn-secondary" data-close-modal="associateArenaModalOverlay">Cancel</button><button id="saveArenaAssociation" class="nf-btn nf-btn-primary">Associate</button></div>
+    </div>
+  </div>
+
+  <div id="rinkModalOverlay" class="nf-modal-overlay">
+    <div class="nf-modal small">
+      <div class="nf-modal-header"><h2 id="rinkModalTitle">Add Rink</h2><button class="modal-close" data-close-modal="rinkModalOverlay">×</button></div>
+      <div class="nf-modal-body full">
+        <label>Rink name</label><input id="rinkName" class="nf-input" />
+        <label>Display order</label><input id="rinkDisplayOrder" class="nf-input" type="number" min="0" value="0" />
+        <label class="facility-inline-check"><input id="rinkActive" type="checkbox" checked /> Active</label>
+      </div>
+      <div class="nf-modal-footer"><button class="nf-btn nf-btn-secondary" data-close-modal="rinkModalOverlay">Cancel</button><button id="saveRink" class="nf-btn nf-btn-primary">Save Rink</button></div>
+    </div>
+  </div>
+
+  <div id="gatewayModalOverlay" class="nf-modal-overlay">
+    <div class="nf-modal medium">
+      <div class="nf-modal-header"><h2 id="gatewayModalTitle">Configure Gateway</h2><button class="modal-close" data-close-modal="gatewayModalOverlay">×</button></div>
+      <div class="nf-modal-body">
+        <div class="full-width-section"><div class="two-col">
+          <div><label>Gateway name</label><input id="gatewayName" class="nf-input" /></div>
+          <div><label>Device MAC address</label><input id="gatewayMac" class="nf-input" placeholder="AA:BB:CC:DD:EE:FF" /></div>
+          <div><label>Host or IP address</label><input id="gatewayHost" class="nf-input" placeholder="192.168.1.150" /></div>
+          <div><label>WebSocket port</label><input id="gatewayPort" class="nf-input" type="number" min="1" max="65535" value="80" /></div>
+          <div class="full-width-section"><label>Authentication secret</label><input id="gatewaySecret" class="nf-input" type="password" autocomplete="new-password" /><small id="gatewaySecretHint">Required for a new gateway.</small></div>
+          <div class="facility-checkboxes"><label><input id="gatewayPrimary" type="checkbox" checked /> Primary gateway</label><label><input id="gatewayActive" type="checkbox" checked /> Active</label></div>
+        </div></div>
+      </div>
+      <div class="nf-modal-footer"><button class="nf-btn nf-btn-secondary" data-close-modal="gatewayModalOverlay">Cancel</button><button id="saveGateway" class="nf-btn nf-btn-primary">Save Gateway</button></div>
     </div>
   </div>
 `;

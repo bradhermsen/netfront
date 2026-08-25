@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NetFront Pricing &amp; Packages</title>
+  <style>
+    :root {
+      --navy: #0b1424;
+      --navy-soft: #14213a;
+      --ink: #172033;
+      --muted: #607087;
+      --line: #d9e0e8;
+      --paper: #ffffff;
+      --wash: #f3f6f9;
+      --orange: #f58220;
+      --orange-soft: #fff1e5;
+      --green: #19745a;
+    }
+
+    * { box-sizing: border-box; }
+
+    @page { size: Letter; margin: 0; }
+
+    body {
+      margin: 0;
+      background: #dce2e8;
+      color: var(--ink);
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.4;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      position: relative;
+      width: 8.5in;
+      height: 11in;
+      margin: 0 auto 18px;
+      padding: 0.58in 0.62in 0.54in;
+      overflow: hidden;
+      background: var(--paper);
+      break-after: page;
+    }
+
+    .page:last-child { break-after: auto; }
+
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 0.12in;
+      background: linear-gradient(90deg, var(--orange) 0 20%, var(--navy) 20% 100%);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 0.38in;
+      margin-bottom: 0.34in;
+    }
+
+    .logo {
+      width: 1.7in;
+      height: auto;
+      display: block;
+    }
+
+    .document-meta {
+      color: var(--muted);
+      font-size: 8.5pt;
+      letter-spacing: 0.06em;
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      max-width: 6.5in;
+      margin-bottom: 0.14in;
+      color: var(--navy);
+      font-size: 30pt;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-bottom: 0.18in;
+      color: var(--navy);
+      font-size: 19pt;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin-bottom: 0.08in;
+      color: var(--navy);
+      font-size: 12pt;
+      letter-spacing: 0;
+    }
+
+    .eyebrow {
+      margin-bottom: 0.08in;
+      color: var(--orange);
+      font-size: 9pt;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .lead {
+      max-width: 6.7in;
+      margin-bottom: 0.3in;
+      color: #44536a;
+      font-size: 12pt;
+      line-height: 1.5;
+    }
+
+    .principle {
+      display: grid;
+      grid-template-columns: 1.05in 1fr;
+      gap: 0.2in;
+      align-items: center;
+      margin: 0.2in 0 0.3in;
+      padding: 0.18in 0.22in;
+      border-left: 4px solid var(--orange);
+      background: var(--wash);
+    }
+
+    .principle strong {
+      color: var(--orange);
+      font-size: 10pt;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .tier-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.16in;
+    }
+
+    .tier {
+      min-height: 2.2in;
+      padding: 0.18in;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--paper);
+    }
+
+    .tier.recommended {
+      border: 2px solid var(--orange);
+      background: linear-gradient(180deg, var(--orange-soft), #ffffff 42%);
+    }
+
+    .tier-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.12in;
+    }
+
+    .tier-name {
+      color: var(--navy);
+      font-size: 16pt;
+      font-weight: 750;
+    }
+
+    .badge {
+      padding: 0.035in 0.08in;
+      border-radius: 3px;
+      background: var(--orange);
+      color: #fff;
+      font-size: 7.5pt;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .price {
+      margin: 0.06in 0 0.02in;
+      color: var(--navy);
+      font-size: 22pt;
+      font-weight: 750;
+      line-height: 1.1;
+    }
+
+    .price span {
+      color: var(--muted);
+      font-size: 9pt;
+      font-weight: 500;
+    }
+
+    .scale {
+      margin-bottom: 0.1in;
+      color: var(--orange);
+      font-size: 9.5pt;
+      font-weight: 700;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 0.18in;
+    }
+
+    li { margin-bottom: 0.035in; }
+
+    .small { font-size: 8.5pt; }
+    .muted { color: var(--muted); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.4pt;
+    }
+
+    th {
+      padding: 0.09in 0.07in;
+      background: var(--navy);
+      color: #fff;
+      font-size: 8pt;
+      font-weight: 650;
+      text-align: center;
+      vertical-align: bottom;
+    }
+
+    th:first-child { text-align: left; }
+
+    td {
+      padding: 0.075in 0.07in;
+      border-bottom: 1px solid var(--line);
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    td:first-child {
+      width: 35%;
+      color: var(--ink);
+      font-weight: 600;
+      text-align: left;
+    }
+
+    tbody tr:nth-child(even) { background: var(--wash); }
+
+    .check { color: var(--green); font-size: 11pt; font-weight: 800; }
+    .dash { color: #a8b2c0; }
+
+    .section-note {
+      margin-top: 0.16in;
+      padding: 0.12in 0.15in;
+      border-radius: 4px;
+      background: var(--wash);
+      color: var(--muted);
+      font-size: 8.5pt;
+    }
+
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.22in;
+    }
+
+    .panel {
+      padding: 0.18in;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .addon-list {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0;
+      margin-top: 0.08in;
+      border-top: 1px solid var(--line);
+    }
+
+    .addon-list div {
+      padding: 0.075in 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .addon-list div:nth-child(even) {
+      padding-left: 0.1in;
+      color: var(--navy);
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .roadmap {
+      margin-top: 0.22in;
+      padding: 0.2in 0.22in;
+      border: 1px solid #edc79f;
+      border-radius: 6px;
+      background: var(--orange-soft);
+    }
+
+    .roadmap-title {
+      display: flex;
+      align-items: center;
+      gap: 0.1in;
+      margin-bottom: 0.12in;
+    }
+
+    .roadmap-label {
+      padding: 0.035in 0.08in;
+      border: 1px solid var(--orange);
+      border-radius: 3px;
+      color: #9d4b08;
+      font-size: 7.5pt;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .terms {
+      display: grid;
+      grid-template-columns: 0.26in 1fr;
+      column-gap: 0.1in;
+      row-gap: 0.13in;
+      margin-top: 0.18in;
+    }
+
+    .term-number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 0.24in;
+      height: 0.24in;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #fff;
+      font-size: 8pt;
+      font-weight: 700;
+    }
+
+    .recommendation {
+      margin-top: 0.3in;
+      padding: 0.25in;
+      border-radius: 6px;
+      background: var(--navy);
+      color: #fff;
+    }
+
+    .recommendation h2 { color: #fff; }
+    .recommendation .price { color: #fff; }
+    .recommendation .price span { color: #bac5d4; }
+    .recommendation p { color: #d7dee8; }
+
+    .comparison-page header,
+    .options-page header,
+    .commercial-page header { margin-bottom: 0.25in; }
+
+    .comparison-page td { padding-top: 0.06in; padding-bottom: 0.06in; }
+    .comparison-page .section-note { margin-top: 0.1in; padding: 0.08in 0.12in; }
+
+    .options-page .section-note { margin-top: 0.1in; padding: 0.08in 0.12in; }
+    .options-page .roadmap { margin-top: 0.16in; padding: 0.15in 0.18in; }
+    .options-page .safeguards { margin-top: 0.16in; }
+    .options-page .safeguards li { margin-bottom: 0.02in; }
+
+    .commercial-page .lead { margin-bottom: 0.12in !important; }
+    .commercial-page .terms { margin-top: 0.14in; row-gap: 0.1in; }
+    .commercial-page .recommendation { margin-top: 0.2in; padding: 0.2in; }
+    .commercial-page .recommendation p { margin-bottom: 0.08in; }
+    .commercial-page .section-note { margin-top: 0.12in; padding: 0.08in 0.12in; }
+
+    footer {
+      position: absolute;
+      right: 0.62in;
+      bottom: 0.25in;
+      left: 0.62in;
+      display: flex;
+      justify-content: space-between;
+      padding-top: 0.08in;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 7.5pt;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page { margin: 0; }
+    }
+  </style>
+</head>
+<body>
+  <section class="page">
+    <header>
+      <img class="logo" src="../web/admin-portal/assets/NF_Logo_Default.png" alt="NetFront">
+      <div class="document-meta">Pricing framework<br>August 2026</div>
+    </header>
+
+    <div class="eyebrow">Game operations, from roster to final report</div>
+    <h1>Pricing &amp; Packages</h1>
+    <p class="lead">A seasonal subscription model for clubs, associations, and leagues that need reliable administration, game-day scoring, public results, and official reporting.</p>
+
+    <div class="principle">
+      <strong>Pricing principle</strong>
+      <span>Price by organization scale, active teams, and scheduled games. Include the people who make the platform work: administrators, coaches, operators, and unlimited public viewers.</span>
+    </div>
+
+    <div class="tier-grid">
+      <article class="tier">
+        <div class="tier-top"><div class="tier-name">Pilot</div></div>
+        <div class="price">$750 <span>/ season</span></div>
+        <div class="scale">Up to 4 teams · 50 games</div>
+        <ul class="small">
+          <li>Complete core workflow for one evaluation season</li>
+          <li>Admin Portal, Game Manager, and public Game View</li>
+          <li>Game summaries and email delivery</li>
+          <li>Guided initial setup and email support</li>
+        </ul>
+      </article>
+
+      <article class="tier recommended">
+        <div class="tier-top"><div class="tier-name">Club</div><div class="badge">Recommended</div></div>
+        <div class="price">$2,400 <span>/ season</span></div>
+        <div class="scale">Up to 15 teams · 250 games</div>
+        <ul class="small">
+          <li>Full roster, schedule, and game-day operations</li>
+          <li>Multiple administrators and team managers</li>
+          <li>Offline event sync and tablet recovery</li>
+          <li>Standard scoreboard integration support</li>
+        </ul>
+      </article>
+
+      <article class="tier">
+        <div class="tier-top"><div class="tier-name">Association</div></div>
+        <div class="price">$4,800 <span>/ season</span></div>
+        <div class="scale">Up to 40 teams · 750 games</div>
+        <ul class="small">
+          <li>Multi-level and multi-division administration</li>
+          <li>Assisted roster and schedule imports</li>
+          <li>Advanced operational reports</li>
+          <li>Priority game-day support and admin training</li>
+        </ul>
+      </article>
+
+      <article class="tier">
+        <div class="tier-top"><div class="tier-name">League</div></div>
+        <div class="price">From $9,500 <span>/ year</span></div>
+        <div class="scale">Multiple organizations · Custom limits</div>
+        <ul class="small">
+          <li>Central league administration and reporting</li>
+          <li>Custom imports, integrations, and retention</li>
+          <li>Dedicated onboarding and named support contact</li>
+          <li>Contracted support and availability terms</li>
+        </ul>
+      </article>
+    </div>
+
+    <footer><span>NetFront Pricing &amp; Packages</span><span>1 / 4</span></footer>
+  </section>
+
+  <section class="page comparison-page">
+    <header>
+      <img class="logo" src="../web/admin-portal/assets/NF_Logo_Default.png" alt="NetFront">
+      <div class="document-meta">Package comparison</div>
+    </header>
+
+    <div class="eyebrow">Current NetFront modules</div>
+    <h2>What each package includes</h2>
+
+    <table aria-label="NetFront package comparison">
+      <thead>
+        <tr><th>Capability</th><th>Pilot</th><th>Club</th><th>Association</th><th>League</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Active teams</td><td>4</td><td>15</td><td>40</td><td>Custom</td></tr>
+        <tr><td>Scheduled games</td><td>50</td><td>250</td><td>750</td><td>Custom</td></tr>
+        <tr><td>Public viewers</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td></tr>
+        <tr><td>Admin Portal</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Team, player, and roster management</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Season and schedule management</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Game Manager mobile application</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Goals, penalties, shots, and event feed</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Game summary PDF and email delivery</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Public Game View</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Role and access-code security</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Offline event synchronization</td><td>Standard</td><td>Full</td><td>Full</td><td>Full</td></tr>
+        <tr><td>Tablet recovery workflow</td><td class="dash">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Scoreboard integration support</td><td class="dash">—</td><td>Standard</td><td>Priority</td><td>Custom</td></tr>
+        <tr><td>Assisted data import</td><td class="dash">—</td><td>Templates</td><td>Included</td><td>Custom</td></tr>
+        <tr><td>Remote administrator training</td><td>Setup</td><td class="dash">—</td><td>1 session</td><td>Custom</td></tr>
+        <tr><td>Support</td><td>Email</td><td>Standard</td><td>Priority</td><td>Contracted</td></tr>
+        <tr><td>Multiple organizations</td><td class="dash">—</td><td class="dash">—</td><td class="dash">—</td><td class="check">✓</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-note"><strong>Pilot eligibility:</strong> available to a new organization for one season. A season may cover up to 12 months. Historical teams and completed games do not count toward active limits.</div>
+
+    <footer><span>NetFront Pricing &amp; Packages</span><span>2 / 4</span></footer>
+  </section>
+
+  <section class="page options-page">
+    <header>
+      <img class="logo" src="../web/admin-portal/assets/NF_Logo_Default.png" alt="NetFront">
+      <div class="document-meta">Options &amp; roadmap</div>
+    </header>
+
+    <div class="eyebrow">Adapt NetFront to your operation</div>
+    <h2>Add-ons and services</h2>
+
+    <div class="two-column">
+      <div class="panel">
+        <h3>Capacity &amp; software</h3>
+        <div class="addon-list small">
+          <div>Additional active team</div><div>$150 / season</div>
+          <div>Additional 100 games</div><div>$300 / season</div>
+          <div>Scoreboard Connect</div><div>$600 / venue</div>
+          <div>Premium game-day support</div><div>$1,500 / season</div>
+          <div>Custom branding/domain</div><div>$750 + $500/yr</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Hardware &amp; professional services</h3>
+        <div class="addon-list small">
+          <div>Scoreboard gateway hardware</div><div>$495–$795</div>
+          <div>Standard data migration</div><div>$750</div>
+          <div>Complex data migration</div><div>From $2,500</div>
+          <div>Custom scoreboard model</div><div>From $2,500</div>
+          <div>Additional remote training</div><div>$250 / session</div>
+          <div>On-site services</div><div>$1,000 / day + travel</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-note">Hardware, installation, travel, replacement units, venue cabling, taxes, and third-party services are quoted separately unless explicitly included in an order.</div>
+
+    <div class="roadmap">
+      <div class="roadmap-title"><h3 style="margin:0">Future product modules</h3><span class="roadmap-label">Not currently for sale</span></div>
+      <p class="small muted">The following price positions are planning targets only. These modules should be added to proposals after product approval, implementation, and production-readiness review.</p>
+
+      <div class="two-column">
+        <div>
+          <h3>StatManager</h3>
+          <p class="small">Proposed detailed game-stat capture with team-scoped operators and concurrent writer assignments.</p>
+          <p class="small"><strong>Planning target:</strong> $1,500 per organization/season or $75–$125 per team/season.</p>
+        </div>
+        <div>
+          <h3>Tournament Manager</h3>
+          <p class="small">Proposed tournament scheduling and bracket operations as an event-based product.</p>
+          <p class="small"><strong>Planning target:</strong> $500–$1,500 per tournament, based on teams and duration.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="safeguards">
+      <h3>Pricing safeguards</h3>
+      <ul class="small muted">
+        <li>Keep scoreboard hardware separate from recurring software pricing.</li>
+        <li>Scope custom integrations before committing to a fixed fee.</li>
+        <li>Use fair-use controls for email and PDF volume without exposing per-event metering.</li>
+        <li>Review third-party licensing and delivery costs as customer volume grows.</li>
+      </ul>
+    </div>
+
+    <footer><span>NetFront Pricing &amp; Packages</span><span>3 / 4</span></footer>
+  </section>
+
+  <section class="page commercial-page">
+    <header>
+      <img class="logo" src="../web/admin-portal/assets/NF_Logo_Default.png" alt="NetFront">
+      <div class="document-meta">Commercial framework</div>
+    </header>
+
+    <div class="eyebrow">Simple terms that encourage adoption</div>
+    <h2>Recommended commercial structure</h2>
+    <p class="lead" style="font-size:11pt;margin-bottom:0.18in">NetFront works best when the whole operation participates. Avoid per-user charges that discourage directors, coaches, operators, and volunteers from using the system.</p>
+
+    <div class="terms">
+      <div class="term-number">1</div><div><strong>Seasonal subscription.</strong> Bill Pilot, Club, and Association annually, aligned to the customer’s operating season and covering no more than 12 months.</div>
+      <div class="term-number">2</div><div><strong>Unlimited viewers.</strong> Public Game View access remains unlimited. Include reasonable administrator, coach, manager, and game-operator accounts.</div>
+      <div class="term-number">3</div><div><strong>Usage boundaries.</strong> Count active teams and scheduled games. Do not count archived teams or completed historical seasons against current capacity.</div>
+      <div class="term-number">4</div><div><strong>Commitment incentive.</strong> Offer up to 10% off a two-year agreement. Reserve multi-organization volume pricing for Association and League contracts.</div>
+      <div class="term-number">5</div><div><strong>No permanent free tier.</strong> Use the one-season Pilot to lower adoption risk while covering onboarding and game-day support costs.</div>
+      <div class="term-number">6</div><div><strong>Clear proposal scope.</strong> Document included teams, games, venues, integrations, support hours, migration work, and hardware on every order.</div>
+    </div>
+
+    <div class="recommendation">
+      <div class="eyebrow">Recommended launch offer</div>
+      <h2>Lead with Club</h2>
+      <div class="price">$2,400 <span>/ organization / season</span></div>
+      <p>Club is the strongest default package: enough capacity for an established program, the complete game-day workflow, and a price that reflects operational value rather than positioning NetFront as a basic scoring app.</p>
+      <p style="margin-bottom:0"><strong style="color:#fff">Acquisition path:</strong> offer qualified new organizations one Pilot season at $750, then move them to Club or Association based on active scale.</p>
+    </div>
+
+    <div class="section-note"><strong>Pricing status:</strong> recommended launch framework for customer discovery and commercial validation. Final quotes should reflect deployment scope, service requirements, taxes, and contract terms.</div>
+
+    <footer><span>NetFront Pricing &amp; Packages</span><span>4 / 4</span></footer>
+  </section>
+</body>
+</html>

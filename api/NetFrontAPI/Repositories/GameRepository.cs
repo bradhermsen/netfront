@@ -29,8 +29,11 @@ namespace NetFrontAPI.Repositories
                     g.AwayTeamId,
                     at.Name AS AwayTeamName,
                     g.GameDateTime,
+                    g.ArenaId,
+                    g.RinkId,
                     g.ArenaName,
                     g.RinkName,
+                    g.VenueAddress,
                     gt.Name AS GameTypeName,
                     gr.RoundName AS GameRoundName,
                     NULLIF(LTRIM(RTRIM(CONCAT(COALESCE(r1.FirstName, ''), ' ', COALESCE(r1.LastName, '')))), '') AS Referee1,
@@ -95,8 +98,11 @@ namespace NetFrontAPI.Repositories
                     g.AwayTeamId,
                     at.Name AS AwayTeamName,
                     g.GameDateTime,
+                    g.ArenaId,
+                    g.RinkId,
                     g.ArenaName,
                     g.RinkName,
+                    g.VenueAddress,
                     g.GameTypeId,
                     gt.Name AS GameTypeName,
                     g.GameRoundId,
@@ -173,6 +179,18 @@ namespace NetFrontAPI.Repositories
             return await _db.QueryFirstOrDefaultAsync<string?>(sql, new { TeamId = teamId });
         }
 
+                public async Task<ManagedVenueSnapshotDto?> GetManagedVenueAsync(Guid arenaId, Guid rinkId)
+                {
+                        return await _db.QueryFirstOrDefaultAsync<ManagedVenueSnapshotDto>(@"
+                                SELECT a.ArenaId, r.RinkId, a.Name AS ArenaName, r.Name AS RinkName,
+                                             NULLIF(CONCAT_WS(', ', NULLIF(a.StreetAddress, ''), NULLIF(a.City, ''), NULLIF(a.State, ''), NULLIF(a.PostalCode, '')), '') AS VenueAddress
+                                FROM dbo.Arenas a
+                                INNER JOIN dbo.Rinks r ON r.ArenaId = a.ArenaId
+                                WHERE a.ArenaId = @ArenaId AND r.RinkId = @RinkId
+                                    AND a.IsActive = 1 AND r.IsActive = 1;",
+                                new { ArenaId = arenaId, RinkId = rinkId });
+                }
+
         // =========================================================
         // CREATE
         // =========================================================
@@ -184,8 +202,11 @@ namespace NetFrontAPI.Repositories
                     HomeTeamId,
                     AwayTeamId,
                     GameDateTime,
+                    ArenaId,
+                    RinkId,
                     ArenaName,
                     RinkName,
+                    VenueAddress,
                     GameTypeId,
                     GameRoundId,
                     PeriodLengthMinutes,
@@ -199,8 +220,11 @@ namespace NetFrontAPI.Repositories
                     @HomeTeamId,
                     @AwayTeamId,
                     @GameDateTime,
+                    @ArenaId,
+                    @RinkId,
                     @ArenaName,
                     @RinkName,
+                    @VenueAddress,
                     @GameTypeId,
                     @GameRoundId,
                     @PeriodLengthMinutes,
@@ -229,8 +253,11 @@ namespace NetFrontAPI.Repositories
                     dto.HomeTeamId,
                     dto.AwayTeamId,
                     dto.GameDateTime,
+                    dto.ArenaId,
+                    dto.RinkId,
                     dto.ArenaName,
                     dto.RinkName,
+                    dto.VenueAddress,
                     dto.GameTypeId,
                     dto.GameRoundId,
                     PeriodLengthMinutes = dto.PeriodLengthMinutes ?? 17,
@@ -261,8 +288,11 @@ namespace NetFrontAPI.Repositories
                     HomeTeamId = @HomeTeamId,
                     AwayTeamId = @AwayTeamId,
                     GameDateTime = @GameDateTime,
+                    ArenaId = @ArenaId,
+                    RinkId = @RinkId,
                     ArenaName = @ArenaName,
                     RinkName = @RinkName,
+                    VenueAddress = @VenueAddress,
                     GameTypeId = @GameTypeId,
                     GameRoundId = @GameRoundId,
                     PeriodLengthMinutes = @PeriodLengthMinutes,
@@ -287,8 +317,11 @@ namespace NetFrontAPI.Repositories
                     dto.HomeTeamId,
                     dto.AwayTeamId,
                     dto.GameDateTime,
+                    dto.ArenaId,
+                    dto.RinkId,
                     dto.ArenaName,
                     dto.RinkName,
+                    dto.VenueAddress,
                     dto.GameTypeId,
                     dto.GameRoundId,
                     PeriodLengthMinutes = dto.PeriodLengthMinutes ?? 17,

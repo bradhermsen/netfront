@@ -9,8 +9,11 @@ namespace NetFrontAPI.DTOs
 
         public DateTime GameDateTime { get; set; }
 
+        public Guid? ArenaId { get; set; }
+        public Guid? RinkId { get; set; }
         public string ArenaName { get; set; }
         public string RinkName { get; set; }
+        public string? VenueAddress { get; set; }
 
         public int GameTypeId { get; set; }
         public int? GameRoundId { get; set; }

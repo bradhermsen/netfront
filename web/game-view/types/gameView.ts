@@ -134,11 +134,19 @@ export interface ApiSummaryPenalty {
   durationMinutes: number;
 }
 
+export interface ApiSummaryShot {
+  eventId: string;
+  period?: number;
+  timeInPeriod?: string;
+  teamName: string;
+}
+
 export interface ApiGameSummary {
   gameId: string;
   currentPeriod?: number;
   goals: ApiSummaryGoal[];
   penalties: ApiSummaryPenalty[];
+  shots: ApiSummaryShot[];
   homeShotsP1?: number;
   homeShotsP2?: number;
   homeShotsP3?: number;

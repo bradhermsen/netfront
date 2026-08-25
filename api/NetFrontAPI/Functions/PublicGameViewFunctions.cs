@@ -207,6 +207,20 @@ namespace NetFrontAPI.Functions
             }
 
             var liveStatus = await GetLiveStatusAsync(gameId);
+                        using var conn = _connectionFactory.CreateConnection();
+                        var shots = (await conn.QueryAsync(@"
+                                SELECT
+                                        ge.Id AS EventId,
+                                        ge.Period,
+                                        ge.TimeInPeriod,
+                                        t.Name AS TeamName
+                                FROM dbo.GameEvents ge
+                                INNER JOIN dbo.Teams t ON t.Id = ge.TeamId
+                                WHERE ge.GameId = @GameId
+                                    AND ge.EventType = 'Shot'
+                                ORDER BY ge.Period, ge.TimeInPeriod, ge.CreatedAt;",
+                                new { GameId = gameId })).ToArray();
+
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(new
             {
@@ -234,6 +248,7 @@ namespace NetFrontAPI.Functions
                     penalty.Infraction,
                     penalty.DurationMinutes,
                 }),
+                Shots = shots,
                 HomeShotsP1 = report.HomeShots.P1,
                 HomeShotsP2 = report.HomeShots.P2,
                 HomeShotsP3 = report.HomeShots.P3,

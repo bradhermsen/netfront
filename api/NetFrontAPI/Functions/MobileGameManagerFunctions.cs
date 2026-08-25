@@ -380,6 +380,21 @@ namespace NetFrontAPI.Functions
                 WHERE gp.GameId = @GameId
                 ORDER BY gp.Period, gp.TimeInPeriod, gp.CreatedAt;";
 
+                        const string shotEventsSql = @"
+                                SELECT
+                                        ge.Id AS EventId,
+                                        ge.GameId,
+                                        ge.Period,
+                                        ge.TimeInPeriod,
+                                        ge.TeamId,
+                                        t.Name AS TeamName,
+                                        ge.CreatedAt
+                                FROM dbo.GameEvents ge
+                                INNER JOIN dbo.Teams t ON t.Id = ge.TeamId
+                                WHERE ge.GameId = @GameId
+                                    AND ge.EventType = 'Shot'
+                                ORDER BY ge.Period, ge.TimeInPeriod, ge.CreatedAt;";
+
             const string shotsSql = @"
                 IF OBJECT_ID('dbo.GameStatsSnapshots', 'U') IS NULL
                 BEGIN
@@ -443,6 +458,9 @@ namespace NetFrontAPI.Functions
                     DurationLabel = ToPenaltyDurationDisplayLabel(penalty.PenaltyType, penalty.Infraction, penalty.DurationMinutes),
                     penalty.Notes
                 })
+                .ToArray();
+
+            var shotEvents = (await conn.QueryAsync<MobileSummaryShotRow>(shotEventsSql, new { GameId = gameId }))
                 .ToArray();
 
             var shotTotals = await conn.QueryFirstOrDefaultAsync<MobileShotTotalsRow>(shotsSql, new { GameId = gameId });
@@ -511,6 +529,7 @@ namespace NetFrontAPI.Functions
                 GameId = gameId,
                 Goals = goals,
                 Penalties = penalties,
+                Shots = shotEvents,
                 HomeShotsP1 = homeShotsP1,
                 HomeShotsP2 = homeShotsP2,
                 HomeShotsP3 = homeShotsP3,
@@ -983,6 +1002,74 @@ namespace NetFrontAPI.Functions
             return created;
         }
 
+        [Function("CreateGameShotForMobile")]
+        public async Task<HttpResponseData> CreateGameShotForMobile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "games/{gameId:guid}/shots/events")] HttpRequestData req,
+            Guid gameId)
+        {
+            var payload = await req.ReadFromJsonAsync<MobileCreateShotRequest>();
+            if (payload == null || payload.TeamId == Guid.Empty || payload.Period <= 0 || string.IsNullOrWhiteSpace(payload.TimeInPeriod))
+            {
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteAsJsonAsync(new { error = "Invalid shot payload." });
+                return bad;
+            }
+
+            using var conn = _connectionFactory.CreateConnection();
+            if (!string.IsNullOrWhiteSpace(payload.ClientEventId))
+            {
+                var existingEventId = await conn.QueryFirstOrDefaultAsync<Guid?>(@"
+                    SELECT TOP 1 ge.Id
+                    FROM dbo.GameEvents ge
+                    WHERE ge.GameId = @GameId
+                      AND ge.EventType = 'Shot'
+                      AND JSON_VALUE(ge.Details, '$.ClientEventId') = @ClientEventId;",
+                    new { GameId = gameId, payload.ClientEventId });
+
+                if (existingEventId.HasValue)
+                {
+                    var existing = req.CreateResponse(HttpStatusCode.OK);
+                    await existing.WriteAsJsonAsync(new { EventId = existingEventId.Value });
+                    return existing;
+                }
+            }
+
+            var eventId = Guid.NewGuid();
+            var createdAt = DateTime.UtcNow;
+            var details = JsonSerializer.Serialize(new
+            {
+                ClientEventId = string.IsNullOrWhiteSpace(payload.ClientEventId) ? null : payload.ClientEventId,
+                Source = "mobile",
+                Kind = "manual-shot"
+            });
+
+            await conn.ExecuteAsync(@"
+                INSERT INTO dbo.GameEvents
+                (
+                    Id, GameId, EventType, Period, TimeInPeriod, TeamId,
+                    PlayerId, SecondaryPlayerId, Zone, Details, CreatedAt
+                )
+                VALUES
+                (
+                    @Id, @GameId, 'Shot', @Period, @TimeInPeriod, @TeamId,
+                    NULL, NULL, NULL, @Details, @CreatedAt
+                );",
+                new
+                {
+                    Id = eventId,
+                    GameId = gameId,
+                    payload.Period,
+                    payload.TimeInPeriod,
+                    payload.TeamId,
+                    Details = details,
+                    CreatedAt = createdAt
+                });
+
+            var created = req.CreateResponse(HttpStatusCode.Created);
+            await created.WriteAsJsonAsync(new { EventId = eventId });
+            return created;
+        }
+
         [Function("CreateGamePenaltyForMobile")]
         public async Task<HttpResponseData> CreateGamePenaltyForMobile(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "games/{gameId:guid}/penalties")] HttpRequestData req,
@@ -1206,6 +1293,21 @@ namespace NetFrontAPI.Functions
             string eventRef)
         {
             var deleted = await DeleteGameEventByRef(gameId, eventRef, "Goal", "dbo.GameGoals");
+            if (!deleted)
+            {
+                return req.CreateResponse(HttpStatusCode.NotFound);
+            }
+
+            return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+
+        [Function("DeleteGameShotForMobile")]
+        public async Task<HttpResponseData> DeleteGameShotForMobile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "games/{gameId:guid}/shots/events/{eventRef}")] HttpRequestData req,
+            Guid gameId,
+            string eventRef)
+        {
+            var deleted = await DeleteGameEventByRef(gameId, eventRef, "Shot", null);
             if (!deleted)
             {
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -1736,6 +1838,17 @@ namespace NetFrontAPI.Functions
             public string? Notes { get; set; }
         }
 
+        private class MobileSummaryShotRow
+        {
+            public Guid EventId { get; set; }
+            public Guid GameId { get; set; }
+            public Guid TeamId { get; set; }
+            public int Period { get; set; }
+            public string TimeInPeriod { get; set; } = string.Empty;
+            public string TeamName { get; set; } = string.Empty;
+            public DateTime CreatedAt { get; set; }
+        }
+
         private class MobileShotTotalsRow
         {
             public int? HomeShotsP1 { get; set; }
@@ -1791,6 +1904,14 @@ namespace NetFrontAPI.Functions
             public int Period { get; set; }
             public string TimeInPeriod { get; set; } = string.Empty;
             public string Strength { get; set; } = "Even Strength";
+            public string? ClientEventId { get; set; }
+        }
+
+        private class MobileCreateShotRequest
+        {
+            public Guid TeamId { get; set; }
+            public int Period { get; set; }
+            public string TimeInPeriod { get; set; } = string.Empty;
             public string? ClientEventId { get; set; }
         }
 

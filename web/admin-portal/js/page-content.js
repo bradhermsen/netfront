@@ -249,7 +249,7 @@ window.PageContentRegistry.teamsModals = () => `
             <h3 class="section-header">Arenas &amp; Rinks</h3>
             <div class="org-facilities-actions">
               <a id="org-add-arena" class="nf-btn nf-btn-primary" href="facilities.html">Add Arena</a>
-              <a id="org-manage-facilities" class="nf-btn nf-btn-secondary" href="facilities.html">Manage Arenas, Rinks &amp; Gateways</a>
+              <a id="org-manage-facilities" class="nf-btn nf-btn-secondary" href="facilities.html">Open Arena Manager</a>
             </div>
           </div>
           <div id="org-facilities-list" class="org-facilities-list"></div>
@@ -1340,20 +1340,8 @@ window.PageContentRegistry.schedulesModals = () => `
 
           <div class="two-col">
             <div>
-              <label>Home Organization</label>
-              <select id="game-home-organization" class="nf-input"></select>
-            </div>
-
-            <div>
-              <label>Away Organization</label>
-              <select id="game-away-organization" class="nf-input"></select>
-            </div>
-
-            <div>
-              <label>Team Type</label>
-              <select id="game-team-type" class="nf-input">
-                <option value="">All Team Types</option>
-              </select>
+              <label>Organization</label>
+              <select id="game-organization" class="nf-input"></select>
             </div>
           </div>
 
@@ -1976,7 +1964,7 @@ window.PageContentRegistry.facilities = () => `
   <div class="page-header-block">
     <div class="page-header-row">
       <div class="page-header-text">
-        <h1 class="page-header">Arenas, Rinks &amp; Gateways</h1>
+        <h1 class="page-header">Arena Manager</h1>
         <p class="page-subtext">Manage organization venues, rink surfaces, and optional scoreboard gateways</p>
       </div>
       <div class="page-header-actions facility-header-actions">

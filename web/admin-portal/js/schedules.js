@@ -149,11 +149,11 @@ function updateVenueManagerActions() {
   const arenaId = document.getElementById("game-arena-id")?.value || "";
   const addArena = document.getElementById("game-add-arena");
   const addRink = document.getElementById("game-add-rink");
-  addArena.href = `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addArena`;
-  addRink.href = arenaId
+  addArena.dataset.url = `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addArena`;
+  addRink.dataset.url = arenaId
     ? `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addRink&arenaId=${encodeURIComponent(arenaId)}`
     : "facilities.html";
-  addRink.setAttribute("aria-disabled", arenaId ? "false" : "true");
+  addRink.disabled = !arenaId;
 }
 
 async function loadManagedVenues(selectedArenaId = "", selectedRinkId = "") {
@@ -200,6 +200,14 @@ function wireVenueControls() {
   document.getElementById("game-venue-external").onclick = () => setVenueMode("external");
   document.getElementById("game-arena-id").onchange = () => populateManagedRinks();
   document.getElementById("game-rink-id").onchange = updateManagedGatewayStatus;
+  document.getElementById("game-add-arena").onclick = (event) => {
+    event.preventDefault();
+    window.open(event.currentTarget.dataset.url, "_blank", "noopener");
+  };
+  document.getElementById("game-add-rink").onclick = (event) => {
+    event.preventDefault();
+    if (!event.currentTarget.disabled) window.open(event.currentTarget.dataset.url, "_blank", "noopener");
+  };
 }
 
 function populateGameOrganizationDropdown(selectedTeamId = "") {

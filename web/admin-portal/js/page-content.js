@@ -1415,8 +1415,8 @@ window.PageContentRegistry.schedulesModals = () => `
           </div>
 
           <div class="venue-manager-actions">
-            <a id="game-add-arena" class="nf-btn nf-btn-secondary" href="facilities.html" target="_blank" rel="noopener">Add Arena</a>
-            <a id="game-add-rink" class="nf-btn nf-btn-secondary" href="facilities.html" target="_blank" rel="noopener">Add Rink</a>
+            <button id="game-add-arena" class="nf-btn nf-btn-secondary" type="button">Add Arena</button>
+            <button id="game-add-rink" class="nf-btn nf-btn-secondary" type="button">Add Rink</button>
           </div>
         </div>
 

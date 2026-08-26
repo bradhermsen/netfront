@@ -198,7 +198,7 @@ AdminPage.init({
 
   editHandlerName: "openEditOrganization",
   deleteHandlerName: "openDeleteOrganization",
-  addHandlerName: "openAddOrganization",
+  addHandler: openAddOrganization,
 
   addTitle: "Add Organization",
   editTitle: "Edit Organization",
@@ -312,11 +312,6 @@ AdminPage.init({
     isActive: document.getElementById("org-active").checked,
   }),
 });
-
-//=========================================================
-// Map AdminPage internal add handler to your function
-//=========================================================
-AdminPage.openAdd = openAddOrganization;
 
 // =========================================================
 // LEAGUES

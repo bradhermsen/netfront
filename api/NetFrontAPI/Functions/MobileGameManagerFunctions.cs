@@ -254,7 +254,7 @@ namespace NetFrontAPI.Functions
                 LEFT JOIN GameTypes gt ON g.GameTypeId = gt.GameTypeId
                 LEFT JOIN ConferenceDistricts cd ON t.ConferenceDistrictId = cd.Id
                 LEFT JOIN SectionRegions sr ON t.SectionRegionId = sr.Id
-                WHERE g.HomeTeamId = @TeamId
+                WHERE (g.HomeTeamId = @TeamId OR g.AwayTeamId = @TeamId)
                                     AND UPPER(ISNULL(g.Status, 'SCHEDULED')) NOT IN (
                                                 'COMPLETED',
                                                 'CLOSED',
@@ -305,7 +305,7 @@ namespace NetFrontAPI.Functions
                     FROM Games g
                     LEFT JOIN Teams ht ON g.HomeTeamId = ht.Id
                     LEFT JOIN Teams at ON g.AwayTeamId = at.Id
-                                        WHERE g.HomeTeamId = @TeamId
+                                        WHERE (g.HomeTeamId = @TeamId OR g.AwayTeamId = @TeamId)
                       AND UPPER(ISNULL(g.Status, '')) IN ('COMPLETED', 'CLOSED', 'FINAL')
                     ORDER BY g.GameDateTime DESC;";
 

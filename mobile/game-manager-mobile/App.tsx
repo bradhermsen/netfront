@@ -5853,7 +5853,7 @@ export default function App() {
         } else {
           setIsClosedGameNotice(false);
           const message =
-            "Access code is valid, but no home game is scheduled within the next 48 hours.";
+            "Access code is valid, but no game is scheduled within the next 48 hours.";
           setNextGameMessage(message);
           return { status: "no_games", message };
         }

@@ -1609,6 +1609,7 @@ export default function App() {
   const [scoreboardConnectionMessage, setScoreboardConnectionMessage] =
     useState("Disconnected");
   const [scoreboardReconnectNonce, setScoreboardReconnectNonce] = useState(0);
+  const scheduledGatewayAppliedRef = useRef(false);
   const [showScoreboardTokenSecret, setShowScoreboardTokenSecret] =
     useState(false);
   const [rosterPreviewTeam, setRosterPreviewTeam] = useState<
@@ -2632,6 +2633,7 @@ export default function App() {
           port: normalizeScoreboardPort(String(parsed.port ?? "")),
           tokenSecret: String(parsed.tokenSecret ?? "").trim(),
         };
+        if (scheduledGatewayAppliedRef.current) return;
         setScoreboardGatewaySettings(normalizedSettings);
         setScoreboardSettingsDraft(normalizedSettings);
       } catch {
@@ -5757,6 +5759,13 @@ export default function App() {
         port?: number;
         tokenSecret?: string;
       };
+      trace("scoreboard.gateway.schedule.response", {
+        gameId: game.gameId,
+        gatewayAvailable: Boolean(payload.gatewayAvailable),
+        hasHost: Boolean(payload.host),
+        port: payload.port ?? null,
+        hasToken: Boolean(payload.tokenSecret),
+      });
       const settings: ScoreboardGatewaySettings = payload.gatewayAvailable
         ? {
             enabled: true,
@@ -5771,6 +5780,7 @@ export default function App() {
             tokenSecret: scoreboardGatewaySettings.tokenSecret,
           };
 
+          scheduledGatewayAppliedRef.current = true;
       setScoreboardGatewaySettings(settings);
       setScoreboardSettingsDraft(settings);
       await storageSetItem(

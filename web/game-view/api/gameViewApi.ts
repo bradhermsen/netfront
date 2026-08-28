@@ -206,6 +206,7 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
         scorerName: pickString(goal, "scorerName", "ScorerName") || undefined,
         assist1Name: pickString(goal, "assist1Name", "Assist1Name") || null,
         assist2Name: pickString(goal, "assist2Name", "Assist2Name") || null,
+        strength: pickString(goal, "strength", "Strength") || null,
       };
     }),
     penalties: penaltiesRaw.map((row) => {

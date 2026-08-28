@@ -145,15 +145,91 @@ function managedArenaAddress(arena) {
 }
 
 function updateVenueManagerActions() {
-  const organizationId = document.getElementById("game-organization")?.value || "";
   const arenaId = document.getElementById("game-arena-id")?.value || "";
-  const addArena = document.getElementById("game-add-arena");
   const addRink = document.getElementById("game-add-rink");
-  addArena.dataset.url = `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addArena`;
-  addRink.dataset.url = arenaId
-    ? `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addRink&arenaId=${encodeURIComponent(arenaId)}`
-    : "facilities.html";
   addRink.disabled = !arenaId;
+}
+
+function closeScheduleFacilityModal(type) {
+  document.getElementById(`schedule${type}ModalOverlay`).classList.remove("active");
+}
+
+function openScheduleArenaModal() {
+  document.getElementById("schedule-arena-name").value = "";
+  document.getElementById("schedule-arena-street").value = "";
+  document.getElementById("schedule-arena-city").value = "";
+  document.getElementById("schedule-arena-state").value = "";
+  document.getElementById("schedule-arena-postal").value = "";
+  document.getElementById("schedule-arena-primary").checked = managedArenas.length === 0;
+  document.getElementById("scheduleArenaModalOverlay").classList.add("active");
+  document.getElementById("schedule-arena-name").focus();
+}
+
+async function saveScheduleArena() {
+  const organizationId = document.getElementById("game-organization").value;
+  const name = document.getElementById("schedule-arena-name").value.trim();
+  if (!organizationId || !name) {
+    showMessage("Organization and Arena name are required", "error");
+    return;
+  }
+
+  const saveButton = document.getElementById("scheduleArenaSave");
+  saveButton.disabled = true;
+  try {
+    const result = await FacilityApi.createArena(organizationId, {
+      name,
+      streetAddress: document.getElementById("schedule-arena-street").value.trim() || null,
+      city: document.getElementById("schedule-arena-city").value.trim() || null,
+      state: document.getElementById("schedule-arena-state").value.trim() || null,
+      postalCode: document.getElementById("schedule-arena-postal").value.trim() || null,
+      isPrimary: document.getElementById("schedule-arena-primary").checked,
+      isActive: true,
+    });
+    closeScheduleFacilityModal("Arena");
+    await loadManagedVenues(result.arenaId);
+    setVenueMode("managed");
+    showMessage("Arena added. Add or select a Rink to continue.", "success");
+  } catch (error) {
+    showMessage(error.message || "Failed to add Arena", "error");
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
+function openScheduleRinkModal() {
+  const arena = managedArenas.find((item) => item.arenaId === document.getElementById("game-arena-id").value);
+  if (!arena) return;
+  document.getElementById("schedule-rink-name").value = "";
+  document.getElementById("schedule-rink-order").value = arena.rinks?.length ?? 0;
+  document.getElementById("scheduleRinkModalOverlay").classList.add("active");
+  document.getElementById("schedule-rink-name").focus();
+}
+
+async function saveScheduleRink() {
+  const arenaId = document.getElementById("game-arena-id").value;
+  const name = document.getElementById("schedule-rink-name").value.trim();
+  if (!arenaId || !name) {
+    showMessage("Arena and Rink name are required", "error");
+    return;
+  }
+
+  const saveButton = document.getElementById("scheduleRinkSave");
+  saveButton.disabled = true;
+  try {
+    const result = await FacilityApi.createRink(arenaId, {
+      name,
+      displayOrder: Number(document.getElementById("schedule-rink-order").value) || 0,
+      isActive: true,
+    });
+    closeScheduleFacilityModal("Rink");
+    await loadManagedVenues(arenaId, result.rinkId);
+    setVenueMode("managed");
+    showMessage("Rink added and selected", "success");
+  } catch (error) {
+    showMessage(error.message || "Failed to add Rink", "error");
+  } finally {
+    saveButton.disabled = false;
+  }
 }
 
 async function loadManagedVenues(selectedArenaId = "", selectedRinkId = "") {
@@ -202,11 +278,11 @@ function wireVenueControls() {
   document.getElementById("game-rink-id").onchange = updateManagedGatewayStatus;
   document.getElementById("game-add-arena").onclick = (event) => {
     event.preventDefault();
-    window.open(event.currentTarget.dataset.url, "_blank", "noopener");
+    openScheduleArenaModal();
   };
   document.getElementById("game-add-rink").onclick = (event) => {
     event.preventDefault();
-    if (!event.currentTarget.disabled) window.open(event.currentTarget.dataset.url, "_blank", "noopener");
+    if (!event.currentTarget.disabled) openScheduleRinkModal();
   };
 }
 
@@ -1258,6 +1334,8 @@ function closeGameModal() {
   if (gameDatePicker?.isOpen) gameDatePicker.close();
   if (gameTimePicker?.isOpen) gameTimePicker.close();
   setGameModalBackgroundScrollLock(false);
+  closeScheduleFacilityModal("Arena");
+  closeScheduleFacilityModal("Rink");
   document.getElementById("gameModalOverlay").classList.remove("active");
 }
 
@@ -1277,6 +1355,12 @@ document.getElementById("btnAddGame").onclick = openAddGame;
 
   document.getElementById("gameSave").onclick = saveGame;
   document.getElementById("gameCancel").onclick = closeGameModal;
+  document.getElementById("scheduleArenaSave").onclick = saveScheduleArena;
+  document.getElementById("scheduleArenaCancel").onclick = () => closeScheduleFacilityModal("Arena");
+  document.getElementById("scheduleArenaClose").onclick = () => closeScheduleFacilityModal("Arena");
+  document.getElementById("scheduleRinkSave").onclick = saveScheduleRink;
+  document.getElementById("scheduleRinkCancel").onclick = () => closeScheduleFacilityModal("Rink");
+  document.getElementById("scheduleRinkClose").onclick = () => closeScheduleFacilityModal("Rink");
 
   document.getElementById("gameDeleteConfirm").onclick = confirmDeleteGame;
   document.getElementById("gameDeleteCancel").onclick = closeDeleteGameModal;

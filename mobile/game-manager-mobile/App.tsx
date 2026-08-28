@@ -1457,6 +1457,16 @@ function buildTeamDisplayName(name?: string, mascot?: string) {
   return safeMascot ? `${safeName} ${safeMascot}` : safeName;
 }
 
+function getStarterPositionGroup(player: RosterPlayer) {
+  if (player.isGoalie || /^g(oalie)?$/i.test(player.position.trim())) {
+    return "Goalies";
+  }
+  if (/^(d|ld|rd|def|defense|defenc|defenseman|defenceman)$/i.test(player.position.trim())) {
+    return "Defensemen";
+  }
+  return "Forwards";
+}
+
 function formatVenue(arenaName?: string, rinkName?: string) {
   const arena = (arenaName || "").trim();
   const rink = (rinkName || "").trim();
@@ -1616,6 +1626,7 @@ export default function App() {
     "home" | "away" | null
   >(null);
   const [showOfficialsPreview, setShowOfficialsPreview] = useState(false);
+  const [showStarterInformation, setShowStarterInformation] = useState(false);
   const [suspensionNotesByPenaltyId, setSuspensionNotesByPenaltyId] = useState<
     Record<string, string>
   >({});
@@ -2324,6 +2335,44 @@ export default function App() {
     startersByTeam,
     coachesByTeam,
   ]);
+
+  const starterInformationTeams = useMemo(() => {
+    if (!session) return [];
+
+    return [
+      {
+        teamId: awayTeamId,
+        teamName: buildTeamDisplayName(session.awayTeam, nextGame?.awayTeamMascot),
+        side: "Visiting",
+      },
+      {
+        teamId: homeTeamId,
+        teamName: buildTeamDisplayName(session.homeTeam, nextGame?.homeTeamMascot),
+        side: "Home",
+      },
+    ].map(({ teamId, teamName, side }) => {
+      const roster = rostersByTeam[teamId] ?? [];
+      const starters = (startersByTeam[teamId] ?? [])
+        .map((playerId) => roster.find((player) => player.playerId === playerId))
+        .filter((player): player is RosterPlayer => Boolean(player))
+        .sort((a, b) => {
+          const groupOrder = { Goalies: 0, Defensemen: 1, Forwards: 2 };
+          const groupDifference = groupOrder[getStarterPositionGroup(a)] - groupOrder[getStarterPositionGroup(b)];
+          if (groupDifference !== 0) return groupDifference;
+          const jerseyDifference = (a.jerseyNumber ?? Number.MAX_SAFE_INTEGER) - (b.jerseyNumber ?? Number.MAX_SAFE_INTEGER);
+          return jerseyDifference || a.fullName.localeCompare(b.fullName);
+        });
+      const starterGroups = ["Goalies", "Defensemen", "Forwards"].map((label) => ({
+        label,
+        players: starters.filter((player) => getStarterPositionGroup(player) === label),
+      })).filter((group) => group.players.length > 0);
+      const coaches = (coachesByTeam[teamId] ?? []).filter(
+        (coach) => coach.coachName.trim().length > 0,
+      );
+
+      return { teamId, teamName, side, starters, starterGroups, coaches };
+    });
+  }, [session, nextGame, homeTeamId, awayTeamId, rostersByTeam, startersByTeam, coachesByTeam]);
 
   const coachEmailRecipients = useMemo(() => {
     const teamRows = [
@@ -6168,6 +6217,7 @@ export default function App() {
     setShowSuspensionNotesModal(false);
     setRosterPreviewTeam(null);
     setShowOfficialsPreview(false);
+    setShowStarterInformation(false);
     setSuspensionNotesByPenaltyId({});
     setSuspensionNotesError("");
     setSendRecipientSelection({});
@@ -8648,6 +8698,107 @@ export default function App() {
           </Modal>
         ) : null}
 
+        {showStarterInformation && session ? (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setShowStarterInformation(false)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.starterInformationModal}>
+                <Text style={styles.goalModalTitle}>Starter Information</Text>
+
+                <ScrollView style={styles.starterInformationScroll}>
+                  <View style={styles.starterInformationTeamGrid}>
+                    {starterInformationTeams.map((team) => (
+                      <View
+                        key={`starter-information-${team.teamId}`}
+                        style={styles.starterInformationTeamColumn}
+                      >
+                        <Text style={styles.starterInformationTeamTitle}>
+                          {team.side.toUpperCase()} TEAM
+                        </Text>
+                        <Text style={styles.starterInformationTeamName}>
+                          {team.teamName}
+                        </Text>
+                        <Text style={styles.rosterPreviewGroupLabel}>STARTERS</Text>
+                        {team.starters.length === 0 ? (
+                          <Text style={styles.footerHint}>No starters selected.</Text>
+                        ) : (
+                          team.starterGroups.map((group) => (
+                            <View key={`starter-information-group-${team.teamId}-${group.label}`}>
+                              <Text style={styles.starterInformationPositionLabel}>{group.label}</Text>
+                              {group.players.map((player) => (
+                                <View
+                                  key={`starter-information-player-${team.teamId}-${player.playerId}`}
+                                  style={styles.rosterPreviewRow}
+                                >
+                                  <Text
+                                    style={styles.starterInformationPlayerLine}
+                                    numberOfLines={1}
+                                  >
+                                    #{player.jerseyNumber ?? "-"}  {player.fullName}  {player.isGoalie ? "G" : player.position || "-"}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          ))
+                        )}
+
+                        <Text style={styles.rosterPreviewGroupLabel}>COACHES</Text>
+                        {team.coaches.length === 0 ? (
+                          <Text style={styles.footerHint}>No coaches listed.</Text>
+                        ) : (
+                          team.coaches.map((coach, index) => (
+                            <View
+                              key={`starter-information-coach-${team.teamId}-${coach.roleName}-${index}`}
+                              style={styles.rosterPreviewRow}
+                            >
+                              <Text style={styles.starterInformationPlayerLine}>{coach.coachName}</Text>
+                              <Text style={styles.rosterPreviewMeta}>{coach.roleName}</Text>
+                            </View>
+                          ))
+                        )}
+                      </View>
+                    ))}
+                  </View>
+
+                  <View style={styles.starterInformationOfficials}>
+                    <Text style={styles.sectionLabel}>OFFICIALS</Text>
+                    {officials.length === 0 ? (
+                      <Text style={styles.footerHint}>No officials assigned.</Text>
+                    ) : (
+                      officials.map((official, index) => (
+                        <View
+                          key={`starter-information-official-${official.role}-${index}`}
+                          style={styles.rosterPreviewRow}
+                        >
+                          <Text style={styles.starterInformationPlayerLine}>
+                            {official.officialName || "Not assigned"}
+                          </Text>
+                          <Text style={styles.rosterPreviewMeta}>
+                            {toOfficialRoleLabel(official.role)}
+                          </Text>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                </ScrollView>
+
+                <Pressable
+                  style={styles.primaryButton}
+                  onPress={() => setShowStarterInformation(false)}
+                >
+                  <Text style={styles.primaryButtonText}>Close</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Modal>
+        ) : null}
+
         {goalieModal?.visible ? (
           <Modal
             visible
@@ -10409,6 +10560,14 @@ export default function App() {
               >
                 <Text style={styles.secondaryButtonText}>
                   View {session.awayTeam} Roster
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => setShowStarterInformation(true)}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  Starter Information
                 </Text>
               </Pressable>
               <Pressable
@@ -13583,6 +13742,71 @@ const styles = StyleSheet.create({
   rosterPreviewList: {
     maxHeight: 340,
     marginBottom: 10,
+  },
+  starterInformationModal: {
+    width: "100%",
+    maxWidth: 860,
+    maxHeight: "92%",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#FF7B00",
+    backgroundColor: "#0D1A2B",
+    padding: 14,
+    gap: 8,
+  },
+  starterInformationScroll: {
+    maxHeight: 520,
+    marginBottom: 10,
+  },
+  starterInformationTeamGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  starterInformationTeamColumn: {
+    flex: 1,
+    minWidth: 280,
+    borderWidth: 1,
+    borderColor: "#2A3A5B",
+    borderRadius: 10,
+    backgroundColor: "#0B1424",
+    padding: 10,
+  },
+  starterInformationTeamTitle: {
+    color: "#FFB26B",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  starterInformationTeamName: {
+    color: "#E8EDF5",
+    fontSize: 16,
+    fontWeight: "900",
+    marginBottom: 10,
+    marginTop: 2,
+  },
+  starterInformationPlayerLine: {
+    color: "#E8EDF5",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  starterInformationPositionLabel: {
+    color: "#FFB26B",
+    fontSize: 12,
+    fontWeight: "900",
+    marginBottom: 5,
+    marginTop: 2,
+  },
+  starterInformationOfficials: {
+    marginTop: 14,
+  },
+  rosterPreviewGroupLabel: {
+    color: "#8AA1BD",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+    marginBottom: 6,
+    marginTop: 2,
   },
   rosterPreviewRow: {
     borderWidth: 1,

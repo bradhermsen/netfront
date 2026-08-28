@@ -1527,6 +1527,46 @@ window.PageContentRegistry.schedulesModals = () => `
     </div>
   </div>
 
+  <div id="scheduleArenaModalOverlay" class="nf-modal-overlay schedule-nested-modal">
+    <div class="nf-modal medium">
+      <div class="nf-modal-header">
+        <h2>Add Arena</h2>
+        <button id="scheduleArenaClose" class="modal-close" type="button">×</button>
+      </div>
+      <div class="nf-modal-body">
+        <div class="full-width-section"><div class="two-col">
+          <div><label>Arena name</label><input id="schedule-arena-name" class="nf-input" /></div>
+          <div><label>Street address</label><input id="schedule-arena-street" class="nf-input" /></div>
+          <div><label>City</label><input id="schedule-arena-city" class="nf-input" /></div>
+          <div><label>State</label><input id="schedule-arena-state" class="nf-input" /></div>
+          <div><label>Postal code</label><input id="schedule-arena-postal" class="nf-input" /></div>
+          <div><label class="facility-inline-check"><input id="schedule-arena-primary" type="checkbox" /> Primary arena</label></div>
+        </div></div>
+      </div>
+      <div class="nf-modal-footer">
+        <button id="scheduleArenaCancel" class="nf-btn nf-btn-secondary" type="button">Cancel</button>
+        <button id="scheduleArenaSave" class="nf-btn nf-btn-primary" type="button">Save Arena</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="scheduleRinkModalOverlay" class="nf-modal-overlay schedule-nested-modal">
+    <div class="nf-modal small">
+      <div class="nf-modal-header">
+        <h2>Add Rink</h2>
+        <button id="scheduleRinkClose" class="modal-close" type="button">×</button>
+      </div>
+      <div class="nf-modal-body full">
+        <label>Rink name</label><input id="schedule-rink-name" class="nf-input" />
+        <label>Display order</label><input id="schedule-rink-order" class="nf-input" type="number" min="0" value="0" />
+      </div>
+      <div class="nf-modal-footer">
+        <button id="scheduleRinkCancel" class="nf-btn nf-btn-secondary" type="button">Cancel</button>
+        <button id="scheduleRinkSave" class="nf-btn nf-btn-primary" type="button">Save Rink</button>
+      </div>
+    </div>
+  </div>
+
   <!-- DELETE GAME MODAL -->
   <div id="gameDeleteModalOverlay" class="nf-modal-overlay hidden">
     <div id="gameDeleteModal" class="nf-modal small">

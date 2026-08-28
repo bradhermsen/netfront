@@ -387,8 +387,8 @@ function openAddOrganization() {
   AdminPage.editingId = null;
   AdminPage.config.clearForm();
   document.getElementById("orgModalTitle").textContent = "Add Organization";
-  document.getElementById("org-facilities-section").classList.add("hidden");
-  document.getElementById("org-facilities-divider").classList.add("hidden");
+  document.getElementById("org-facilities-section")?.classList.add("hidden");
+  document.getElementById("org-facilities-divider")?.classList.add("hidden");
 
   const overlay = document.getElementById("orgModalOverlay");
   overlay.classList.remove("hidden");

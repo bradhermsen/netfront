@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId, useState } from "react";
 import type { ApiTeamCoach } from "../types/gameView";
 
 export interface RosterPlayerRow {
@@ -29,6 +29,7 @@ interface Props {
   activeTab: "home" | "away";
   onTabChange: (tab: "home" | "away") => void;
   goalieStatsNotice?: string;
+  collapsible?: boolean;
 }
 
 export function RosterTabs({
@@ -41,7 +42,11 @@ export function RosterTabs({
   activeTab,
   onTabChange,
   goalieStatsNotice = "",
+  collapsible = false,
 }: Props) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const contentId = useId();
+  const showContent = !collapsible || isExpanded;
   const rows = activeTab === "home" ? homeRoster : awayRoster;
   const coaches = activeTab === "home" ? homeCoaches : awayCoaches;
   const skaterRows = rows.filter((row) => !row.isGoalie);
@@ -49,8 +54,23 @@ export function RosterTabs({
 
   return (
     <section className="game-view-roster-card">
-      <h2 className="game-view-section-title">Rosters</h2>
+      <div className="game-view-card-title-row">
+        <h2 className="game-view-section-title">Rosters</h2>
+        {collapsible ? (
+          <button
+            type="button"
+            className="game-view-collapse-button"
+            aria-expanded={isExpanded}
+            aria-controls={contentId}
+            aria-label={`${isExpanded ? "Collapse" : "Expand"} Rosters`}
+            onClick={() => setIsExpanded((current) => !current)}
+          >
+            <span className="game-view-collapse-icon" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
 
+      <div id={contentId} hidden={!showContent}>
       <div className="game-view-tab-row" role="tablist" aria-label="Roster tabs">
         <button
           type="button"
@@ -169,6 +189,7 @@ export function RosterTabs({
           </ul>
         )}
       </section>
+      </div>
     </section>
   );
 }

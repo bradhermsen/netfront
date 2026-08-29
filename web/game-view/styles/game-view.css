@@ -301,6 +301,49 @@ body,
   margin-bottom: 0;
 }
 
+.game-view-card-title-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.game-view-card-title-row .game-view-section-title {
+  margin-bottom: 0;
+}
+
+.game-view-collapse-button {
+  align-items: center;
+  appearance: none;
+  background: #101f38;
+  border: 1px solid #52719a;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+  width: 32px;
+}
+
+.game-view-collapse-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.game-view-collapse-icon {
+  border-bottom: 2px solid #f26f21;
+  border-right: 2px solid #f26f21;
+  display: block;
+  height: 7px;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 160ms ease;
+  width: 7px;
+}
+
+.game-view-collapse-button[aria-expanded="false"] .game-view-collapse-icon {
+  transform: translateY(2px) rotate(225deg);
+}
+
 .game-view-event-filters {
   display: flex;
   flex-wrap: wrap;

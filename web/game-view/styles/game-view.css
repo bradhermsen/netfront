@@ -289,6 +289,49 @@ body,
   width: 100%;
 }
 
+.game-view-events-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.game-view-events-header .game-view-section-title {
+  margin-bottom: 0;
+}
+
+.game-view-event-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.game-view-event-filter {
+  appearance: none;
+  background: #101f38;
+  border: 1px solid #52719a;
+  border-radius: 6px;
+  color: #d6e4fb;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  min-height: 32px;
+  padding: 5px 10px;
+}
+
+.game-view-event-filter--active {
+  background: #f26f21;
+  border-color: #f26f21;
+  color: #08162b;
+}
+
+.game-view-event-filter:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
 .game-view-next-card {
   appearance: none;
   border: 1px solid #274a7a;

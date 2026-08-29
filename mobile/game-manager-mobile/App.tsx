@@ -1553,6 +1553,11 @@ export default function App() {
     useState(false);
   const [goalModalError, setGoalModalError] = useState("");
   const [eventFeed, setEventFeed] = useState<GameFeedEvent[]>([]);
+  const [eventTypeFilters, setEventTypeFilters] = useState({
+    Shot: true,
+    Goal: true,
+    Penalty: true,
+  });
   const [playerStatsById, setPlayerStatsById] = useState<
     Record<string, PlayerStatLine>
   >({});
@@ -2020,6 +2025,13 @@ export default function App() {
     () => safeEventFeed.filter((event) => event?.eventType === "Penalty"),
     [safeEventFeed],
   );
+
+  const visibleEventFeed = safeEventFeed.filter((event) => {
+    if (event.eventType === "Shot") return eventTypeFilters.Shot;
+    if (event.eventType === "Goal") return eventTypeFilters.Goal;
+    if (event.eventType === "Penalty") return eventTypeFilters.Penalty;
+    return true;
+  });
 
   const gameDqPenaltyEvents = useMemo(
     () =>
@@ -10451,11 +10463,50 @@ export default function App() {
               </View>
             </View>
 
-            <Text style={styles.sectionLabel}>GAME EVENTS</Text>
+            <View style={styles.eventsHeaderRow}>
+              <Text style={styles.sectionLabel}>GAME EVENTS</Text>
+              <View style={styles.eventFilterButtons}>
+                {(["Shot", "Goal", "Penalty"] as const).map((eventType) => {
+                  const isActive = eventTypeFilters[eventType];
+                  const label = eventType === "Penalty" ? "Penalties" : `${eventType}s`;
+                  return (
+                    <Pressable
+                      key={eventType}
+                      style={[
+                        styles.eventFilterButton,
+                        isActive && styles.eventFilterButtonActive,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={`${label} event filter`}
+                      onPress={() =>
+                        setEventTypeFilters((current) => ({
+                          ...current,
+                          [eventType]: !current[eventType],
+                        }))
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.eventFilterButtonText,
+                          isActive && styles.eventFilterButtonTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
             <View style={styles.eventsPanel}>
               {safeEventFeed.length === 0 ? (
                 <Text style={styles.eventsHint}>
                   No events yet. Tap + Goal or + Penalty to record one.
+                </Text>
+              ) : visibleEventFeed.length === 0 ? (
+                <Text style={styles.eventsHint}>
+                  No events match the selected filters.
                 </Text>
               ) : (
                 <ScrollView
@@ -10463,7 +10514,7 @@ export default function App() {
                   nestedScrollEnabled
                   showsVerticalScrollIndicator
                 >
-                  {safeEventFeed.map((event) => (
+                  {visibleEventFeed.map((event) => (
                     <Pressable
                       key={event.localId}
                       style={styles.eventRow}
@@ -10545,36 +10596,46 @@ export default function App() {
               )}
             </View>
 
-            <View style={styles.rowButtons}>
+            <View style={styles.dashboardInfoButtons}>
               <Pressable
-                style={styles.secondaryButton}
+                style={[styles.secondaryButton, styles.dashboardInfoButton]}
                 onPress={() => setRosterPreviewTeam("home")}
               >
-                <Text style={styles.secondaryButtonText}>
-                  View {session.homeTeam} Roster
+                <Text
+                  style={[styles.secondaryButtonText, styles.dashboardInfoButtonText]}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                >
+                  {session.homeTeam} Roster
                 </Text>
               </Pressable>
               <Pressable
-                style={styles.secondaryButton}
+                style={[styles.secondaryButton, styles.dashboardInfoButton]}
                 onPress={() => setRosterPreviewTeam("away")}
               >
-                <Text style={styles.secondaryButtonText}>
-                  View {session.awayTeam} Roster
+                <Text
+                  style={[styles.secondaryButtonText, styles.dashboardInfoButtonText]}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                >
+                  {session.awayTeam} Roster
                 </Text>
               </Pressable>
               <Pressable
-                style={styles.secondaryButton}
+                style={[styles.secondaryButton, styles.dashboardInfoButton]}
                 onPress={() => setShowStarterInformation(true)}
               >
-                <Text style={styles.secondaryButtonText}>
+                <Text style={[styles.secondaryButtonText, styles.dashboardInfoButtonText]}>
                   Starter Information
                 </Text>
               </Pressable>
               <Pressable
-                style={styles.secondaryButton}
+                style={[styles.secondaryButton, styles.dashboardInfoButton]}
                 onPress={() => setShowOfficialsPreview(true)}
               >
-                <Text style={styles.secondaryButtonText}>View Officials</Text>
+                <Text style={[styles.secondaryButtonText, styles.dashboardInfoButtonText]}>Officials</Text>
               </Pressable>
             </View>
 
@@ -12197,6 +12258,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+  dashboardInfoButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    width: "100%",
+  },
+  dashboardInfoButton: {
+    flexBasis: "48%",
+    flexGrow: 1,
+    minHeight: 48,
+  },
+  dashboardInfoButtonText: {
+    textAlign: "center",
+  },
   confirmOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 50,
@@ -13195,6 +13270,39 @@ const styles = StyleSheet.create({
     width: 1,
     height: 76,
     backgroundColor: "#2a3a5b",
+  },
+  eventsHeaderRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  eventFilterButtons: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  eventFilterButton: {
+    minHeight: 32,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#40516D",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#101C30",
+  },
+  eventFilterButtonActive: {
+    borderColor: "#FF7B00",
+    backgroundColor: "#FF7B00",
+  },
+  eventFilterButtonText: {
+    color: "#AAB7C9",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  eventFilterButtonTextActive: {
+    color: "#0B1424",
   },
   eventsPanel: {
     borderWidth: 1,

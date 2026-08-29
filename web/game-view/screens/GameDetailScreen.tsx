@@ -458,7 +458,7 @@ export function GameDetailScreen() {
           </section>
 
           <section className="game-view-section">
-            <EventFeed events={events} />
+            <EventFeed events={events} collapsible={isInProgress} />
           </section>
 
           {summaryReport && isFinalStatus(summaryReport.status) ? (
@@ -577,6 +577,7 @@ export function GameDetailScreen() {
               activeTab={activeRosterTab}
               onTabChange={setActiveRosterTab}
               goalieStatsNotice={goalieStatsNotice}
+              collapsible={isInProgress}
             />
           </section>
         </>

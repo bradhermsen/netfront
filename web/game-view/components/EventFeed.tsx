@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 export interface GameEventRow {
   eventId: string;
@@ -13,15 +13,49 @@ interface Props {
 }
 
 export function EventFeed({ events }: Props) {
+  const [enabledEventTypes, setEnabledEventTypes] = useState({
+    shot: true,
+    goal: true,
+    penalty: true,
+  });
+  const visibleEvents = events.filter((event) => enabledEventTypes[event.eventType]);
+
   return (
     <section className="game-view-events-card">
-      <h2 className="game-view-section-title">Event Feed</h2>
+      <div className="game-view-events-header">
+        <h2 className="game-view-section-title">Event Feed</h2>
+        <div className="game-view-event-filters" aria-label="Event feed filters">
+          {(["shot", "goal", "penalty"] as const).map((eventType) => {
+            const isEnabled = enabledEventTypes[eventType];
+            const label = eventType === "penalty" ? "Penalties" : `${eventType[0].toUpperCase()}${eventType.slice(1)}s`;
+
+            return (
+              <button
+                key={eventType}
+                type="button"
+                className={`game-view-event-filter${isEnabled ? " game-view-event-filter--active" : ""}`}
+                aria-pressed={isEnabled}
+                onClick={() =>
+                  setEnabledEventTypes((current) => ({
+                    ...current,
+                    [eventType]: !current[eventType],
+                  }))
+                }
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {events.length === 0 ? (
         <p className="game-view-empty-text">No game events found.</p>
+      ) : visibleEvents.length === 0 ? (
+        <p className="game-view-empty-text">No events match the selected filters.</p>
       ) : (
         <ul className="game-view-events-list" aria-label="Game events" tabIndex={0}>
-          {events.map((event) => (
+          {visibleEvents.map((event) => (
             <li key={event.eventId} className="game-view-event-row">
               <div>
                 <p className="game-view-event-time">{event.createdAtIso}</p>

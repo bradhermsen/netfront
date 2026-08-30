@@ -239,7 +239,7 @@ async function saveScheduleRink() {
 
 async function loadManagedVenues(selectedArenaId = "", selectedRinkId = "") {
   const organizationId = getVenueOrganizationId();
-  const results = organizationId ? [await FacilityApi.getForOrganization(organizationId).catch(() => [])] : [];
+  const results = [await FacilityApi.getCatalog().catch(() => [])];
   const byId = new Map();
   results.flat().filter((arena) => arena.isActive).forEach((arena) => byId.set(arena.arenaId, arena));
   managedArenas = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -248,7 +248,7 @@ async function loadManagedVenues(selectedArenaId = "", selectedRinkId = "") {
   arenaSelect.innerHTML = `<option value="">Select Arena</option>${managedArenas.map((arena) => `<option value="${arena.arenaId}">${arena.name}</option>`).join("")}`;
   if (selectedArenaId && byId.has(selectedArenaId)) arenaSelect.value = selectedArenaId;
   if (!selectedArenaId) {
-    arenaSelect.value = managedArenas.find((arena) => arena.isPrimary)?.arenaId || "";
+    arenaSelect.value = managedArenas.find((arena) => (arena.organizations || []).some((org) => org.organizationId === organizationId && org.isPrimary))?.arenaId || "";
   }
   populateManagedRinks(selectedRinkId);
 }

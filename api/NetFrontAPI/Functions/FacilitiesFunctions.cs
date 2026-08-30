@@ -81,23 +81,49 @@ namespace NetFrontAPI.Functions
         public async Task<HttpResponseData> GetArenaCatalog(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "arenas/catalog")] HttpRequestData req)
         {
-            var context = await AuthorizeAsync(req, requireAdmin: true);
+            var context = await AuthorizeAsync(req, requireAdmin: false);
             if (context.Error != null) return context.Error;
 
             using var connection = _connectionFactory.CreateConnection();
-            var arenas = await connection.QueryAsync(@"
-                SELECT a.ArenaId, a.Name, a.StreetAddress, a.City, a.State, a.PostalCode,
-                       a.IsActive,
-                       STRING_AGG(o.Name, ', ') AS Organizations
+            var arenas = (await connection.QueryAsync<ArenaDto>(@"
+                SELECT a.ArenaId, a.Name, a.StreetAddress, a.City, a.State, a.PostalCode, a.IsActive
                 FROM dbo.Arenas a
-                LEFT JOIN dbo.ArenaOrganizations ao ON ao.ArenaId = a.ArenaId
-                LEFT JOIN dbo.Organizations o ON o.OrganizationId = ao.OrganizationId
                 WHERE a.IsActive = 1
-                GROUP BY a.ArenaId, a.Name, a.StreetAddress, a.City, a.State, a.PostalCode, a.IsActive
-                ORDER BY a.Name;");
+                ORDER BY a.Name;")).ToList();
+            await PopulateChildrenAsync(connection, arenas, includeInactive: false, includeGatewayDetails: context.IsSuperAdmin);
+
+            var arenaIds = arenas.Select(arena => arena.ArenaId).ToArray();
+            var associations = arenaIds.Length == 0
+                ? new List<ArenaOrganizationSummaryDto>()
+                : (await connection.QueryAsync<ArenaOrganizationSummaryDto>(@"
+                    SELECT ao.ArenaId, ao.OrganizationId, o.Name, ao.AccessLevel, ao.IsPrimary
+                    FROM dbo.ArenaOrganizations ao
+                    INNER JOIN dbo.Organizations o ON o.OrganizationId = ao.OrganizationId
+                    WHERE ao.ArenaId IN @ArenaIds
+                    ORDER BY o.Name;", new { ArenaIds = arenaIds })).ToList();
+            foreach (var arena in arenas)
+                arena.Organizations = associations.Where(association => association.ArenaId == arena.ArenaId).ToList();
+
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(arenas);
             return response;
+        }
+
+        [Function("RemoveOrganizationArenaAssociation")]
+        public async Task<HttpResponseData> RemoveOrganizationArenaAssociation(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "organizations/{organizationId:guid}/arenas/{arenaId:guid}/associate")] HttpRequestData req,
+            Guid organizationId,
+            Guid arenaId)
+        {
+            var context = await AuthorizeOrganizationAsync(req, organizationId, requireAdmin: true);
+            if (context.Error != null) return context.Error;
+
+            using var connection = _connectionFactory.CreateConnection();
+            await connection.ExecuteAsync(@"
+                DELETE FROM dbo.ArenaOrganizations
+                WHERE ArenaId = @ArenaId AND OrganizationId = @OrganizationId;",
+                new { ArenaId = arenaId, OrganizationId = organizationId });
+            return req.CreateResponse(HttpStatusCode.NoContent);
         }
 
         [Function("CreateOrganizationArena")]

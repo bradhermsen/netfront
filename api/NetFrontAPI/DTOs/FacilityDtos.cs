@@ -15,6 +15,16 @@ namespace NetFrontAPI.DTOs
         public string AccessLevel { get; set; } = "Use";
         public bool IsPrimary { get; set; }
         public List<RinkDto> Rinks { get; set; } = new();
+        public List<ArenaOrganizationSummaryDto> Organizations { get; set; } = new();
+    }
+
+    public class ArenaOrganizationSummaryDto
+    {
+        public Guid ArenaId { get; set; }
+        public Guid OrganizationId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string AccessLevel { get; set; } = "Use";
+        public bool IsPrimary { get; set; }
     }
 
     public class RinkDto

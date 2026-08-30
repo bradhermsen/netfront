@@ -13,6 +13,7 @@ const FacilityApi = {
   createArena(organizationId, dto) { return this.request(`/organizations/${organizationId}/arenas`, { method: "POST", body: JSON.stringify(dto) }); },
   updateArena(arenaId, dto) { return this.request(`/arenas/${arenaId}`, { method: "PUT", body: JSON.stringify(dto) }); },
   associateArena(organizationId, arenaId, dto) { return this.request(`/organizations/${organizationId}/arenas/${arenaId}/associate`, { method: "POST", body: JSON.stringify(dto) }); },
+  removeArenaAssociation(organizationId, arenaId) { return this.request(`/organizations/${organizationId}/arenas/${arenaId}/associate`, { method: "DELETE" }); },
   createRink(arenaId, dto) { return this.request(`/arenas/${arenaId}/rinks`, { method: "POST", body: JSON.stringify(dto) }); },
   updateRink(rinkId, dto) { return this.request(`/rinks/${rinkId}`, { method: "PUT", body: JSON.stringify(dto) }); },
   createGateway(rinkId, dto) { return this.request(`/rinks/${rinkId}/gateways`, { method: "POST", body: JSON.stringify(dto) }); },

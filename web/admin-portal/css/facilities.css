@@ -1,34 +1,40 @@
 .facility-header-actions { display: flex; gap: 8px; }
-.facility-toolbar { display: grid; grid-template-columns: auto minmax(240px, 420px) 1fr; gap: 12px; align-items: center; margin-bottom: 18px; }
+.facility-toolbar { display: grid; grid-template-columns: auto minmax(200px, 320px) auto minmax(200px, 320px) 1fr; gap: 12px; align-items: center; margin-bottom: 18px; }
 .facility-toolbar label { font-weight: 700; }
 .facility-status { color: var(--nf-text-muted); text-align: right; }
-.facility-list { border-top: 1px solid var(--nf-border-light); }
-.facility-arena { padding: 18px 0 22px; border-bottom: 1px solid var(--nf-border-light); }
-.facility-arena-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
-.facility-arena h2 { margin: 0 0 4px; font-size: 20px; }
+.facility-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.facility-arena-card { min-width: 0; padding: 16px; border: 1px solid var(--nf-border-light); border-radius: 8px; background: #0f192d; display: flex; flex-direction: column; gap: 12px; }
+.facility-arena-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.facility-arena-card h2 { margin: 0 0 4px; font-size: 18px; overflow-wrap: anywhere; }
 .facility-meta { color: var(--nf-text-muted); font-size: 13px; }
-.facility-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.facility-rinks { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.facility-rinks th, .facility-rinks td { padding: 10px 12px; border-bottom: 1px solid var(--nf-border-light); text-align: left; vertical-align: middle; overflow-wrap: anywhere; }
-.facility-rinks th { color: var(--nf-text-muted); font-size: 12px; text-transform: uppercase; }
-.facility-rinks th:last-child, .facility-rinks td:last-child { width: 240px; text-align: right; }
-.facility-access, .facility-mode { display: inline-block; padding: 3px 7px; border-radius: 4px; font-size: 12px; font-weight: 700; }
-.facility-access { background: #203e66; color: #d4e8ff; }
+.facility-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.facility-associations { display: flex; gap: 6px; flex-wrap: wrap; }
+.facility-association, .facility-mode { display: inline-block; padding: 3px 7px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+.facility-association { background: #203e66; color: #d4e8ff; }
+.facility-association.external { background: #374151; color: #e5e7eb; }
+.facility-rink-list { border-top: 1px solid var(--nf-border-light); }
+.facility-rink-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--nf-border-light); }
+.facility-rink-row > div:first-child { display: flex; gap: 7px; align-items: center; min-width: 0; }
+.facility-rink-row strong { overflow-wrap: anywhere; }
+.facility-rink-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.facility-rink-actions .nf-btn, .facility-actions .nf-btn { padding: 7px 9px; }
 .facility-mode.gateway { background: #14532d; color: #bbf7d0; }
 .facility-mode.manual { background: #374151; color: #e5e7eb; }
-.facility-empty { padding: 28px 0; color: var(--nf-text-muted); text-align: center; }
+.facility-empty { grid-column: 1 / -1; padding: 28px 0; color: var(--nf-text-muted); text-align: center; }
 .facility-checkboxes { display: flex; gap: 18px; align-items: center; padding-top: 24px; }
 .facility-checkboxes label, .facility-inline-check { display: flex; gap: 8px; align-items: center; }
 .facility-inline-check { margin-top: 14px; }
 .facility-readonly { opacity: 0.7; }
+@media (max-width: 1100px) {
+  .facility-toolbar { grid-template-columns: auto 1fr; }
+  .facility-status { grid-column: 1 / -1; text-align: left; }
+  .facility-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 760px) {
   .facility-toolbar { grid-template-columns: 1fr; }
+  .facility-toolbar label, .facility-status { grid-column: auto; }
   .facility-status { text-align: left; }
-  .facility-arena-header { flex-direction: column; }
+  .facility-list { grid-template-columns: 1fr; }
   .facility-actions { justify-content: flex-start; }
-  .facility-rinks, .facility-rinks tbody, .facility-rinks tr, .facility-rinks td { display: block; width: 100%; }
-  .facility-rinks thead { display: none; }
-  .facility-rinks tr { padding: 10px 0; border-bottom: 1px solid var(--nf-border-light); }
-  .facility-rinks td { border: 0; padding: 4px 0; }
-  .facility-rinks th:last-child, .facility-rinks td:last-child { width: 100%; text-align: left; }
+  .facility-rink-row { align-items: flex-start; flex-direction: column; }
 }

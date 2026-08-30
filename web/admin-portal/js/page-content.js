@@ -2036,6 +2036,8 @@ window.PageContentRegistry.facilities = () => `
   <div class="facility-toolbar">
     <label for="facilityOrganization">Organization</label>
     <select id="facilityOrganization" class="nf-select"></select>
+    <label for="facilityNameFilter">Arena name</label>
+    <input id="facilityNameFilter" class="nf-search" type="search" placeholder="Search arenas" />
     <span id="facilityStatus" class="facility-status" aria-live="polite"></span>
   </div>
 

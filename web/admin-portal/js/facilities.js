@@ -30,7 +30,11 @@ async function initializeFacilities() {
 async function loadFacilities(selectedOrganizationId = facilityState.organizationId) {
   facilityById("facilityStatus").textContent = "Loading facilities...";
   try {
-    facilityState.arenas = await FacilityApi.getCatalog();
+    facilityState.arenas = (await FacilityApi.getCatalog()).map((arena) => ({
+      ...arena,
+      organizations: Array.isArray(arena.organizations) ? arena.organizations : [],
+      rinks: Array.isArray(arena.rinks) ? arena.rinks : [],
+    }));
     if (!facilityState.isSuperAdmin && facilityState.organizations[0]?.organizationId) {
       const managedArenas = await FacilityApi.getForOrganization(facilityState.organizations[0].organizationId);
       const managedById = new Map(managedArenas.map((arena) => [arena.arenaId, arena]));
@@ -71,6 +75,17 @@ function getFacilityActionOrganizationId() {
     : "";
 }
 
+function populateFacilityOrganizationSelect(selectId, selectedOrganizationId = "") {
+  const select = facilityById(selectId);
+  select.innerHTML = facilityState.organizations
+    .map((org) => `<option value="${facilityEscape(org.organizationId)}">${facilityEscape(org.name)}</option>`)
+    .join("");
+  const fallbackId = getFacilityActionOrganizationId() || facilityState.organizations[0]?.organizationId || "";
+  select.value = facilityState.organizations.some((org) => org.organizationId === selectedOrganizationId)
+    ? selectedOrganizationId
+    : fallbackId;
+}
+
 function renderFacilities() {
   const list = facilityById("facilityList");
   const nameFilter = facilityById("facilityNameFilter").value.trim().toLowerCase();
@@ -81,9 +96,8 @@ function renderFacilities() {
     return matchesOrganization && (!nameFilter || arena.name.toLowerCase().includes(nameFilter));
   });
   facilityById("facilityStatus").textContent = `${filteredArenas.length} of ${facilityState.arenas.length} arena${facilityState.arenas.length === 1 ? "" : "s"}`;
-  const actionOrganizationId = getFacilityActionOrganizationId();
-  facilityById("btnAddArena").disabled = !actionOrganizationId;
-  facilityById("btnAssociateArena").disabled = !actionOrganizationId;
+  facilityById("btnAddArena").disabled = facilityState.organizations.length === 0;
+  facilityById("btnAssociateArena").disabled = facilityState.organizations.length === 0;
 
   if (!filteredArenas.length) {
     list.innerHTML = '<div class="facility-empty">No Arenas match the selected filters.</div>';
@@ -123,6 +137,7 @@ function bindFacilityEvents() {
   facilityById("facilityNameFilter").addEventListener("input", renderFacilities);
   facilityById("btnAddArena").addEventListener("click", () => openArenaModal());
   facilityById("btnAssociateArena").addEventListener("click", openAssociateModal);
+  facilityById("associateOrganizationId").addEventListener("change", populateAssociateArenaOptions);
   facilityById("saveArena").addEventListener("click", saveArena);
   facilityById("saveArenaAssociation").addEventListener("click", saveArenaAssociation);
   facilityById("saveRink").addEventListener("click", saveRink);
@@ -153,7 +168,10 @@ function openArenaModal(arena = null) {
   facilityById("arenaCity").value = arena?.city || "";
   facilityById("arenaState").value = arena?.state || "";
   facilityById("arenaPostalCode").value = arena?.postalCode || "";
-  facilityById("arenaPrimary").checked = getFacilityManagementAssociation(arena || {})?.isPrimary || false;
+  const managementAssociation = getFacilityManagementAssociation(arena || {});
+  populateFacilityOrganizationSelect("arenaOrganization", managementAssociation?.organizationId);
+  facilityById("arenaOrganization").disabled = Boolean(arena);
+  facilityById("arenaPrimary").checked = managementAssociation?.isPrimary || false;
   facilityById("arenaActive").checked = arena?.isActive ?? true;
   facilityOpen("arenaModalOverlay");
 }
@@ -166,7 +184,7 @@ async function saveArena() {
     const association = getFacilityManagementAssociation(facilityState.arena);
     if (association) await FacilityApi.associateArena(association.organizationId, facilityState.arena.arenaId, { accessLevel: association.accessLevel, isPrimary: dto.isPrimary });
   } else {
-    const organizationId = getFacilityActionOrganizationId();
+    const organizationId = facilityById("arenaOrganization").value;
     if (!organizationId) return alert("Select an Organization before adding an Arena.");
     await FacilityApi.createArena(organizationId, dto);
   }
@@ -174,20 +192,25 @@ async function saveArena() {
 }
 
 async function openAssociateModal() {
-  const catalog = await FacilityApi.getCatalog();
-  const organizationId = getFacilityActionOrganizationId();
-  if (!organizationId) return alert("Select an Organization before associating an Arena.");
-  const associated = new Set(catalog.filter((arena) => (arena.organizations || []).some((org) => org.organizationId === organizationId)).map((arena) => arena.arenaId));
-  const available = catalog.filter((arena) => !associated.has(arena.arenaId));
-  facilityById("associateArenaId").innerHTML = available.map((arena) => `<option value="${arena.arenaId}">${facilityEscape(arena.name)}${arena.city ? ` · ${facilityEscape(arena.city)}` : ""}</option>`).join("");
-  if (!available.length) return alert("No unassociated active arenas are available.");
+  populateFacilityOrganizationSelect("associateOrganizationId");
+  const available = populateAssociateArenaOptions();
+  if (!available.length) return alert("No unassociated active arenas are available for this Organization.");
   facilityById("associateAccessLevel").value = "Use";
   facilityById("associateAccessLevel").disabled = !facilityState.isSuperAdmin;
   facilityOpen("associateArenaModalOverlay");
 }
 
+function populateAssociateArenaOptions() {
+  const organizationId = facilityById("associateOrganizationId").value;
+  const available = facilityState.arenas.filter((arena) => !(arena.organizations || []).some((org) => org.organizationId === organizationId));
+  facilityById("associateArenaId").innerHTML = available
+    .map((arena) => `<option value="${arena.arenaId}">${facilityEscape(arena.name)}${arena.city ? ` · ${facilityEscape(arena.city)}` : ""}</option>`)
+    .join("");
+  return available;
+}
+
 async function saveArenaAssociation() {
-  await FacilityApi.associateArena(getFacilityActionOrganizationId(), facilityById("associateArenaId").value, { accessLevel: facilityById("associateAccessLevel").value, isPrimary: facilityById("associatePrimary").checked });
+  await FacilityApi.associateArena(facilityById("associateOrganizationId").value, facilityById("associateArenaId").value, { accessLevel: facilityById("associateAccessLevel").value, isPrimary: facilityById("associatePrimary").checked });
   facilityClose("associateArenaModalOverlay"); await loadFacilities();
 }
 

@@ -1402,6 +1402,8 @@ window.PageContentRegistry.schedulesModals = () => `
           </div>
 
           <div id="game-managed-venue-fields" class="two-col hidden">
+            <div><label>Arena Organization</label><select id="game-arena-organization-filter" class="nf-input"><option value="">All Arenas</option></select></div>
+            <div><label>Search Arenas</label><input id="game-arena-search" class="nf-input" type="search" placeholder="Search name, city, or Organization" autocomplete="off" /></div>
             <div><label>Arena</label><select id="game-arena-id" class="nf-input"><option value="">Select Arena</option></select></div>
             <div><label>Rink</label><select id="game-rink-id" class="nf-input"><option value="">Select Rink</option></select></div>
             <div class="full-width-section"><label>Arena address</label><input id="game-managed-arena-address" class="nf-input" type="text" readonly placeholder="No address configured" /></div>
@@ -2050,6 +2052,7 @@ window.PageContentRegistry.facilitiesModals = () => `
       <div class="nf-modal-header"><h2 id="arenaModalTitle">Add Arena</h2><button class="modal-close" data-close-modal="arenaModalOverlay">×</button></div>
       <div class="nf-modal-body">
         <div class="full-width-section"><div class="two-col">
+          <div class="full-width"><label>Organization</label><select id="arenaOrganization" class="nf-input"></select></div>
           <div><label>Arena name</label><input id="arenaName" class="nf-input" /></div>
           <div><label>Street address</label><input id="arenaStreet" class="nf-input" /></div>
           <div><label>City</label><input id="arenaCity" class="nf-input" /></div>
@@ -2066,6 +2069,7 @@ window.PageContentRegistry.facilitiesModals = () => `
     <div class="nf-modal small">
       <div class="nf-modal-header"><h2>Associate Existing Arena</h2><button class="modal-close" data-close-modal="associateArenaModalOverlay">×</button></div>
       <div class="nf-modal-body full">
+        <label>Organization</label><select id="associateOrganizationId" class="nf-input"></select>
         <label>Arena</label><select id="associateArenaId" class="nf-input"></select>
         <label>Organization access</label><select id="associateAccessLevel" class="nf-input"><option value="Use">Use</option><option value="Manage">Manage</option></select>
         <label class="facility-inline-check"><input id="associatePrimary" type="checkbox" /> Primary arena</label>

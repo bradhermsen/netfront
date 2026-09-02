@@ -34,6 +34,7 @@ namespace NetFrontAPI.DTOs
     {
         public Guid OfficialId { get; set; }
         public string Role { get; set; } = string.Empty;
+        public string? PreviousRole { get; set; }
     }
 
     public class MobileCreateOfficialDto

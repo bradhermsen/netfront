@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   Platform,
@@ -169,6 +170,7 @@ type AddOfficialForm = {
   isReferee: boolean;
   isLinesman: boolean;
   isActive: boolean;
+  assignmentRole: string;
 };
 
 const OFFICIAL_ASSIGNMENT_ROLES = [
@@ -1576,6 +1578,7 @@ export default function App() {
     isReferee: true,
     isLinesman: false,
     isActive: true,
+    assignmentRole: "",
   });
   const [isSavingOfficial, setIsSavingOfficial] = useState(false);
   const [isOfficialsLoading, setIsOfficialsLoading] = useState(false);
@@ -5511,7 +5514,7 @@ export default function App() {
     }).filter((official) => official.officialId && official.displayName);
   }
 
-  async function assignOfficialToGame(role: string, officialId: string) {
+  async function assignOfficialToGame(role: string, officialId: string, previousRole?: string) {
     if (!nextGame?.gameId || !session?.code) return;
     setIsOfficialsLoading(true);
     setOfficialsError("");
@@ -5524,7 +5527,7 @@ export default function App() {
             "Content-Type": "application/json",
             "x-netfront-access-code": session.code,
           },
-          body: JSON.stringify({ officialId, role }),
+          body: JSON.stringify({ officialId, role, previousRole: previousRole || null }),
         },
       );
       if (!response.ok) {
@@ -5539,7 +5542,47 @@ export default function App() {
     }
   }
 
+  async function removeOfficialFromGame(role: string) {
+    if (!nextGame?.gameId || !session?.code) return;
+    setIsOfficialsLoading(true);
+    setOfficialsError("");
+    try {
+      const response = await fetch(
+        `${activeApiBase}/games/${nextGame.gameId}/officials/${encodeURIComponent(role)}/assignment-mobile`,
+        {
+          method: "DELETE",
+          headers: { "x-netfront-access-code": session.code },
+        },
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || "Failed to remove official from game.");
+      }
+      setOfficials(await fetchOfficialsForGame(nextGame.gameId));
+    } catch (err) {
+      setOfficialsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsOfficialsLoading(false);
+    }
+  }
+
+  function confirmRemoveOfficial(official: OfficialVerification) {
+    Alert.alert(
+      "Remove Official from Game?",
+      `${official.officialName} will be removed from ${toOfficialRoleLabel(official.role)}. The Official will remain available for future games.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => void removeOfficialFromGame(official.role),
+        },
+      ],
+    );
+  }
+
   function openAddOfficialModal() {
+    const assignedRoles = new Set(officials.map((official) => official.role));
     setAddOfficialForm({
       firstName: "",
       lastName: "",
@@ -5547,6 +5590,7 @@ export default function App() {
       isReferee: true,
       isLinesman: false,
       isActive: true,
+      assignmentRole: ["Referee1", "Referee2"].find((role) => !assignedRoles.has(role)) || "",
     });
     setOfficialsError("");
     setShowAddOfficialModal(true);
@@ -5563,13 +5607,11 @@ export default function App() {
       return;
     }
 
-    const assignedRoles = new Set(officials.map((official) => official.role));
-    const assignmentRole = addOfficialForm.isReferee
-      ? ["Referee1", "Referee2"].find((role) => !assignedRoles.has(role))
-      : ["Linesman1", "Linesman2"].find((role) => !assignedRoles.has(role));
-    const fallbackRole = addOfficialForm.isLinesman
-      ? ["Linesman1", "Linesman2"].find((role) => !assignedRoles.has(role))
-      : undefined;
+    const assignmentRole = addOfficialForm.assignmentRole;
+    if (assignmentRole && !(assignmentRole.startsWith("Referee") ? addOfficialForm.isReferee : addOfficialForm.isLinesman)) {
+      setOfficialsError("The game assignment must match one of the selected Official roles.");
+      return;
+    }
 
     setIsSavingOfficial(true);
     setOfficialsError("");
@@ -5587,7 +5629,7 @@ export default function App() {
             firstName: addOfficialForm.firstName.trim(),
             lastName: addOfficialForm.lastName.trim(),
             email: addOfficialForm.email.trim() || null,
-            assignmentRole: assignmentRole || fallbackRole || null,
+            assignmentRole: assignmentRole || null,
           }),
         },
       );
@@ -7777,11 +7819,35 @@ export default function App() {
                     idx % 2 === 0 ? styles.officialRow : styles.officialRowAlt
                   }
                 >
-                  <View style={styles.officialRoleCol}>
-                    <Text style={styles.officialRoleText}>
-                      {toOfficialRoleLabel(official.role).toUpperCase()}
-                    </Text>
-                  </View>
+                  <Pressable
+                    style={styles.officialRoleSelect}
+                    onPress={() => {
+                      const officialType = officialOptions.find((option) => option.officialId === official.officialId)?.role || official.role;
+                      const roles = OFFICIAL_ASSIGNMENT_ROLES.filter((role) =>
+                        role.startsWith("Referee")
+                          ? officialType.toLowerCase().includes("referee")
+                          : officialType.toLowerCase().includes("linesman"),
+                      );
+                      openThemedDropdown({
+                        title: `Change Role for ${official.officialName}`,
+                        selectedValue: official.role,
+                        options: [
+                          ...roles.map((role) => ({ value: role, label: toOfficialRoleLabel(role) })),
+                          { value: "remove", label: "Remove from Game" },
+                        ],
+                        onSelect: (role) => {
+                          if (role === "remove") {
+                            confirmRemoveOfficial(official);
+                            return;
+                          }
+                          if (role !== official.role && official.officialId) void assignOfficialToGame(role, official.officialId, official.role);
+                        },
+                      });
+                    }}
+                  >
+                    <Text style={styles.officialRoleText}>{toOfficialRoleLabel(official.role).toUpperCase()}</Text>
+                    <Text style={styles.officialRoleChevron}>⌄</Text>
+                  </Pressable>
                   <View style={styles.officialNameCol}>
                     <Text style={styles.officialNameText}>
                       {official.officialName || "Not assigned"}
@@ -7945,6 +8011,33 @@ export default function App() {
                           trackColor={{ false: "#475569", true: "#FF7B00" }}
                         />
                       </View>
+                    </View>
+                    <View style={styles.addOfficialField}>
+                      <Text style={styles.inputLabel}>Game Assignment</Text>
+                      <Pressable
+                        style={styles.officialSelectButton}
+                        onPress={() => {
+                          const assignedRoles = new Set(officials.map((official) => official.role));
+                          const roles = OFFICIAL_ASSIGNMENT_ROLES.filter((role) =>
+                            !assignedRoles.has(role)
+                            && (role.startsWith("Referee") ? addOfficialForm.isReferee : addOfficialForm.isLinesman),
+                          );
+                          openThemedDropdown({
+                            title: "Select Game Assignment",
+                            selectedValue: addOfficialForm.assignmentRole,
+                            options: [
+                              { value: "", label: "Add to Officials List Only" },
+                              ...roles.map((role) => ({ value: role, label: toOfficialRoleLabel(role) })),
+                            ],
+                            onSelect: (assignmentRole) => setAddOfficialForm((current) => ({ ...current, assignmentRole })),
+                          });
+                        }}
+                      >
+                        <Text style={styles.officialSelectButtonText}>
+                          {addOfficialForm.assignmentRole ? toOfficialRoleLabel(addOfficialForm.assignmentRole) : "Officials List Only"}
+                        </Text>
+                        <Text style={styles.officialSelectChevron}>⌄</Text>
+                      </Pressable>
                     </View>
                     <View style={styles.addOfficialField}>
                       <Text style={styles.inputLabel}>Active</Text>
@@ -12494,11 +12587,29 @@ const styles = StyleSheet.create({
   officialRoleCol: {
     width: 80,
   },
+  officialRoleSelect: {
+    width: 92,
+    minHeight: 40,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: "#40516D",
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
+    backgroundColor: "#101B2E",
+  },
   officialRoleText: {
     color: "#7A8FA8",
     fontWeight: "800",
     fontSize: 10,
     letterSpacing: 0.8,
+  },
+  officialRoleChevron: {
+    color: "#FF7B00",
+    fontSize: 16,
+    fontWeight: "800",
   },
   officialNameCol: {
     width: 120,

@@ -274,7 +274,40 @@ namespace NetFrontAPI.Functions
             if (official == null) return req.CreateResponse(HttpStatusCode.NotFound);
             if (!OfficialSupportsRole(official.Role, dto.Role)) return await BadRequestAsync(req, "The selected official is not available for this role.");
 
-            await AssignOfficialAsync(conn, gameId, dto.Role, official);
+            using var transaction = conn.BeginTransaction();
+            if (!string.IsNullOrWhiteSpace(dto.PreviousRole)
+                && IsValidAssignmentRole(dto.PreviousRole)
+                && !dto.PreviousRole.Equals(dto.Role, StringComparison.OrdinalIgnoreCase))
+            {
+                await MoveOfficialAssignmentAsync(conn, transaction, gameId, dto.PreviousRole, dto.Role, official);
+            }
+            else
+            {
+                await AssignOfficialAsync(conn, gameId, dto.Role, official, transaction);
+            }
+            transaction.Commit();
+            return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+
+        [Function("RemoveMobileGameOfficial")]
+        public async Task<HttpResponseData> RemoveMobileGameOfficial(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "games/{gameId:guid}/officials/{role}/assignment-mobile")] HttpRequestData req,
+            Guid gameId,
+            string role)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            var authorizationError = await AuthorizeGameManagerAsync(req, conn, gameId);
+            if (authorizationError != null) return authorizationError;
+            if (!IsValidAssignmentRole(role)) return await BadRequestAsync(req, "A valid official assignment role is required.");
+
+            using var transaction = conn.BeginTransaction();
+            await conn.ExecuteAsync(@"
+                DELETE FROM dbo.GameOfficialVerifications
+                WHERE GameId = @GameId AND Role = @Role;
+                DELETE FROM dbo.GameOfficials
+                WHERE GameId = @GameId AND Role = @Role;",
+                new { GameId = gameId, Role = role }, transaction);
+            transaction.Commit();
             return req.CreateResponse(HttpStatusCode.NoContent);
         }
 
@@ -345,6 +378,51 @@ namespace NetFrontAPI.Functions
                 new { GameId = gameId, Role = role.Trim(), official.OfficialId, official.FirstName, official.LastName }, transaction);
         }
 
+        private static async Task MoveOfficialAssignmentAsync(
+            System.Data.IDbConnection conn,
+            System.Data.IDbTransaction transaction,
+            Guid gameId,
+            string previousRole,
+            string newRole,
+            MobileOfficialRow official)
+        {
+            var sourceId = await conn.QueryFirstOrDefaultAsync<Guid?>(@"
+                SELECT TOP 1 Id FROM dbo.GameOfficials
+                WHERE GameId = @GameId AND Role = @PreviousRole AND OfficialId = @OfficialId;",
+                new { GameId = gameId, PreviousRole = previousRole, official.OfficialId }, transaction);
+            if (!sourceId.HasValue)
+            {
+                await AssignOfficialAsync(conn, gameId, newRole, official, transaction);
+                return;
+            }
+
+            var target = await conn.QueryFirstOrDefaultAsync<GameOfficialAssignmentRow>(@"
+                SELECT TOP 1 Id, OfficialId, FirstName, LastName FROM dbo.GameOfficials
+                WHERE GameId = @GameId AND Role = @NewRole;",
+                new { GameId = gameId, NewRole = newRole }, transaction);
+
+            if (target == null)
+            {
+                await conn.ExecuteAsync("UPDATE dbo.GameOfficials SET Role = @NewRole WHERE Id = @SourceId;",
+                    new { NewRole = newRole, SourceId = sourceId.Value }, transaction);
+            }
+            else
+            {
+                var temporaryRole = $"Swap-{Guid.NewGuid():N}";
+                await conn.ExecuteAsync("UPDATE dbo.GameOfficials SET Role = @TemporaryRole WHERE Id = @SourceId;",
+                    new { TemporaryRole = temporaryRole, SourceId = sourceId.Value }, transaction);
+                await conn.ExecuteAsync("UPDATE dbo.GameOfficials SET Role = @PreviousRole WHERE Id = @TargetId;",
+                    new { PreviousRole = previousRole, TargetId = target.Id }, transaction);
+                await conn.ExecuteAsync("UPDATE dbo.GameOfficials SET Role = @NewRole WHERE Id = @SourceId;",
+                    new { NewRole = newRole, SourceId = sourceId.Value }, transaction);
+            }
+
+            await conn.ExecuteAsync(@"
+                DELETE FROM dbo.GameOfficialVerifications
+                WHERE GameId = @GameId AND Role IN @Roles;",
+                new { GameId = gameId, Roles = new[] { previousRole, newRole } }, transaction);
+        }
+
         private static bool IsValidAssignmentRole(string? role) => role is "Referee1" or "Referee2" or "Linesman1" or "Linesman2";
         private static bool OfficialSupportsRole(string? officialRole, string assignmentRole) => assignmentRole.StartsWith("Referee", StringComparison.OrdinalIgnoreCase)
             ? officialRole?.Contains("Referee", StringComparison.OrdinalIgnoreCase) == true
@@ -359,6 +437,14 @@ namespace NetFrontAPI.Functions
             public string FirstName { get; set; } = string.Empty;
             public string LastName { get; set; } = string.Empty;
             public string? Role { get; set; }
+        }
+
+        private sealed class GameOfficialAssignmentRow
+        {
+            public Guid Id { get; set; }
+            public Guid? OfficialId { get; set; }
+            public string FirstName { get; set; } = string.Empty;
+            public string LastName { get; set; } = string.Empty;
         }
     }
 }

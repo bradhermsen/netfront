@@ -155,6 +155,29 @@ type OfficialVerification = {
   signedAtUtc?: string | null;
 };
 
+type OfficialOption = {
+  officialId: string;
+  displayName: string;
+  email?: string | null;
+  role: string;
+};
+
+type AddOfficialForm = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  isReferee: boolean;
+  isLinesman: boolean;
+  isActive: boolean;
+};
+
+const OFFICIAL_ASSIGNMENT_ROLES = [
+  "Referee1",
+  "Referee2",
+  "Linesman1",
+  "Linesman2",
+] as const;
+
 type EmailRecipientOption = {
   key: string;
   recipientName: string;
@@ -1544,6 +1567,17 @@ export default function App() {
   });
   const [shotHistory, setShotHistory] = useState<ShotLogEntry[]>([]);
   const [officials, setOfficials] = useState<OfficialVerification[]>([]);
+  const [officialOptions, setOfficialOptions] = useState<OfficialOption[]>([]);
+  const [showAddOfficialModal, setShowAddOfficialModal] = useState(false);
+  const [addOfficialForm, setAddOfficialForm] = useState<AddOfficialForm>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    isReferee: true,
+    isLinesman: false,
+    isActive: true,
+  });
+  const [isSavingOfficial, setIsSavingOfficial] = useState(false);
   const [isOfficialsLoading, setIsOfficialsLoading] = useState(false);
   const [officialsError, setOfficialsError] = useState("");
   const [showStartConfirm, setShowStartConfirm] = useState(false);
@@ -5454,6 +5488,124 @@ export default function App() {
     });
   }
 
+  async function fetchOfficialOptions(gameId: string) {
+    const response = await fetch(
+      `${activeApiBase}/games/${gameId}/officials/options-mobile`,
+      { headers: { "x-netfront-access-code": session?.code ?? "" } },
+    );
+    const payload = await response.json().catch(() => []);
+    if (!response.ok || !Array.isArray(payload)) {
+      throw new Error("Failed to load available officials.");
+    }
+    return payload.map((entry) => {
+      const row = entry as Record<string, unknown>;
+      return {
+        officialId: String(row.officialId ?? row.OfficialId ?? ""),
+        displayName: String(row.displayName ?? row.DisplayName ?? ""),
+        email: String(row.email ?? row.Email ?? "") || null,
+        role: String(row.role ?? row.Role ?? ""),
+      } as OfficialOption;
+    }).filter((official) => official.officialId && official.displayName);
+  }
+
+  async function assignOfficialToGame(role: string, officialId: string) {
+    if (!nextGame?.gameId || !session?.code) return;
+    setIsOfficialsLoading(true);
+    setOfficialsError("");
+    try {
+      const response = await fetch(
+        `${activeApiBase}/games/${nextGame.gameId}/officials/assignment-mobile`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "x-netfront-access-code": session.code,
+          },
+          body: JSON.stringify({ officialId, role }),
+        },
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || "Failed to assign official.");
+      }
+      setOfficials(await fetchOfficialsForGame(nextGame.gameId));
+    } catch (err) {
+      setOfficialsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsOfficialsLoading(false);
+    }
+  }
+
+  function openAddOfficialModal() {
+    setAddOfficialForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      isReferee: true,
+      isLinesman: false,
+      isActive: true,
+    });
+    setOfficialsError("");
+    setShowAddOfficialModal(true);
+  }
+
+  async function saveNewOfficial() {
+    if (!nextGame?.gameId || !session?.code) return;
+    if (!addOfficialForm.firstName.trim() || !addOfficialForm.lastName.trim()) {
+      setOfficialsError("First name and last name are required.");
+      return;
+    }
+    if (!addOfficialForm.isReferee && !addOfficialForm.isLinesman) {
+      setOfficialsError("Select Referee, Linesman, or both.");
+      return;
+    }
+
+    const assignedRoles = new Set(officials.map((official) => official.role));
+    const assignmentRole = addOfficialForm.isReferee
+      ? ["Referee1", "Referee2"].find((role) => !assignedRoles.has(role))
+      : ["Linesman1", "Linesman2"].find((role) => !assignedRoles.has(role));
+    const fallbackRole = addOfficialForm.isLinesman
+      ? ["Linesman1", "Linesman2"].find((role) => !assignedRoles.has(role))
+      : undefined;
+
+    setIsSavingOfficial(true);
+    setOfficialsError("");
+    try {
+      const response = await fetch(
+        `${activeApiBase}/games/${nextGame.gameId}/officials/mobile`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-netfront-access-code": session.code,
+          },
+          body: JSON.stringify({
+            ...addOfficialForm,
+            firstName: addOfficialForm.firstName.trim(),
+            lastName: addOfficialForm.lastName.trim(),
+            email: addOfficialForm.email.trim() || null,
+            assignmentRole: assignmentRole || fallbackRole || null,
+          }),
+        },
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || "Failed to add official.");
+      }
+      const [loadedOfficials, loadedOptions] = await Promise.all([
+        fetchOfficialsForGame(nextGame.gameId),
+        fetchOfficialOptions(nextGame.gameId),
+      ]);
+      setOfficials(loadedOfficials);
+      setOfficialOptions(loadedOptions);
+      setShowAddOfficialModal(false);
+    } catch (err) {
+      setOfficialsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsSavingOfficial(false);
+    }
+  }
+
   async function handleRefreshOfficials() {
     if (!nextGame?.gameId) return;
 
@@ -5461,8 +5613,12 @@ export default function App() {
     setOfficialsError("");
 
     try {
-      const loaded = await fetchOfficialsForGame(nextGame.gameId);
+      const [loaded, options] = await Promise.all([
+        fetchOfficialsForGame(nextGame.gameId),
+        fetchOfficialOptions(nextGame.gameId),
+      ]);
       setOfficials(loaded);
+      setOfficialOptions(options);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setOfficialsError(message);
@@ -6849,8 +7005,12 @@ export default function App() {
     setIsOfficialsLoading(true);
 
     try {
-      const loaded = await fetchOfficialsForGame(nextGame.gameId);
+      const [loaded, options] = await Promise.all([
+        fetchOfficialsForGame(nextGame.gameId),
+        fetchOfficialOptions(nextGame.gameId),
+      ]);
       setOfficials(loaded);
+      setOfficialOptions(options);
       setStage("officialsVerify");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -7596,12 +7756,18 @@ export default function App() {
 
             <Text style={styles.sectionLabel}>OFFICIALS</Text>
 
-            {!isOfficialsLoading && officials.length === 0 ? (
-              <Text style={styles.nextGameEmptyText}>
-                No officials assigned for this scheduled game.
-              </Text>
-            ) : (
-              officials.map((official, idx) => (
+            {!isOfficialsLoading ? (
+              <Pressable
+                style={styles.addOfficialButton}
+                onPress={openAddOfficialModal}
+              >
+                <Text style={styles.addOfficialButtonText}>+ Add Official</Text>
+              </Pressable>
+            ) : null}
+
+            {!isOfficialsLoading ? (
+              <>
+              {officials.map((official, idx) => (
                 <View
                   key={`${official.role}-${idx}`}
                   style={
@@ -7642,8 +7808,51 @@ export default function App() {
                     </Pressable>
                   </View>
                 </View>
-              ))
-            )}
+              ))}
+              {OFFICIAL_ASSIGNMENT_ROLES
+                .filter((role) => !officials.some((official) => official.role === role))
+                .map((role, index) => {
+                  const roleType = role.startsWith("Referee") ? "Referee" : "Linesman";
+                  const assignedIds = new Set(officials.map((official) => official.officialId).filter(Boolean));
+                  const compatibleOptions = officialOptions.filter((official) =>
+                    official.role.toLowerCase().includes(roleType.toLowerCase()) && !assignedIds.has(official.officialId),
+                  );
+                  return (
+                    <View
+                      key={role}
+                      style={index % 2 === 0 ? styles.officialRow : styles.officialRowAlt}
+                    >
+                      <View style={styles.officialRoleCol}>
+                        <Text style={styles.officialRoleText}>
+                          {toOfficialRoleLabel(role).toUpperCase()}
+                        </Text>
+                      </View>
+                      <Pressable
+                        style={styles.officialSelectButton}
+                        onPress={() =>
+                          openThemedDropdown({
+                            title: `Select ${toOfficialRoleLabel(role)}`,
+                            selectedValue: "",
+                            options: compatibleOptions.length
+                              ? compatibleOptions.map((official) => ({
+                                  value: official.officialId,
+                                  label: official.displayName,
+                                }))
+                              : [{ value: "", label: `No ${roleType.toLowerCase()}s available` }],
+                            onSelect: (officialId) => {
+                              if (officialId) void assignOfficialToGame(role, officialId);
+                            },
+                          })
+                        }
+                      >
+                        <Text style={styles.officialSelectButtonText}>Select Official</Text>
+                        <Text style={styles.officialSelectChevron}>⌄</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </>
+            ) : null}
 
             <View style={styles.rowButtons}>
               <Pressable
@@ -7660,6 +7869,109 @@ export default function App() {
               </Pressable>
             </View>
           </View>
+        ) : null}
+
+        {showAddOfficialModal ? (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            presentationStyle="overFullScreen"
+            onRequestClose={() => setShowAddOfficialModal(false)}
+          >
+            <View style={styles.confirmOverlay}>
+              <View style={styles.addOfficialModal}>
+                <View style={styles.addOfficialHeader}>
+                  <Text style={styles.addOfficialTitle}>Add Official</Text>
+                  <Pressable
+                    style={styles.addOfficialClose}
+                    onPress={() => setShowAddOfficialModal(false)}
+                  >
+                    <Text style={styles.addOfficialCloseText}>×</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.addOfficialDivider} />
+                <ScrollView contentContainerStyle={styles.addOfficialBody}>
+                  <Text style={styles.addOfficialSectionTitle}>Official Information</Text>
+                  {officialsError ? <Text style={styles.error}>{officialsError}</Text> : null}
+                  <View style={styles.addOfficialFields}>
+                    <View style={styles.addOfficialField}>
+                      <Text style={styles.inputLabel}>First Name</Text>
+                      <TextInput
+                        style={styles.inputInline}
+                        value={addOfficialForm.firstName}
+                        onChangeText={(firstName) => setAddOfficialForm((current) => ({ ...current, firstName }))}
+                      />
+                    </View>
+                    <View style={styles.addOfficialField}>
+                      <Text style={styles.inputLabel}>Last Name</Text>
+                      <TextInput
+                        style={styles.inputInline}
+                        value={addOfficialForm.lastName}
+                        onChangeText={(lastName) => setAddOfficialForm((current) => ({ ...current, lastName }))}
+                      />
+                    </View>
+                    <View style={styles.addOfficialField}>
+                      <Text style={styles.inputLabel}>Email</Text>
+                      <TextInput
+                        style={styles.inputInline}
+                        value={addOfficialForm.email}
+                        onChangeText={(email) => setAddOfficialForm((current) => ({ ...current, email }))}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        placeholder="name@example.com"
+                        placeholderTextColor="#66758d"
+                      />
+                    </View>
+                    <View style={styles.addOfficialRolesField}>
+                      <Text style={styles.inputLabel}>Roles</Text>
+                      <View style={styles.addOfficialRoleRow}>
+                        <Text style={styles.addOfficialRoleText}>Referee</Text>
+                        <Switch
+                          value={addOfficialForm.isReferee}
+                          onValueChange={(isReferee) => setAddOfficialForm((current) => ({ ...current, isReferee }))}
+                          trackColor={{ false: "#475569", true: "#FF7B00" }}
+                        />
+                      </View>
+                      <View style={styles.addOfficialRoleRow}>
+                        <Text style={styles.addOfficialRoleText}>Linesman</Text>
+                        <Switch
+                          value={addOfficialForm.isLinesman}
+                          onValueChange={(isLinesman) => setAddOfficialForm((current) => ({ ...current, isLinesman }))}
+                          trackColor={{ false: "#475569", true: "#FF7B00" }}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.addOfficialField}>
+                      <Text style={styles.inputLabel}>Active</Text>
+                      <Switch
+                        value={addOfficialForm.isActive}
+                        onValueChange={(isActive) => setAddOfficialForm((current) => ({ ...current, isActive }))}
+                        trackColor={{ false: "#475569", true: "#FF7B00" }}
+                      />
+                    </View>
+                  </View>
+                </ScrollView>
+                <View style={styles.addOfficialFooter}>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    disabled={isSavingOfficial}
+                    onPress={() => setShowAddOfficialModal(false)}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.primaryButton, isSavingOfficial && styles.buttonDisabled]}
+                    disabled={isSavingOfficial}
+                    onPress={saveNewOfficial}
+                  >
+                    <Text style={styles.primaryButtonText}>{isSavingOfficial ? "Saving..." : "Save"}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
         ) : null}
 
         {showStartConfirm && session ? (
@@ -12202,6 +12514,141 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 10,
     letterSpacing: 0.8,
+  },
+  addOfficialButton: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#FF7B00",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,123,0,0.08)",
+  },
+  addOfficialButtonText: {
+    color: "#FF7B00",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  officialSelectButton: {
+    flex: 1,
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#40516D",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#101B2E",
+  },
+  officialSelectButtonText: {
+    color: "#E8EDF5",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  officialSelectChevron: {
+    color: "#FF7B00",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  addOfficialModal: {
+    width: "100%",
+    maxWidth: 700,
+    maxHeight: "94%",
+    borderWidth: 1,
+    borderColor: "#40516D",
+    borderRadius: 8,
+    backgroundColor: "#0B1424",
+    overflow: "hidden",
+  },
+  addOfficialHeader: {
+    minHeight: 70,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  addOfficialTitle: {
+    color: "#FF7B00",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  addOfficialClose: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addOfficialCloseText: {
+    color: "#E8EDF5",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  addOfficialDivider: {
+    height: 1,
+    marginHorizontal: 20,
+    backgroundColor: "#FF7B00",
+  },
+  addOfficialBody: {
+    padding: 20,
+    gap: 14,
+  },
+  addOfficialSectionTitle: {
+    color: "#F2F5FA",
+    fontSize: 16,
+    fontWeight: "900",
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#40516D",
+  },
+  inputLabel: {
+    color: "#AAB7C9",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  buttonDisabled: {
+    opacity: 0.55,
+  },
+  addOfficialFields: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  addOfficialField: {
+    flexBasis: "46%",
+    flexGrow: 1,
+    minWidth: 190,
+    gap: 6,
+  },
+  addOfficialRolesField: {
+    flexBasis: "46%",
+    flexGrow: 1,
+    minWidth: 190,
+    gap: 8,
+  },
+  addOfficialRoleRow: {
+    minHeight: 46,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#40516D",
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#0D192B",
+  },
+  addOfficialRoleText: {
+    color: "#E8EDF5",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  addOfficialFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#40516D",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
   },
   signaturePlaceholderMini: {
     borderWidth: 1,

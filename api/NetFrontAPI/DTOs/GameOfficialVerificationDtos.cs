@@ -29,4 +29,21 @@ namespace NetFrontAPI.DTOs
         public string Role { get; set; } = string.Empty;
         public string? SignatureImageBase64 { get; set; }
     }
+
+    public class MobileOfficialAssignmentDto
+    {
+        public Guid OfficialId { get; set; }
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class MobileCreateOfficialDto
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public bool IsReferee { get; set; }
+        public bool IsLinesman { get; set; }
+        public bool IsActive { get; set; } = true;
+        public string? AssignmentRole { get; set; }
+    }
 }

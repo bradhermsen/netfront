@@ -8,16 +8,19 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using NetFrontAPI.DTOs;
 using NetFrontAPI.Infrastructure.Database;
+using NetFrontAPI.Services;
 
 namespace NetFrontAPI.Functions
 {
     public class GameOfficialsVerificationFunctions
     {
         private readonly ISqlConnectionFactory _connectionFactory;
+        private readonly IAccessCodeService _accessCodeService;
 
-        public GameOfficialsVerificationFunctions(ISqlConnectionFactory connectionFactory)
+        public GameOfficialsVerificationFunctions(ISqlConnectionFactory connectionFactory, IAccessCodeService accessCodeService)
         {
             _connectionFactory = connectionFactory;
+            _accessCodeService = accessCodeService;
         }
 
         private static Task EnsureOfficialsEmailColumnAsync(System.Data.IDbConnection conn)
@@ -234,6 +237,129 @@ namespace NetFrontAPI.Functions
 
             tx.Commit();
             return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+
+        [Function("GetMobileOfficialOptions")]
+        public async Task<HttpResponseData> GetMobileOfficialOptions(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "games/{gameId:guid}/officials/options-mobile")] HttpRequestData req,
+            Guid gameId)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            var authorizationError = await AuthorizeGameManagerAsync(req, conn, gameId);
+            if (authorizationError != null) return authorizationError;
+            await EnsureOfficialsEmailColumnAsync(conn);
+
+            var officials = await conn.QueryAsync(@"
+                SELECT OfficialId, FirstName, LastName, Email, Role,
+                       LTRIM(RTRIM(CONCAT(FirstName, ' ', LastName))) AS DisplayName
+                FROM dbo.Officials
+                WHERE IsActive = 1
+                ORDER BY LastName, FirstName;");
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(officials);
+            return response;
+        }
+
+        [Function("AssignMobileGameOfficial")]
+        public async Task<HttpResponseData> AssignMobileGameOfficial(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "games/{gameId:guid}/officials/assignment-mobile")] HttpRequestData req,
+            Guid gameId)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            var authorizationError = await AuthorizeGameManagerAsync(req, conn, gameId);
+            if (authorizationError != null) return authorizationError;
+            var dto = await req.ReadFromJsonAsync<MobileOfficialAssignmentDto>();
+            if (dto == null || !IsValidAssignmentRole(dto.Role)) return await BadRequestAsync(req, "A valid official and assignment role are required.");
+
+            var official = await conn.QuerySingleOrDefaultAsync<MobileOfficialRow>(@"
+                SELECT OfficialId, FirstName, LastName, Role FROM dbo.Officials
+                WHERE OfficialId = @OfficialId AND IsActive = 1;", new { dto.OfficialId });
+            if (official == null) return req.CreateResponse(HttpStatusCode.NotFound);
+            if (!OfficialSupportsRole(official.Role, dto.Role)) return await BadRequestAsync(req, "The selected official is not available for this role.");
+
+            await AssignOfficialAsync(conn, gameId, dto.Role, official);
+            return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+
+        [Function("CreateMobileGameOfficial")]
+        public async Task<HttpResponseData> CreateMobileGameOfficial(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "games/{gameId:guid}/officials/mobile")] HttpRequestData req,
+            Guid gameId)
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            var authorizationError = await AuthorizeGameManagerAsync(req, conn, gameId);
+            if (authorizationError != null) return authorizationError;
+            var dto = await req.ReadFromJsonAsync<MobileCreateOfficialDto>();
+            if (dto == null || string.IsNullOrWhiteSpace(dto.FirstName) || string.IsNullOrWhiteSpace(dto.LastName))
+                return await BadRequestAsync(req, "First name and last name are required.");
+            if (!dto.IsReferee && !dto.IsLinesman) return await BadRequestAsync(req, "Select at least one official role.");
+            if (!string.IsNullOrWhiteSpace(dto.AssignmentRole) && (!IsValidAssignmentRole(dto.AssignmentRole) || !SupportsSelectedRole(dto, dto.AssignmentRole)))
+                return await BadRequestAsync(req, "The assignment slot must match a selected official role.");
+            await EnsureOfficialsEmailColumnAsync(conn);
+
+            var official = new MobileOfficialRow
+            {
+                OfficialId = Guid.NewGuid(),
+                FirstName = dto.FirstName.Trim(),
+                LastName = dto.LastName.Trim(),
+                Role = dto.IsReferee && dto.IsLinesman ? "Referee, Linesman" : dto.IsReferee ? "Referee" : "Linesman"
+            };
+            using var transaction = conn.BeginTransaction();
+            await conn.ExecuteAsync(@"
+                INSERT INTO dbo.Officials (OfficialId, FirstName, LastName, Email, Role, IsActive, CreatedAt, UpdatedAt)
+                VALUES (@OfficialId, @FirstName, @LastName, @Email, @Role, @IsActive, SYSUTCDATETIME(), SYSUTCDATETIME());",
+                new { official.OfficialId, official.FirstName, official.LastName, Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim(), official.Role, dto.IsActive }, transaction);
+            if (!string.IsNullOrWhiteSpace(dto.AssignmentRole)) await AssignOfficialAsync(conn, gameId, dto.AssignmentRole, official, transaction);
+            transaction.Commit();
+
+            var response = req.CreateResponse(HttpStatusCode.Created);
+            await response.WriteAsJsonAsync(new { official.OfficialId, official.FirstName, official.LastName, Email = dto.Email, official.Role });
+            return response;
+        }
+
+        private async Task<HttpResponseData?> AuthorizeGameManagerAsync(HttpRequestData req, System.Data.IDbConnection conn, Guid gameId)
+        {
+            var accessCode = req.Headers.TryGetValues("x-netfront-access-code", out var values) ? values.FirstOrDefault()?.Trim().ToUpperInvariant() : null;
+            if (string.IsNullOrWhiteSpace(accessCode) || !accessCode.StartsWith("GM-", StringComparison.OrdinalIgnoreCase))
+                return await UnauthorizedAsync(req, "A valid Game Manager access code is required.");
+            var codeWithoutPrefix = accessCode[3..];
+            var gameDateTime = await conn.QueryFirstOrDefaultAsync<DateTime?>(@"
+                SELECT TOP 1 g.GameDateTime FROM dbo.Games g
+                INNER JOIN dbo.Teams t ON t.Id IN (g.HomeTeamId, g.AwayTeamId)
+                WHERE g.GameId = @GameId AND (UPPER(ISNULL(t.ScorekeeperCode, '')) IN (@AccessCode, @CodeWithoutPrefix)
+                    OR 'GM-' + UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCode);",
+                new { GameId = gameId, AccessCode = accessCode, CodeWithoutPrefix = codeWithoutPrefix });
+            return gameDateTime.HasValue && _accessCodeService.IsValidGameDay(gameDateTime.Value)
+                ? null
+                : await UnauthorizedAsync(req, "The access code is not valid for this game.");
+        }
+
+        private static async Task AssignOfficialAsync(System.Data.IDbConnection conn, Guid gameId, string role, MobileOfficialRow official, System.Data.IDbTransaction? transaction = null)
+        {
+            await conn.ExecuteAsync(@"
+                MERGE dbo.GameOfficials AS target
+                USING (SELECT @GameId AS GameId, @Role AS Role) AS source
+                ON target.GameId = source.GameId AND target.Role = source.Role
+                WHEN MATCHED THEN UPDATE SET OfficialId = @OfficialId, FirstName = @FirstName, LastName = @LastName
+                WHEN NOT MATCHED THEN INSERT (Id, GameId, OfficialId, FirstName, LastName, Role)
+                    VALUES (NEWID(), @GameId, @OfficialId, @FirstName, @LastName, @Role);",
+                new { GameId = gameId, Role = role.Trim(), official.OfficialId, official.FirstName, official.LastName }, transaction);
+        }
+
+        private static bool IsValidAssignmentRole(string? role) => role is "Referee1" or "Referee2" or "Linesman1" or "Linesman2";
+        private static bool OfficialSupportsRole(string? officialRole, string assignmentRole) => assignmentRole.StartsWith("Referee", StringComparison.OrdinalIgnoreCase)
+            ? officialRole?.Contains("Referee", StringComparison.OrdinalIgnoreCase) == true
+            : officialRole?.Contains("Linesman", StringComparison.OrdinalIgnoreCase) == true;
+        private static bool SupportsSelectedRole(MobileCreateOfficialDto dto, string assignmentRole) => assignmentRole.StartsWith("Referee", StringComparison.OrdinalIgnoreCase) ? dto.IsReferee : dto.IsLinesman;
+        private static async Task<HttpResponseData> BadRequestAsync(HttpRequestData req, string message) { var response = req.CreateResponse(HttpStatusCode.BadRequest); await response.WriteAsJsonAsync(new { message }); return response; }
+        private static async Task<HttpResponseData> UnauthorizedAsync(HttpRequestData req, string message) { var response = req.CreateResponse(HttpStatusCode.Unauthorized); await response.WriteAsJsonAsync(new { message }); return response; }
+
+        private sealed class MobileOfficialRow
+        {
+            public Guid OfficialId { get; set; }
+            public string FirstName { get; set; } = string.Empty;
+            public string LastName { get; set; } = string.Empty;
+            public string? Role { get; set; }
         }
     }
 }

@@ -5495,7 +5495,10 @@ export default function App() {
     );
     const payload = await response.json().catch(() => []);
     if (!response.ok || !Array.isArray(payload)) {
-      throw new Error("Failed to load available officials.");
+      const serverMessage = !Array.isArray(payload)
+        ? String((payload as Record<string, unknown>).message ?? (payload as Record<string, unknown>).error ?? "")
+        : "";
+      throw new Error(serverMessage || `Failed to load available officials (HTTP ${response.status}).`);
     }
     return payload.map((entry) => {
       const row = entry as Record<string, unknown>;

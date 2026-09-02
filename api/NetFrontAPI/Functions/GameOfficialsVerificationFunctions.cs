@@ -8,19 +8,16 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using NetFrontAPI.DTOs;
 using NetFrontAPI.Infrastructure.Database;
-using NetFrontAPI.Services;
 
 namespace NetFrontAPI.Functions
 {
     public class GameOfficialsVerificationFunctions
     {
         private readonly ISqlConnectionFactory _connectionFactory;
-        private readonly IAccessCodeService _accessCodeService;
 
-        public GameOfficialsVerificationFunctions(ISqlConnectionFactory connectionFactory, IAccessCodeService accessCodeService)
+        public GameOfficialsVerificationFunctions(ISqlConnectionFactory connectionFactory)
         {
             _connectionFactory = connectionFactory;
-            _accessCodeService = accessCodeService;
         }
 
         private static Task EnsureOfficialsEmailColumnAsync(System.Data.IDbConnection conn)
@@ -323,13 +320,15 @@ namespace NetFrontAPI.Functions
             if (string.IsNullOrWhiteSpace(accessCode) || !accessCode.StartsWith("GM-", StringComparison.OrdinalIgnoreCase))
                 return await UnauthorizedAsync(req, "A valid Game Manager access code is required.");
             var codeWithoutPrefix = accessCode[3..];
-            var gameDateTime = await conn.QueryFirstOrDefaultAsync<DateTime?>(@"
-                SELECT TOP 1 g.GameDateTime FROM dbo.Games g
+            var isAuthorized = await conn.ExecuteScalarAsync<bool>(@"
+                SELECT CAST(CASE WHEN EXISTS (
+                SELECT 1 FROM dbo.Games g
                 INNER JOIN dbo.Teams t ON t.Id IN (g.HomeTeamId, g.AwayTeamId)
                 WHERE g.GameId = @GameId AND (UPPER(ISNULL(t.ScorekeeperCode, '')) IN (@AccessCode, @CodeWithoutPrefix)
-                    OR 'GM-' + UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCode);",
+                    OR 'GM-' + UPPER(ISNULL(t.ScorekeeperCode, '')) = @AccessCode)
+                ) THEN 1 ELSE 0 END AS bit);",
                 new { GameId = gameId, AccessCode = accessCode, CodeWithoutPrefix = codeWithoutPrefix });
-            return gameDateTime.HasValue && _accessCodeService.IsValidGameDay(gameDateTime.Value)
+            return isAuthorized
                 ? null
                 : await UnauthorizedAsync(req, "The access code is not valid for this game.");
         }

@@ -1058,6 +1058,12 @@ export function computeElapsedTime(
   return formatSecondsToClock(elapsedSeconds);
 }
 
+function formatEventTimeInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, -2)}:${digits.slice(-2)}`;
+}
+
 function extractUserIdFromAccessCode(code: string) {
   const normalized = code.trim();
   const parts = normalized.split("-");
@@ -1824,6 +1830,12 @@ export default function App() {
   );
   const isEventEditModalOpen = Boolean(eventEditModal?.visible);
   const isPenaltyAdjustModalOpen = Boolean(penaltyAdjustModal?.visible);
+  const isRunningTimeActive =
+    session?.period === 3 &&
+    Math.abs((session?.homeScore ?? 0) - (session?.awayScore ?? 0)) >= 5;
+  const isEventEntryLockedByClock = isClockRunning && !isRunningTimeActive;
+  const isRunningTimeEventModalOpen =
+    isGoalModalOpen || isPenaltyModalOpen || isTimeoutModalOpen;
   const isAnyModalOpen =
     isGoalModalOpen ||
     isPenaltyModalOpen ||
@@ -3053,12 +3065,16 @@ export default function App() {
       return;
     }
 
-    if (isClockRunning && isAnyModalOpen && gameClock.isRunning) {
+    const shouldPauseForModal =
+      isAnyModalOpen &&
+      !(isRunningTimeActive && isRunningTimeEventModalOpen);
+
+    if (isClockRunning && shouldPauseForModal && gameClock.isRunning) {
       gameClock.pause();
       return;
     }
 
-    if (isClockRunning && !isAnyModalOpen && !gameClock.isRunning) {
+    if (isClockRunning && !shouldPauseForModal && !gameClock.isRunning) {
       gameClock.resume();
       return;
     }
@@ -3071,6 +3087,8 @@ export default function App() {
     periodController.state,
     isClockRunning,
     isAnyModalOpen,
+    isRunningTimeActive,
+    isRunningTimeEventModalOpen,
     gameClock.isRunning,
     isScoreboardClockSyncActive,
   ]);
@@ -4147,6 +4165,25 @@ export default function App() {
     }
   }
 
+  async function updateEventTimingInBackend(event: GameFeedEvent) {
+    if (!event.gameId) throw new Error("Missing gameId for event timing update.");
+    const response = await fetch(
+      `${activeApiBase}/games/${event.gameId}/events/${event.localId}/timing`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: event.eventType,
+          period: event.period,
+          timeInPeriod: event.timeInPeriod,
+        }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Event timing update failed (${response.status}).`);
+    }
+  }
+
   async function syncPenaltyEvent(event: GameFeedEvent) {
     setSyncState("syncing");
     try {
@@ -4426,7 +4463,7 @@ export default function App() {
 
   function openTimeoutModal() {
     if (!session || !canControlGame(session.role)) return;
-    if (isClockRunning) return;
+    if (isClockRunning && !isRunningTimeActive) return;
 
     const periodLengthMinutes = getPeriodLengthMinutes(session.periodLength);
     const elapsed = computeElapsedTime(periodLengthMinutes, session.clock);
@@ -5068,6 +5105,22 @@ export default function App() {
   async function saveEventEdit() {
     if (!eventEditModal) return;
 
+    const timeMatch = eventEditModal.timeInPeriod.trim().match(/^(\d{1,2}):([0-5]\d)$/);
+    if (!timeMatch) {
+      setEventEditModalError("Enter time in MM:SS format.");
+      return;
+    }
+    const eventTimeSeconds = Number(timeMatch[1]) * 60 + Number(timeMatch[2]);
+    const periodLengthSeconds = getPeriodLengthMinutes(session?.periodLength ?? "") * 60;
+    if (eventTimeSeconds > periodLengthSeconds) {
+      setEventEditModalError(`Time cannot exceed ${formatSecondsToClock(periodLengthSeconds)}.`);
+      return;
+    }
+    if (eventEditModal.period < 1 || eventEditModal.period > 4) {
+      setEventEditModalError("Select a valid period.");
+      return;
+    }
+
     if (eventEditModal.event.eventType === "Goal" && !eventEditModal.playerId) {
       setEventEditModalError("Goal scorer is required.");
       return;
@@ -5078,6 +5131,18 @@ export default function App() {
       !eventEditModal.playerId
     ) {
       setEventEditModalError("Penalized player is required.");
+      return;
+    }
+
+    const normalizedTimeInPeriod = formatSecondsToClock(eventTimeSeconds);
+    try {
+      await updateEventTimingInBackend({
+        ...eventEditModal.event,
+        period: eventEditModal.period,
+        timeInPeriod: normalizedTimeInPeriod,
+      });
+    } catch (err) {
+      setEventEditModalError(err instanceof Error ? err.message : String(err));
       return;
     }
 
@@ -5100,7 +5165,7 @@ export default function App() {
               ? (session?.awayTeam ?? event.teamName)
               : event.teamName,
         period: eventEditModal.period,
-        timeInPeriod: eventEditModal.timeInPeriod,
+        timeInPeriod: normalizedTimeInPeriod,
         playerId: eventEditModal.playerId,
         playerName: findPlayerName(
           eventEditModal.teamId,
@@ -5165,7 +5230,7 @@ export default function App() {
                 reviewRequired: getPenaltyRule(eventEditModal.penaltyType)
                   .reviewRequired,
                 period: eventEditModal.period,
-                timeInPeriod: eventEditModal.timeInPeriod,
+                timeInPeriod: normalizedTimeInPeriod,
               },
         ),
       );
@@ -8159,7 +8224,9 @@ export default function App() {
               <View style={styles.goalModal}>
                 <Text style={styles.goalModalTitle}>Goal Event</Text>
                 <Text style={styles.goalModalSubtitle}>
-                  Clock paused. Capture goal details to continue.
+                  {isRunningTimeActive
+                    ? "Running time active. The game clock will continue."
+                    : "Clock paused. Capture goal details to continue."}
                 </Text>
 
                 {goalModalError ? (
@@ -9413,6 +9480,61 @@ export default function App() {
                   contentContainerStyle={styles.eventEditScrollContent}
                   showsVerticalScrollIndicator={false}
                 >
+                  <Text style={styles.sectionLabel}>EVENT TIMING</Text>
+                  <View style={styles.twoColRow}>
+                    <View style={styles.twoColCell}>
+                      <Text style={styles.inputLabel}>Period</Text>
+                      <Pressable
+                        style={styles.themedSelectTrigger}
+                        onPress={() =>
+                          openThemedDropdown({
+                            title: "Event Period",
+                            selectedValue: String(eventEditModal.period),
+                            options: [
+                              { value: "1", label: "1st Period" },
+                              { value: "2", label: "2nd Period" },
+                              { value: "3", label: "3rd Period" },
+                              { value: "4", label: "Overtime" },
+                            ],
+                            onSelect: (value) =>
+                              setEventEditModal((prev) =>
+                                prev ? { ...prev, period: Number(value) } : prev,
+                              ),
+                          })
+                        }
+                      >
+                        <Text style={styles.themedSelectValue}>
+                          {eventEditModal.period === 4 ? "Overtime" : `${eventEditModal.period}${eventEditModal.period === 1 ? "st" : eventEditModal.period === 2 ? "nd" : "rd"} Period`}
+                        </Text>
+                        <Text style={styles.themedSelectChevron}>▾</Text>
+                      </Pressable>
+                    </View>
+                    <View style={styles.twoColCell}>
+                      <Text style={styles.inputLabel}>Time (MM:SS)</Text>
+                      <TextInput
+                        style={styles.inputInline}
+                        value={eventEditModal.timeInPeriod}
+                        onChangeText={(timeInPeriod) =>
+                          setEventEditModal((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  timeInPeriod:
+                                    timeInPeriod.includes(":") && timeInPeriod.length <= 5
+                                      ? timeInPeriod
+                                      : formatEventTimeInput(timeInPeriod),
+                                }
+                              : prev,
+                          )
+                        }
+                        keyboardType="number-pad"
+                        maxLength={5}
+                        placeholder="00:00"
+                        placeholderTextColor="#66758d"
+                      />
+                    </View>
+                  </View>
+
                   {eventEditModal.event.eventType === "Goal" ? (
                     <>
                       <View style={styles.goalLockedGrid}>
@@ -9428,18 +9550,6 @@ export default function App() {
                                 ? (session?.awayTeam ??
                                   eventEditModal.event.teamName)
                                 : eventEditModal.event.teamName}
-                          </Text>
-                        </View>
-                        <View style={styles.goalLockedItem}>
-                          <Text style={styles.goalLockedLabel}>Period</Text>
-                          <Text style={styles.goalLockedValue}>
-                            {eventEditModal.period}
-                          </Text>
-                        </View>
-                        <View style={styles.goalLockedItem}>
-                          <Text style={styles.goalLockedLabel}>Time</Text>
-                          <Text style={styles.goalLockedValue}>
-                            {eventEditModal.timeInPeriod}
                           </Text>
                         </View>
                         <View style={styles.goalLockedItem}>
@@ -9697,18 +9807,6 @@ export default function App() {
                                 : eventEditModal.event.teamName}
                           </Text>
                         </View>
-                        <View style={styles.goalLockedItem}>
-                          <Text style={styles.goalLockedLabel}>Period</Text>
-                          <Text style={styles.goalLockedValue}>
-                            {eventEditModal.period}
-                          </Text>
-                        </View>
-                        <View style={styles.goalLockedItem}>
-                          <Text style={styles.goalLockedLabel}>Time</Text>
-                          <Text style={styles.goalLockedValue}>
-                            {eventEditModal.timeInPeriod}
-                          </Text>
-                        </View>
                       </View>
 
                       <Text style={styles.sectionLabel}>PENALIZED PLAYER</Text>
@@ -9906,7 +10004,7 @@ export default function App() {
                     </>
                   ) : (
                     <Text style={styles.footerHint}>
-                      Goalie events cannot be edited.
+                      Only Period and Time can be edited for goalie events.
                     </Text>
                   )}
                 </ScrollView>
@@ -9942,7 +10040,9 @@ export default function App() {
               <View style={styles.goalModal}>
                 <Text style={styles.goalModalTitle}>Penalty Event</Text>
                 <Text style={styles.goalModalSubtitle}>
-                  Clock paused. Capture penalty details to continue.
+                  {isRunningTimeActive
+                    ? "Running time active. The game clock will continue."
+                    : "Clock paused. Capture penalty details to continue."}
                 </Text>
 
                 {penaltyModalError ? (
@@ -10374,13 +10474,13 @@ export default function App() {
                       styles.scoreboardActionGoal,
                       (!canControlGame(session.role) ||
                         isAnyModalOpen ||
-                        isClockRunning) &&
+                        isEventEntryLockedByClock) &&
                         styles.disabledButton,
                     ]}
                     disabled={
                       !canControlGame(session.role) ||
                       isAnyModalOpen ||
-                      isClockRunning
+                      isEventEntryLockedByClock
                     }
                     onPress={() =>
                       homeTeamId && handleGoalButtonPress(homeTeamId)
@@ -10393,13 +10493,13 @@ export default function App() {
                       styles.scoreboardActionPenalty,
                       (!canControlGame(session.role) ||
                         isAnyModalOpen ||
-                        isClockRunning) &&
+                        isEventEntryLockedByClock) &&
                         styles.disabledButton,
                     ]}
                     disabled={
                       !canControlGame(session.role) ||
                       isAnyModalOpen ||
-                      isClockRunning
+                      isEventEntryLockedByClock
                     }
                     onPress={() =>
                       homeTeamId && handlePenaltyButtonPress(homeTeamId)
@@ -10471,13 +10571,13 @@ export default function App() {
                       styles.scoreboardActionGoal,
                       (!canControlGame(session.role) ||
                         isAnyModalOpen ||
-                        isClockRunning) &&
+                        isEventEntryLockedByClock) &&
                         styles.disabledButton,
                     ]}
                     disabled={
                       !canControlGame(session.role) ||
                       isAnyModalOpen ||
-                      isClockRunning
+                      isEventEntryLockedByClock
                     }
                     onPress={() =>
                       awayTeamId && handleGoalButtonPress(awayTeamId)
@@ -10490,13 +10590,13 @@ export default function App() {
                       styles.scoreboardActionPenalty,
                       (!canControlGame(session.role) ||
                         isAnyModalOpen ||
-                        isClockRunning) &&
+                        isEventEntryLockedByClock) &&
                         styles.disabledButton,
                     ]}
                     disabled={
                       !canControlGame(session.role) ||
                       isAnyModalOpen ||
-                      isClockRunning
+                      isEventEntryLockedByClock
                     }
                     onPress={() =>
                       awayTeamId && handlePenaltyButtonPress(awayTeamId)
@@ -10675,10 +10775,10 @@ export default function App() {
                       style={[
                         styles.clockSecondaryBtn,
                         styles.clockHalfWidthBtn,
-                        (isAnyModalOpen || isClockRunning) &&
+                        (isAnyModalOpen || isEventEntryLockedByClock) &&
                           styles.disabledButton,
                       ]}
-                      disabled={isAnyModalOpen || isClockRunning}
+                      disabled={isAnyModalOpen || isEventEntryLockedByClock}
                       onPress={openTimeoutModal}
                     >
                       <Text style={styles.clockSecondaryText}>Timeout</Text>

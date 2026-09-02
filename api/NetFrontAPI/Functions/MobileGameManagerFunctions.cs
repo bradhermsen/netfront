@@ -1465,6 +1465,50 @@ namespace NetFrontAPI.Functions
             return response;
         }
 
+        [Function("UpdateGameEventTimingForMobile")]
+        public async Task<HttpResponseData> UpdateGameEventTimingForMobile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "games/{gameId:guid}/events/{eventRef}/timing")] HttpRequestData req,
+            Guid gameId,
+            string eventRef)
+        {
+            var payload = await req.ReadFromJsonAsync<MobileUpdateEventTimingRequest>();
+            if (payload == null || payload.Period <= 0 || string.IsNullOrWhiteSpace(payload.TimeInPeriod)
+                || (payload.EventType != "Goal" && payload.EventType != "Penalty" && payload.EventType != "Goalie"))
+            {
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteAsJsonAsync(new { error = "Invalid event timing payload." });
+                return bad;
+            }
+
+            using var conn = _connectionFactory.CreateConnection();
+            var eventId = await ResolveEventIdByRef(conn, gameId, eventRef, payload.EventType);
+            if (eventId == null || eventId == Guid.Empty) return req.CreateResponse(HttpStatusCode.NotFound);
+
+            using var transaction = conn.BeginTransaction();
+            var updated = await conn.ExecuteAsync(@"
+                UPDATE dbo.GameEvents SET Period = @Period, TimeInPeriod = @TimeInPeriod
+                WHERE GameId = @GameId AND Id = @EventId AND EventType = @EventType;",
+                new { GameId = gameId, EventId = eventId, payload.EventType, payload.Period, TimeInPeriod = payload.TimeInPeriod.Trim() }, transaction);
+            if (updated == 0)
+            {
+                transaction.Rollback();
+                return req.CreateResponse(HttpStatusCode.NotFound);
+            }
+
+            var detailTable = payload.EventType == "Goal"
+                ? "dbo.GameGoals"
+                : payload.EventType == "Penalty" ? "dbo.GamePenalties" : null;
+            if (detailTable != null)
+            {
+                await conn.ExecuteAsync($@"
+                    UPDATE {detailTable} SET Period = @Period, TimeInPeriod = @TimeInPeriod
+                    WHERE GameId = @GameId AND EventId = @EventId;",
+                    new { GameId = gameId, EventId = eventId, payload.Period, TimeInPeriod = payload.TimeInPeriod.Trim() }, transaction);
+            }
+            transaction.Commit();
+            return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+
         [Function("DeleteGameGoalieEventForMobile")]
         public async Task<HttpResponseData> DeleteGameGoalieEventForMobile(
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "games/{gameId:guid}/goalies/{eventRef}")] HttpRequestData req,
@@ -2039,6 +2083,13 @@ namespace NetFrontAPI.Functions
             public string? GoalieOldName { get; set; }
             public string? GoalieNewName { get; set; }
             public string? ClientEventId { get; set; }
+        }
+
+        private class MobileUpdateEventTimingRequest
+        {
+            public string EventType { get; set; } = string.Empty;
+            public int Period { get; set; }
+            public string TimeInPeriod { get; set; } = string.Empty;
         }
 
         private class MobileCompleteGameRequest

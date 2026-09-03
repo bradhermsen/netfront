@@ -1,5 +1,5 @@
 // /admin-portal/js/authFetch.js
-// Ultimate authenticated fetch wrapper for NetFront Admin Portal
+// Ultimate authenticated fetch wrapper for TipIn Admin Portal
 
 // Centralized configuration
 const CONFIG = {

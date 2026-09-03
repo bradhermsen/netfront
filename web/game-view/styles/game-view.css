@@ -1,4 +1,4 @@
-/* NetFront GameView styles should consume existing theme tokens. */
+/* TipIn GameView styles should consume existing theme tokens. */
 
 html,
 body,
@@ -17,6 +17,20 @@ body,
   min-height: 100vh;
   padding: 16px;
   width: 100%;
+}
+
+.game-view-legal-footer {
+  border-top: 1px solid #23446f;
+  color: #a9bddb;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  margin-top: 28px;
+  padding: 14px 0 4px;
+  text-align: center;
+}
+
+.game-view-legal-footer p {
+  margin: 0;
 }
 
 .game-view-header {

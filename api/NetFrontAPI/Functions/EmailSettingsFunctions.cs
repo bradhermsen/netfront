@@ -184,7 +184,7 @@ namespace NetFrontAPI.Functions
                         ? "NetFront Email Settings Test"
                         : payload.Subject.Trim(),
                     BodyText = string.IsNullOrWhiteSpace(payload.Body)
-                        ? "This is a test email from NetFront Admin Settings."
+                        ? "This is a test email from TipIn Admin Settings."
                         : payload.Body.Trim()
                 });
 

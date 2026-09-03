@@ -51,7 +51,7 @@ window.EmailSettingsApi = {
         username: settings.username || null,
         password: null,
         fromAddress: settings.fromAddress || "",
-        fromName: settings.fromName || "NetFront",
+        fromName: settings.fromName || "TipIn",
         mediaOutlets: outlets,
         MediaOutlets: outlets,
       };

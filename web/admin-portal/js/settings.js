@@ -275,7 +275,7 @@ async function saveEmailServerSettings() {
     username: getInputValue("smtp-username") || null,
     password: getInputValue("smtp-password") || null,
     fromAddress,
-    fromName: fromName || "NetFront",
+    fromName: fromName || "TipIn",
   };
 
   try {
@@ -336,10 +336,10 @@ async function sendTestEmail() {
     return;
   }
 
-  const subject = getInputValue("email-test-subject") || "NetFront Email Test";
+  const subject = getInputValue("email-test-subject") || "TipIn Email Test";
   const body =
     getInputValue("email-test-body") ||
-    "This is a test email from NetFront Admin Settings.";
+    "This is a test email from TipIn Admin Settings.";
 
   try {
     await EmailSettingsApi.sendTestEmail({ to, subject, body });

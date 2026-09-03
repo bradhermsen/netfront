@@ -48,7 +48,7 @@ function restoreModalState(backup) {
 }
 
 // =========================================================
-// CUSTOM MESSAGE DIALOG (NetFront Theme)
+// CUSTOM MESSAGE DIALOG (TipIn Theme)
 // =========================================================
 function showMessage(message, type = "info", duration = 3500) {
   // Create container
@@ -63,7 +63,7 @@ function showMessage(message, type = "info", duration = 3500) {
     animation: fadeIn 0.25s ease;
   `;
 
-  // NetFront theme colors
+  // TipIn theme colors
   let bgColor = "#0f0f0f";
   let borderColor = "#333";
   let textColor = "#e8e8e8";

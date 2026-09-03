@@ -220,15 +220,38 @@ namespace NetFrontAPI.Services
                 throw new InvalidOperationException("Email sending is disabled in settings.");
             }
 
+            MailAddress fromAddress;
+            try
+            {
+                fromAddress = new MailAddress(settings.FromAddress, settings.FromName);
+            }
+            catch (FormatException)
+            {
+                throw new InvalidOperationException($"SMTP From Address is invalid: {settings.FromAddress}");
+            }
+
+            var parsedRecipients = new List<MailAddress>();
+            foreach (var recipient in recipients)
+            {
+                try
+                {
+                    parsedRecipients.Add(new MailAddress(recipient));
+                }
+                catch (FormatException)
+                {
+                    throw new InvalidOperationException($"Recipient email is invalid: {recipient}");
+                }
+            }
+
             using var message = new MailMessage
             {
-                From = new MailAddress(settings.FromAddress, settings.FromName),
+                From = fromAddress,
                 Subject = string.IsNullOrWhiteSpace(request.Subject) ? "NetFront Notification" : request.Subject,
                 Body = request.BodyText ?? string.Empty,
                 IsBodyHtml = false
             };
 
-            foreach (var recipient in recipients)
+            foreach (var recipient in parsedRecipients)
             {
                 message.To.Add(recipient);
             }

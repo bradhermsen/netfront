@@ -775,7 +775,7 @@ const ROLE_LABELS: Record<AccessRole, string> = {
   AD: "Admin",
 };
 
-const NF_LOGO = require("./assets/NF_Logo_Default.png");
+const TIPIN_LOGO = require("./assets/TipIn_Default_Logo.png");
 
 function toOfficialRoleLabel(role: string) {
   const roleMap: Record<string, string> = {
@@ -5748,11 +5748,14 @@ export default function App() {
       ok: response.ok,
     });
 
-    const payload = await response.json();
+    const payload = await response.json().catch(() => null);
     trace("media-outlets.fetch.payload", summarizePayload(payload));
 
     if (!response.ok || !Array.isArray(payload)) {
-      return [];
+      const serverMessage = payload && typeof payload === "object"
+        ? String((payload as Record<string, unknown>).message ?? (payload as Record<string, unknown>).error ?? "")
+        : "";
+      throw new Error(serverMessage || `Unable to load media outlets (HTTP ${response.status}).`);
     }
 
     return payload
@@ -6641,11 +6644,20 @@ export default function App() {
     void clearActiveGameSnapshot();
   }
 
-  function openSendScoresheet() {
+  async function openSendScoresheet() {
     setSendScoresheetError("");
     const isVarsityGame = isVarsityLevelName(
       nextGame?.levelName || session?.level || "",
     );
+    let currentMediaRecipients = mediaOutletRecipients;
+    try {
+      currentMediaRecipients = await fetchMediaOutlets();
+      setMediaOutletRecipients(currentMediaRecipients);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setSendScoresheetError(message);
+      trace("media-outlets.refresh.error", { message });
+    }
 
     const defaults = coachEmailRecipients.reduce<Record<string, boolean>>(
       (acc, recipient) => {
@@ -6659,7 +6671,7 @@ export default function App() {
       defaults[recipient.key] = true;
     }
 
-    for (const recipient of mediaOutletRecipients) {
+    for (const recipient of currentMediaRecipients) {
       defaults[recipient.key] = isVarsityGame;
     }
 
@@ -6765,6 +6777,12 @@ export default function App() {
         .map((recipient) => recipient.email)
         .filter((email): email is string => Boolean(email && email.trim())),
     ];
+    const invalidRecipient = selectedRecipientEmails.find(
+      (email) => !isValidEmailAddress(email),
+    );
+    if (invalidRecipient) {
+      throw new Error(`Invalid selected recipient email: ${invalidRecipient}`);
+    }
 
     const selectedRecipientLabels = [
       ...selectedCoachRecipients.map(
@@ -7264,9 +7282,9 @@ export default function App() {
       {stage !== "login" ? (
         <View style={styles.topBar}>
           <View style={styles.topBarLeft}>
-            <Image source={NF_LOGO} style={styles.headerLogo} />
+            <Image source={TIPIN_LOGO} style={styles.headerLogo} />
             <View>
-              <Text style={styles.brand}>NetFront Game Manager</Text>
+              <Text style={styles.brand}>TipIn Game Manager</Text>
             </View>
           </View>
 
@@ -7311,9 +7329,9 @@ export default function App() {
         {stage === "login" ? (
           <View style={styles.loginWrap}>
             <View style={styles.loginBrandRow}>
-              <Image source={NF_LOGO} style={styles.loginLogo} />
+              <Image source={TIPIN_LOGO} style={styles.loginLogo} />
               <View>
-                <Text style={styles.loginBrandTitle}>NetFront Scoring</Text>
+                <Text style={styles.loginBrandTitle}>TipIn Scoring</Text>
                 <Text style={styles.loginBrandSubtitle}>GAME MANAGER</Text>
               </View>
             </View>
@@ -10341,7 +10359,7 @@ export default function App() {
               <View style={styles.goalModal}>
                 <Text style={styles.goalModalTitle}>Scoreboard Settings</Text>
                 <Text style={styles.goalModalSubtitle}>
-                  Read-only websocket connection to NetFront Gateway (no clock
+                  Read-only websocket connection to TipIn Gateway (no clock
                   control).
                 </Text>
 

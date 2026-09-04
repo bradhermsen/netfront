@@ -1,6 +1,6 @@
 const OfficialsApi = {
   async getAll() {
-    const res = await authFetch("/officials/all");
+    const res = await authFetch("/officials/all", { cache: "no-store" });
     if (!res.ok) throw new Error("Failed to load officials");
     return await res.json();
   },

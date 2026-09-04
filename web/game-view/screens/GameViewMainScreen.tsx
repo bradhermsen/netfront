@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { GameViewFooter } from "../components/GameViewFooter";
 import { LastFinalGamesCard } from "../components/LastFinalGamesCard";
 import { NextGameCard } from "../components/NextGameCard";
 import { UpcomingScheduleCard } from "../components/UpcomingScheduleCard";
@@ -460,6 +461,7 @@ export function GameViewMainScreen() {
           </section>
         </>
       )}
+      <GameViewFooter />
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { EventFeed } from "../components/EventFeed";
+import { GameViewFooter } from "../components/GameViewFooter";
 import { MiniScoreboard } from "../components/MiniScoreboard";
 import { RosterTabs, type RosterPlayerRow } from "../components/RosterTabs";
 import type { GameEventRow } from "../components/EventFeed";
@@ -586,6 +587,7 @@ export function GameDetailScreen() {
           </section>
         </>
       )}
+      <GameViewFooter />
     </main>
   );
 }

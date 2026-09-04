@@ -1376,11 +1376,30 @@
   font-family: "Segoe UI", "Trebuchet MS", sans-serif;
   font-weight: 700;
   font-size: 1.85rem;
-  color: #fff4ea;
   margin: 0;
   line-height: 1.04;
   text-wrap: balance;
   text-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+.brand-title-tip,
+.brand-title-in {
+  font-style: italic;
+  font-weight: 800;
+  text-shadow: 0 0 2.5px #d4dbe3;
+}
+
+.brand-title-tip {
+  color: #0b1424;
+}
+
+.brand-title-in {
+  color: #ff7b00;
+}
+
+.brand-title-product {
+  color: #fff4ea;
+  font-style: normal;
 }
 
 .subtext {

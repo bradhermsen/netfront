@@ -1710,7 +1710,7 @@ namespace NetFrontAPI.Functions
                     {
                         attachments.Add(new EmailAttachment
                         {
-                            FileName = $"NetFront-GameSummary-{summary.GameDateTime:yyyyMMdd-HHmm}-{summary.GameId}.pdf",
+                            FileName = $"TipIn-GameSummary-{summary.GameDateTime:yyyyMMdd-HHmm}-{summary.GameId}.pdf",
                             ContentType = "application/pdf",
                             Content = _gameSummaryReportService.BuildPdf(summary)
                         });
@@ -1720,7 +1720,7 @@ namespace NetFrontAPI.Functions
                     {
                         To = requestedRecipients,
                         Subject = string.IsNullOrWhiteSpace(payload?.EmailDispatch?.Subject)
-                            ? "NetFront Game Finalized"
+                            ? "TipIn Scoring Game Finalized"
                             : payload.EmailDispatch.Subject,
                         BodyText = bodyText,
                         Attachments = attachments

@@ -3,6 +3,13 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <AssemblyName>TipInBridgeApp</AssemblyName>
+    <AssemblyTitle>TipIn Scoring Bridge</AssemblyTitle>
+    <Product>TipIn Scoring Bridge</Product>
+    <Title>TipIn Scoring Bridge</Title>
+    <Company>TipIn Scoring</Company>
+    <Description>TipIn Scoring scoreboard gateway bridge for vMix.</Description>
+    <Copyright>Copyright © 2026 TipIn Scoring. All rights reserved.</Copyright>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>

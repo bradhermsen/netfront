@@ -220,7 +220,7 @@ namespace NetFrontAPI.Functions
             var pdfBytes = _gameSummaryReportService.BuildPdf(report);
             var response = req.CreateResponse(HttpStatusCode.OK);
             response.Headers.Add("Content-Type", "application/pdf");
-            response.Headers.Add("Content-Disposition", $"attachment; filename=NetFront-GameSummary-{report.GameDateTime:yyyyMMdd-HHmm}-{report.GameId}.pdf");
+            response.Headers.Add("Content-Disposition", $"attachment; filename=TipIn-GameSummary-{report.GameDateTime:yyyyMMdd-HHmm}-{report.GameId}.pdf");
             await response.Body.WriteAsync(pdfBytes, 0, pdfBytes.Length);
             await response.Body.FlushAsync();
             return response;

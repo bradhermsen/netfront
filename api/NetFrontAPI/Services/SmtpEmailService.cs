@@ -304,8 +304,14 @@ namespace NetFrontAPI.Services
                 UseSsl = dbSettings.UseSsl,
                 Username = string.IsNullOrWhiteSpace(dbSettings.Username) ? defaults.Username : dbSettings.Username,
                 Password = dbSettings.Password,
-                FromAddress = string.IsNullOrWhiteSpace(dbSettings.FromAddress) ? defaults.FromAddress : dbSettings.FromAddress,
-                FromName = string.IsNullOrWhiteSpace(dbSettings.FromName) ? defaults.FromName : dbSettings.FromName
+                FromAddress = string.IsNullOrWhiteSpace(dbSettings.FromAddress) ||
+                    string.Equals(dbSettings.FromAddress, "no-reply@netfront.local", StringComparison.OrdinalIgnoreCase)
+                        ? defaults.FromAddress
+                        : dbSettings.FromAddress,
+                FromName = string.IsNullOrWhiteSpace(dbSettings.FromName) ||
+                    string.Equals(dbSettings.FromName, "NetFront", StringComparison.OrdinalIgnoreCase)
+                        ? defaults.FromName
+                        : dbSettings.FromName
             };
         }
 
@@ -362,11 +368,11 @@ namespace NetFrontAPI.Services
                 Username = _configuration["Email:Username"],
                 Password = _configuration["Email:Password"],
                 FromAddress = string.IsNullOrWhiteSpace(_configuration["Email:FromAddress"])
-                    ? "no-reply@netfront.local"
-                    : (_configuration["Email:FromAddress"] ?? "no-reply@netfront.local"),
+                    ? "no-reply@tipinscoring.local"
+                    : (_configuration["Email:FromAddress"] ?? "no-reply@tipinscoring.local"),
                 FromName = string.IsNullOrWhiteSpace(_configuration["Email:FromName"])
-                    ? "NetFront"
-                    : (_configuration["Email:FromName"] ?? "NetFront")
+                    ? "TipIn Scoring"
+                    : (_configuration["Email:FromName"] ?? "TipIn Scoring")
             };
         }
 

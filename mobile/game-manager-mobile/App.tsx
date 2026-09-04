@@ -775,7 +775,7 @@ const ROLE_LABELS: Record<AccessRole, string> = {
   AD: "Admin",
 };
 
-const NF_LOGO = require("./assets/NF_Logo_Default.png");
+const TipIn_LOGO = require("./assets/TipIn NoBG.png");
 
 function toOfficialRoleLabel(role: string) {
   const roleMap: Record<string, string> = {
@@ -799,7 +799,10 @@ function parseRoleFromAccessCode(code: string): AccessRole | null {
 }
 
 function formatAccessCodeInput(value: string): string {
-  const sanitized = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  const sanitized = value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 8);
   if (sanitized.length <= 2) {
     return sanitized;
   }
@@ -1492,7 +1495,11 @@ function getStarterPositionGroup(player: RosterPlayer) {
   if (player.isGoalie || /^g(oalie)?$/i.test(player.position.trim())) {
     return "Goalies";
   }
-  if (/^(d|ld|rd|def|defense|defenc|defenseman|defenceman)$/i.test(player.position.trim())) {
+  if (
+    /^(d|ld|rd|def|defense|defenc|defenseman|defenceman)$/i.test(
+      player.position.trim(),
+    )
+  ) {
     return "Defensemen";
   }
   return "Forwards";
@@ -1713,9 +1720,8 @@ export default function App() {
   const scoreboardClockSyncActiveRef = useRef(false);
   const gatewayLastClockSecondsRef = useRef<number | null>(null);
   const scoreboardLastMessageAtRef = useRef<number | null>(null);
-  const periodControllerStateRef = useRef<PeriodController["state"]>(
-    "NOT_STARTED",
-  );
+  const periodControllerStateRef =
+    useRef<PeriodController["state"]>("NOT_STARTED");
   const periodExpiryHandledRef = useRef(false);
   const stageRef = useRef<Stage>(stage);
   const sessionPeriodRef = useRef(1);
@@ -1943,8 +1949,27 @@ export default function App() {
     if (!gameId || !session) return;
     const homeStarters = startersByTeam[homeTeamId ?? ""] ?? [];
     const awayStarters = startersByTeam[awayTeamId ?? ""] ?? [];
-    void syncLiveStatus(gameId, homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce, homeStarters, awayStarters);
-  }, [nextGame?.gameId, session, session?.period, homeTeamId, awayTeamId, startersByTeam, homeOnPowerPlay, awayOnPowerPlay, homeSkatersOnIce, awaySkatersOnIce]);
+    void syncLiveStatus(
+      gameId,
+      homeOnPowerPlay,
+      awayOnPowerPlay,
+      homeSkatersOnIce,
+      awaySkatersOnIce,
+      homeStarters,
+      awayStarters,
+    );
+  }, [
+    nextGame?.gameId,
+    session,
+    session?.period,
+    homeTeamId,
+    awayTeamId,
+    startersByTeam,
+    homeOnPowerPlay,
+    awayOnPowerPlay,
+    homeSkatersOnIce,
+    awaySkatersOnIce,
+  ]);
 
   const scoreboardConnectionBadgeText = useMemo(() => {
     if (!scoreboardGatewaySettings.enabled) {
@@ -2403,37 +2428,61 @@ export default function App() {
     return [
       {
         teamId: awayTeamId,
-        teamName: buildTeamDisplayName(session.awayTeam, nextGame?.awayTeamMascot),
+        teamName: buildTeamDisplayName(
+          session.awayTeam,
+          nextGame?.awayTeamMascot,
+        ),
         side: "Visiting",
       },
       {
         teamId: homeTeamId,
-        teamName: buildTeamDisplayName(session.homeTeam, nextGame?.homeTeamMascot),
+        teamName: buildTeamDisplayName(
+          session.homeTeam,
+          nextGame?.homeTeamMascot,
+        ),
         side: "Home",
       },
     ].map(({ teamId, teamName, side }) => {
       const roster = rostersByTeam[teamId] ?? [];
       const starters = (startersByTeam[teamId] ?? [])
-        .map((playerId) => roster.find((player) => player.playerId === playerId))
+        .map((playerId) =>
+          roster.find((player) => player.playerId === playerId),
+        )
         .filter((player): player is RosterPlayer => Boolean(player))
         .sort((a, b) => {
           const groupOrder = { Goalies: 0, Defensemen: 1, Forwards: 2 };
-          const groupDifference = groupOrder[getStarterPositionGroup(a)] - groupOrder[getStarterPositionGroup(b)];
+          const groupDifference =
+            groupOrder[getStarterPositionGroup(a)] -
+            groupOrder[getStarterPositionGroup(b)];
           if (groupDifference !== 0) return groupDifference;
-          const jerseyDifference = (a.jerseyNumber ?? Number.MAX_SAFE_INTEGER) - (b.jerseyNumber ?? Number.MAX_SAFE_INTEGER);
+          const jerseyDifference =
+            (a.jerseyNumber ?? Number.MAX_SAFE_INTEGER) -
+            (b.jerseyNumber ?? Number.MAX_SAFE_INTEGER);
           return jerseyDifference || a.fullName.localeCompare(b.fullName);
         });
-      const starterGroups = ["Goalies", "Defensemen", "Forwards"].map((label) => ({
-        label,
-        players: starters.filter((player) => getStarterPositionGroup(player) === label),
-      })).filter((group) => group.players.length > 0);
+      const starterGroups = ["Goalies", "Defensemen", "Forwards"]
+        .map((label) => ({
+          label,
+          players: starters.filter(
+            (player) => getStarterPositionGroup(player) === label,
+          ),
+        }))
+        .filter((group) => group.players.length > 0);
       const coaches = (coachesByTeam[teamId] ?? []).filter(
         (coach) => coach.coachName.trim().length > 0,
       );
 
       return { teamId, teamName, side, starters, starterGroups, coaches };
     });
-  }, [session, nextGame, homeTeamId, awayTeamId, rostersByTeam, startersByTeam, coachesByTeam]);
+  }, [
+    session,
+    nextGame,
+    homeTeamId,
+    awayTeamId,
+    rostersByTeam,
+    startersByTeam,
+    coachesByTeam,
+  ]);
 
   const coachEmailRecipients = useMemo(() => {
     const teamRows = [
@@ -3066,8 +3115,7 @@ export default function App() {
     }
 
     const shouldPauseForModal =
-      isAnyModalOpen &&
-      !(isRunningTimeActive && isRunningTimeEventModalOpen);
+      isAnyModalOpen && !(isRunningTimeActive && isRunningTimeEventModalOpen);
 
     if (isClockRunning && shouldPauseForModal && gameClock.isRunning) {
       gameClock.pause();
@@ -3629,9 +3677,9 @@ export default function App() {
         ? PENALTY_OFFLINE_QUEUE_KEY
         : event.eventType === "Shot"
           ? SHOT_OFFLINE_QUEUE_KEY
-        : event.eventType === "Goalie"
-          ? GOALIE_OFFLINE_QUEUE_KEY
-          : GOAL_OFFLINE_QUEUE_KEY;
+          : event.eventType === "Goalie"
+            ? GOALIE_OFFLINE_QUEUE_KEY
+            : GOAL_OFFLINE_QUEUE_KEY;
     try {
       const existingRaw = await storageGetItem(queueKey);
       const existing = existingRaw
@@ -4166,7 +4214,8 @@ export default function App() {
   }
 
   async function updateEventTimingInBackend(event: GameFeedEvent) {
-    if (!event.gameId) throw new Error("Missing gameId for event timing update.");
+    if (!event.gameId)
+      throw new Error("Missing gameId for event timing update.");
     const response = await fetch(
       `${activeApiBase}/games/${event.gameId}/events/${event.localId}/timing`,
       {
@@ -5105,15 +5154,20 @@ export default function App() {
   async function saveEventEdit() {
     if (!eventEditModal) return;
 
-    const timeMatch = eventEditModal.timeInPeriod.trim().match(/^(\d{1,2}):([0-5]\d)$/);
+    const timeMatch = eventEditModal.timeInPeriod
+      .trim()
+      .match(/^(\d{1,2}):([0-5]\d)$/);
     if (!timeMatch) {
       setEventEditModalError("Enter time in MM:SS format.");
       return;
     }
     const eventTimeSeconds = Number(timeMatch[1]) * 60 + Number(timeMatch[2]);
-    const periodLengthSeconds = getPeriodLengthMinutes(session?.periodLength ?? "") * 60;
+    const periodLengthSeconds =
+      getPeriodLengthMinutes(session?.periodLength ?? "") * 60;
     if (eventTimeSeconds > periodLengthSeconds) {
-      setEventEditModalError(`Time cannot exceed ${formatSecondsToClock(periodLengthSeconds)}.`);
+      setEventEditModalError(
+        `Time cannot exceed ${formatSecondsToClock(periodLengthSeconds)}.`,
+      );
       return;
     }
     if (eventEditModal.period < 1 || eventEditModal.period > 4) {
@@ -5564,22 +5618,35 @@ export default function App() {
     const payload = await response.json().catch(() => []);
     if (!response.ok || !Array.isArray(payload)) {
       const serverMessage = !Array.isArray(payload)
-        ? String((payload as Record<string, unknown>).message ?? (payload as Record<string, unknown>).error ?? "")
+        ? String(
+            (payload as Record<string, unknown>).message ??
+              (payload as Record<string, unknown>).error ??
+              "",
+          )
         : "";
-      throw new Error(serverMessage || `Failed to load available officials (HTTP ${response.status}).`);
+      throw new Error(
+        serverMessage ||
+          `Failed to load available officials (HTTP ${response.status}).`,
+      );
     }
-    return payload.map((entry) => {
-      const row = entry as Record<string, unknown>;
-      return {
-        officialId: String(row.officialId ?? row.OfficialId ?? ""),
-        displayName: String(row.displayName ?? row.DisplayName ?? ""),
-        email: String(row.email ?? row.Email ?? "") || null,
-        role: String(row.role ?? row.Role ?? ""),
-      } as OfficialOption;
-    }).filter((official) => official.officialId && official.displayName);
+    return payload
+      .map((entry) => {
+        const row = entry as Record<string, unknown>;
+        return {
+          officialId: String(row.officialId ?? row.OfficialId ?? ""),
+          displayName: String(row.displayName ?? row.DisplayName ?? ""),
+          email: String(row.email ?? row.Email ?? "") || null,
+          role: String(row.role ?? row.Role ?? ""),
+        } as OfficialOption;
+      })
+      .filter((official) => official.officialId && official.displayName);
   }
 
-  async function assignOfficialToGame(role: string, officialId: string, previousRole?: string) {
+  async function assignOfficialToGame(
+    role: string,
+    officialId: string,
+    previousRole?: string,
+  ) {
     if (!nextGame?.gameId || !session?.code) return;
     setIsOfficialsLoading(true);
     setOfficialsError("");
@@ -5592,7 +5659,11 @@ export default function App() {
             "Content-Type": "application/json",
             "x-netfront-access-code": session.code,
           },
-          body: JSON.stringify({ officialId, role, previousRole: previousRole || null }),
+          body: JSON.stringify({
+            officialId,
+            role,
+            previousRole: previousRole || null,
+          }),
         },
       );
       if (!response.ok) {
@@ -5621,7 +5692,9 @@ export default function App() {
       );
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.message || "Failed to remove official from game.");
+        throw new Error(
+          payload.message || "Failed to remove official from game.",
+        );
       }
       setOfficials(await fetchOfficialsForGame(nextGame.gameId));
     } catch (err) {
@@ -5655,7 +5728,8 @@ export default function App() {
       isReferee: true,
       isLinesman: false,
       isActive: true,
-      assignmentRole: ["Referee1", "Referee2"].find((role) => !assignedRoles.has(role)) || "",
+      assignmentRole:
+        ["Referee1", "Referee2"].find((role) => !assignedRoles.has(role)) || "",
     });
     setOfficialsError("");
     setShowAddOfficialModal(true);
@@ -5673,8 +5747,15 @@ export default function App() {
     }
 
     const assignmentRole = addOfficialForm.assignmentRole;
-    if (assignmentRole && !(assignmentRole.startsWith("Referee") ? addOfficialForm.isReferee : addOfficialForm.isLinesman)) {
-      setOfficialsError("The game assignment must match one of the selected Official roles.");
+    if (
+      assignmentRole &&
+      !(assignmentRole.startsWith("Referee")
+        ? addOfficialForm.isReferee
+        : addOfficialForm.isLinesman)
+    ) {
+      setOfficialsError(
+        "The game assignment must match one of the selected Official roles.",
+      );
       return;
     }
 
@@ -5752,10 +5833,18 @@ export default function App() {
     trace("media-outlets.fetch.payload", summarizePayload(payload));
 
     if (!response.ok || !Array.isArray(payload)) {
-      const serverMessage = payload && typeof payload === "object"
-        ? String((payload as Record<string, unknown>).message ?? (payload as Record<string, unknown>).error ?? "")
-        : "";
-      throw new Error(serverMessage || `Unable to load media outlets (HTTP ${response.status}).`);
+      const serverMessage =
+        payload && typeof payload === "object"
+          ? String(
+              (payload as Record<string, unknown>).message ??
+                (payload as Record<string, unknown>).error ??
+                "",
+            )
+          : "";
+      throw new Error(
+        serverMessage ||
+          `Unable to load media outlets (HTTP ${response.status}).`,
+      );
     }
 
     return payload
@@ -6110,7 +6199,7 @@ export default function App() {
             tokenSecret: scoreboardGatewaySettings.tokenSecret,
           };
 
-          scheduledGatewayAppliedRef.current = true;
+      scheduledGatewayAppliedRef.current = true;
       setScoreboardGatewaySettings(settings);
       setScoreboardSettingsDraft(settings);
       await storageSetItem(
@@ -6161,7 +6250,8 @@ export default function App() {
         trace("nextgame.load.invalid_code", { userId });
         setNextGame(null);
         setIsClosedGameNotice(false);
-        const message = "That access code is not valid. Check the code and try again.";
+        const message =
+          "That access code is not valid. Check the code and try again.";
         setNextGameMessage(message);
         return { status: "invalid", message };
       }
@@ -6576,7 +6666,9 @@ export default function App() {
 
     if (recordShotEvent && nextGame?.gameId) {
       if (delta === 1) {
-        const periodLengthMinutes = getPeriodLengthMinutes(session.periodLength);
+        const periodLengthMinutes = getPeriodLengthMinutes(
+          session.periodLength,
+        );
         const shotEvent: GameFeedEvent = {
           localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           gameId: nextGame.gameId,
@@ -7282,9 +7374,13 @@ export default function App() {
       {stage !== "login" ? (
         <View style={styles.topBar}>
           <View style={styles.topBarLeft}>
-            <Image source={NF_LOGO} style={styles.headerLogo} />
+            <Image source={TipIn_LOGO} style={styles.headerLogo} />
             <View>
-              <Text style={styles.brand}>NetFront Game Manager</Text>
+              <Text style={styles.brand}>
+                <Text style={styles.headerBrandTip}>Tip</Text>
+                <Text style={styles.headerBrandIn}>In</Text>
+                <Text style={styles.headerBrandProduct}> Game Manager</Text>
+              </Text>
             </View>
           </View>
 
@@ -7329,9 +7425,13 @@ export default function App() {
         {stage === "login" ? (
           <View style={styles.loginWrap}>
             <View style={styles.loginBrandRow}>
-              <Image source={NF_LOGO} style={styles.loginLogo} />
+              <Image source={TipIn_LOGO} style={styles.loginLogo} />
               <View>
-                <Text style={styles.loginBrandTitle}>NetFront Scoring</Text>
+                <Text style={styles.loginBrandTitle}>
+                  <Text style={styles.loginBrandTip}>Tip</Text>
+                  <Text style={styles.loginBrandIn}>In</Text>
+                  <Text style={styles.loginBrandScoring}> Scoring</Text>
+                </Text>
                 <Text style={styles.loginBrandSubtitle}>GAME MANAGER</Text>
               </View>
             </View>
@@ -7895,84 +7995,114 @@ export default function App() {
 
             {!isOfficialsLoading ? (
               <>
-              {officials.map((official, idx) => (
-                <View
-                  key={`${official.role}-${idx}`}
-                  style={
-                    idx % 2 === 0 ? styles.officialRow : styles.officialRowAlt
-                  }
-                >
-                  <Pressable
-                    style={styles.officialRoleSelect}
-                    onPress={() => {
-                      const officialType = officialOptions.find((option) => option.officialId === official.officialId)?.role || official.role;
-                      const roles = OFFICIAL_ASSIGNMENT_ROLES.filter((role) =>
-                        role.startsWith("Referee")
-                          ? officialType.toLowerCase().includes("referee")
-                          : officialType.toLowerCase().includes("linesman"),
-                      );
-                      openThemedDropdown({
-                        title: `Change Role for ${official.officialName}`,
-                        selectedValue: official.role,
-                        options: [
-                          ...roles.map((role) => ({ value: role, label: toOfficialRoleLabel(role) })),
-                          { value: "remove", label: "Remove from Game" },
-                        ],
-                        onSelect: (role) => {
-                          if (role === "remove") {
-                            confirmRemoveOfficial(official);
-                            return;
-                          }
-                          if (role !== official.role && official.officialId) void assignOfficialToGame(role, official.officialId, official.role);
-                        },
-                      });
-                    }}
+                {officials.map((official, idx) => (
+                  <View
+                    key={`${official.role}-${idx}`}
+                    style={
+                      idx % 2 === 0 ? styles.officialRow : styles.officialRowAlt
+                    }
                   >
-                    <Text style={styles.officialRoleText}>{toOfficialRoleLabel(official.role).toUpperCase()}</Text>
-                    <Text style={styles.officialRoleChevron}>⌄</Text>
-                  </Pressable>
-                  <View style={styles.officialNameCol}>
-                    <Text style={styles.officialNameText}>
-                      {official.officialName || "Not assigned"}
-                    </Text>
-                  </View>
-                  <View style={styles.officialSignCol}>
-                    <Text style={styles.officialSignLabel}>SIGNATURE</Text>
                     <Pressable
-                      style={[
-                        styles.signaturePlaceholderMini,
-                        official.signatureImageBase64 &&
-                          styles.signaturePlaceholderSigned,
-                      ]}
-                      onPress={() => beginOfficialSignature(idx)}
+                      style={styles.officialRoleSelect}
+                      onPress={() => {
+                        const officialType =
+                          officialOptions.find(
+                            (option) =>
+                              option.officialId === official.officialId,
+                          )?.role || official.role;
+                        const roles = OFFICIAL_ASSIGNMENT_ROLES.filter(
+                          (role) =>
+                            role.startsWith("Referee")
+                              ? officialType.toLowerCase().includes("referee")
+                              : officialType.toLowerCase().includes("linesman"),
+                        );
+                        openThemedDropdown({
+                          title: `Change Role for ${official.officialName}`,
+                          selectedValue: official.role,
+                          options: [
+                            ...roles.map((role) => ({
+                              value: role,
+                              label: toOfficialRoleLabel(role),
+                            })),
+                            { value: "remove", label: "Remove from Game" },
+                          ],
+                          onSelect: (role) => {
+                            if (role === "remove") {
+                              confirmRemoveOfficial(official);
+                              return;
+                            }
+                            if (role !== official.role && official.officialId)
+                              void assignOfficialToGame(
+                                role,
+                                official.officialId,
+                                official.role,
+                              );
+                          },
+                        });
+                      }}
                     >
-                      <Text
-                        style={[
-                          styles.signatureTextMini,
-                          official.signatureImageBase64 &&
-                            styles.signatureTextSigned,
-                        ]}
-                      >
-                        {official.signatureImageBase64
-                          ? `SIGNED: ${(official.signedByName || official.officialName).toUpperCase()}`
-                          : "TAP TO SIGN"}
+                      <Text style={styles.officialRoleText}>
+                        {toOfficialRoleLabel(official.role).toUpperCase()}
                       </Text>
+                      <Text style={styles.officialRoleChevron}>⌄</Text>
                     </Pressable>
+                    <View style={styles.officialNameCol}>
+                      <Text style={styles.officialNameText}>
+                        {official.officialName || "Not assigned"}
+                      </Text>
+                    </View>
+                    <View style={styles.officialSignCol}>
+                      <Text style={styles.officialSignLabel}>SIGNATURE</Text>
+                      <Pressable
+                        style={[
+                          styles.signaturePlaceholderMini,
+                          official.signatureImageBase64 &&
+                            styles.signaturePlaceholderSigned,
+                        ]}
+                        onPress={() => beginOfficialSignature(idx)}
+                      >
+                        <Text
+                          style={[
+                            styles.signatureTextMini,
+                            official.signatureImageBase64 &&
+                              styles.signatureTextSigned,
+                          ]}
+                        >
+                          {official.signatureImageBase64
+                            ? `SIGNED: ${(official.signedByName || official.officialName).toUpperCase()}`
+                            : "TAP TO SIGN"}
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
-                </View>
-              ))}
-              {OFFICIAL_ASSIGNMENT_ROLES
-                .filter((role) => !officials.some((official) => official.role === role))
-                .map((role, index) => {
-                  const roleType = role.startsWith("Referee") ? "Referee" : "Linesman";
-                  const assignedIds = new Set(officials.map((official) => official.officialId).filter(Boolean));
-                  const compatibleOptions = officialOptions.filter((official) =>
-                    official.role.toLowerCase().includes(roleType.toLowerCase()) && !assignedIds.has(official.officialId),
+                ))}
+                {OFFICIAL_ASSIGNMENT_ROLES.filter(
+                  (role) =>
+                    !officials.some((official) => official.role === role),
+                ).map((role, index) => {
+                  const roleType = role.startsWith("Referee")
+                    ? "Referee"
+                    : "Linesman";
+                  const assignedIds = new Set(
+                    officials
+                      .map((official) => official.officialId)
+                      .filter(Boolean),
+                  );
+                  const compatibleOptions = officialOptions.filter(
+                    (official) =>
+                      official.role
+                        .toLowerCase()
+                        .includes(roleType.toLowerCase()) &&
+                      !assignedIds.has(official.officialId),
                   );
                   return (
                     <View
                       key={role}
-                      style={index % 2 === 0 ? styles.officialRow : styles.officialRowAlt}
+                      style={
+                        index % 2 === 0
+                          ? styles.officialRow
+                          : styles.officialRowAlt
+                      }
                     >
                       <View style={styles.officialRoleCol}>
                         <Text style={styles.officialRoleText}>
@@ -7990,14 +8120,22 @@ export default function App() {
                                   value: official.officialId,
                                   label: official.displayName,
                                 }))
-                              : [{ value: "", label: `No ${roleType.toLowerCase()}s available` }],
+                              : [
+                                  {
+                                    value: "",
+                                    label: `No ${roleType.toLowerCase()}s available`,
+                                  },
+                                ],
                             onSelect: (officialId) => {
-                              if (officialId) void assignOfficialToGame(role, officialId);
+                              if (officialId)
+                                void assignOfficialToGame(role, officialId);
                             },
                           })
                         }
                       >
-                        <Text style={styles.officialSelectButtonText}>Select Official</Text>
+                        <Text style={styles.officialSelectButtonText}>
+                          Select Official
+                        </Text>
                         <Text style={styles.officialSelectChevron}>⌄</Text>
                       </Pressable>
                     </View>
@@ -8045,15 +8183,24 @@ export default function App() {
                 </View>
                 <View style={styles.addOfficialDivider} />
                 <ScrollView contentContainerStyle={styles.addOfficialBody}>
-                  <Text style={styles.addOfficialSectionTitle}>Official Information</Text>
-                  {officialsError ? <Text style={styles.error}>{officialsError}</Text> : null}
+                  <Text style={styles.addOfficialSectionTitle}>
+                    Official Information
+                  </Text>
+                  {officialsError ? (
+                    <Text style={styles.error}>{officialsError}</Text>
+                  ) : null}
                   <View style={styles.addOfficialFields}>
                     <View style={styles.addOfficialField}>
                       <Text style={styles.inputLabel}>First Name</Text>
                       <TextInput
                         style={styles.inputInline}
                         value={addOfficialForm.firstName}
-                        onChangeText={(firstName) => setAddOfficialForm((current) => ({ ...current, firstName }))}
+                        onChangeText={(firstName) =>
+                          setAddOfficialForm((current) => ({
+                            ...current,
+                            firstName,
+                          }))
+                        }
                       />
                     </View>
                     <View style={styles.addOfficialField}>
@@ -8061,7 +8208,12 @@ export default function App() {
                       <TextInput
                         style={styles.inputInline}
                         value={addOfficialForm.lastName}
-                        onChangeText={(lastName) => setAddOfficialForm((current) => ({ ...current, lastName }))}
+                        onChangeText={(lastName) =>
+                          setAddOfficialForm((current) => ({
+                            ...current,
+                            lastName,
+                          }))
+                        }
                       />
                     </View>
                     <View style={styles.addOfficialField}>
@@ -8069,7 +8221,12 @@ export default function App() {
                       <TextInput
                         style={styles.inputInline}
                         value={addOfficialForm.email}
-                        onChangeText={(email) => setAddOfficialForm((current) => ({ ...current, email }))}
+                        onChangeText={(email) =>
+                          setAddOfficialForm((current) => ({
+                            ...current,
+                            email,
+                          }))
+                        }
                         keyboardType="email-address"
                         autoCapitalize="none"
                         placeholder="name@example.com"
@@ -8082,7 +8239,12 @@ export default function App() {
                         <Text style={styles.addOfficialRoleText}>Referee</Text>
                         <Switch
                           value={addOfficialForm.isReferee}
-                          onValueChange={(isReferee) => setAddOfficialForm((current) => ({ ...current, isReferee }))}
+                          onValueChange={(isReferee) =>
+                            setAddOfficialForm((current) => ({
+                              ...current,
+                              isReferee,
+                            }))
+                          }
                           trackColor={{ false: "#475569", true: "#FF7B00" }}
                         />
                       </View>
@@ -8090,7 +8252,12 @@ export default function App() {
                         <Text style={styles.addOfficialRoleText}>Linesman</Text>
                         <Switch
                           value={addOfficialForm.isLinesman}
-                          onValueChange={(isLinesman) => setAddOfficialForm((current) => ({ ...current, isLinesman }))}
+                          onValueChange={(isLinesman) =>
+                            setAddOfficialForm((current) => ({
+                              ...current,
+                              isLinesman,
+                            }))
+                          }
                           trackColor={{ false: "#475569", true: "#FF7B00" }}
                         />
                       </View>
@@ -8100,24 +8267,43 @@ export default function App() {
                       <Pressable
                         style={styles.officialSelectButton}
                         onPress={() => {
-                          const assignedRoles = new Set(officials.map((official) => official.role));
-                          const roles = OFFICIAL_ASSIGNMENT_ROLES.filter((role) =>
-                            !assignedRoles.has(role)
-                            && (role.startsWith("Referee") ? addOfficialForm.isReferee : addOfficialForm.isLinesman),
+                          const assignedRoles = new Set(
+                            officials.map((official) => official.role),
+                          );
+                          const roles = OFFICIAL_ASSIGNMENT_ROLES.filter(
+                            (role) =>
+                              !assignedRoles.has(role) &&
+                              (role.startsWith("Referee")
+                                ? addOfficialForm.isReferee
+                                : addOfficialForm.isLinesman),
                           );
                           openThemedDropdown({
                             title: "Select Game Assignment",
                             selectedValue: addOfficialForm.assignmentRole,
                             options: [
-                              { value: "", label: "Add to Officials List Only" },
-                              ...roles.map((role) => ({ value: role, label: toOfficialRoleLabel(role) })),
+                              {
+                                value: "",
+                                label: "Add to Officials List Only",
+                              },
+                              ...roles.map((role) => ({
+                                value: role,
+                                label: toOfficialRoleLabel(role),
+                              })),
                             ],
-                            onSelect: (assignmentRole) => setAddOfficialForm((current) => ({ ...current, assignmentRole })),
+                            onSelect: (assignmentRole) =>
+                              setAddOfficialForm((current) => ({
+                                ...current,
+                                assignmentRole,
+                              })),
                           });
                         }}
                       >
                         <Text style={styles.officialSelectButtonText}>
-                          {addOfficialForm.assignmentRole ? toOfficialRoleLabel(addOfficialForm.assignmentRole) : "Officials List Only"}
+                          {addOfficialForm.assignmentRole
+                            ? toOfficialRoleLabel(
+                                addOfficialForm.assignmentRole,
+                              )
+                            : "Officials List Only"}
                         </Text>
                         <Text style={styles.officialSelectChevron}>⌄</Text>
                       </Pressable>
@@ -8126,7 +8312,12 @@ export default function App() {
                       <Text style={styles.inputLabel}>Active</Text>
                       <Switch
                         value={addOfficialForm.isActive}
-                        onValueChange={(isActive) => setAddOfficialForm((current) => ({ ...current, isActive }))}
+                        onValueChange={(isActive) =>
+                          setAddOfficialForm((current) => ({
+                            ...current,
+                            isActive,
+                          }))
+                        }
                         trackColor={{ false: "#475569", true: "#FF7B00" }}
                       />
                     </View>
@@ -8141,11 +8332,16 @@ export default function App() {
                     <Text style={styles.secondaryButtonText}>Cancel</Text>
                   </Pressable>
                   <Pressable
-                    style={[styles.primaryButton, isSavingOfficial && styles.buttonDisabled]}
+                    style={[
+                      styles.primaryButton,
+                      isSavingOfficial && styles.buttonDisabled,
+                    ]}
                     disabled={isSavingOfficial}
                     onPress={saveNewOfficial}
                   >
-                    <Text style={styles.primaryButtonText}>{isSavingOfficial ? "Saving..." : "Save"}</Text>
+                    <Text style={styles.primaryButtonText}>
+                      {isSavingOfficial ? "Saving..." : "Save"}
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -9229,13 +9425,23 @@ export default function App() {
                         <Text style={styles.starterInformationTeamName}>
                           {team.teamName}
                         </Text>
-                        <Text style={styles.rosterPreviewGroupLabel}>STARTERS</Text>
+                        <Text style={styles.rosterPreviewGroupLabel}>
+                          STARTERS
+                        </Text>
                         {team.starters.length === 0 ? (
-                          <Text style={styles.footerHint}>No starters selected.</Text>
+                          <Text style={styles.footerHint}>
+                            No starters selected.
+                          </Text>
                         ) : (
                           team.starterGroups.map((group) => (
-                            <View key={`starter-information-group-${team.teamId}-${group.label}`}>
-                              <Text style={styles.starterInformationPositionLabel}>{group.label}</Text>
+                            <View
+                              key={`starter-information-group-${team.teamId}-${group.label}`}
+                            >
+                              <Text
+                                style={styles.starterInformationPositionLabel}
+                              >
+                                {group.label}
+                              </Text>
                               {group.players.map((player) => (
                                 <View
                                   key={`starter-information-player-${team.teamId}-${player.playerId}`}
@@ -9245,7 +9451,11 @@ export default function App() {
                                     style={styles.starterInformationPlayerLine}
                                     numberOfLines={1}
                                   >
-                                    #{player.jerseyNumber ?? "-"}  {player.fullName}  {player.isGoalie ? "G" : player.position || "-"}
+                                    #{player.jerseyNumber ?? "-"}{" "}
+                                    {player.fullName}{" "}
+                                    {player.isGoalie
+                                      ? "G"
+                                      : player.position || "-"}
                                   </Text>
                                 </View>
                               ))}
@@ -9253,17 +9463,25 @@ export default function App() {
                           ))
                         )}
 
-                        <Text style={styles.rosterPreviewGroupLabel}>COACHES</Text>
+                        <Text style={styles.rosterPreviewGroupLabel}>
+                          COACHES
+                        </Text>
                         {team.coaches.length === 0 ? (
-                          <Text style={styles.footerHint}>No coaches listed.</Text>
+                          <Text style={styles.footerHint}>
+                            No coaches listed.
+                          </Text>
                         ) : (
                           team.coaches.map((coach, index) => (
                             <View
                               key={`starter-information-coach-${team.teamId}-${coach.roleName}-${index}`}
                               style={styles.rosterPreviewRow}
                             >
-                              <Text style={styles.starterInformationPlayerLine}>{coach.coachName}</Text>
-                              <Text style={styles.rosterPreviewMeta}>{coach.roleName}</Text>
+                              <Text style={styles.starterInformationPlayerLine}>
+                                {coach.coachName}
+                              </Text>
+                              <Text style={styles.rosterPreviewMeta}>
+                                {coach.roleName}
+                              </Text>
                             </View>
                           ))
                         )}
@@ -9274,7 +9492,9 @@ export default function App() {
                   <View style={styles.starterInformationOfficials}>
                     <Text style={styles.sectionLabel}>OFFICIALS</Text>
                     {officials.length === 0 ? (
-                      <Text style={styles.footerHint}>No officials assigned.</Text>
+                      <Text style={styles.footerHint}>
+                        No officials assigned.
+                      </Text>
                     ) : (
                       officials.map((official, index) => (
                         <View
@@ -9516,13 +9736,17 @@ export default function App() {
                             ],
                             onSelect: (value) =>
                               setEventEditModal((prev) =>
-                                prev ? { ...prev, period: Number(value) } : prev,
+                                prev
+                                  ? { ...prev, period: Number(value) }
+                                  : prev,
                               ),
                           })
                         }
                       >
                         <Text style={styles.themedSelectValue}>
-                          {eventEditModal.period === 4 ? "Overtime" : `${eventEditModal.period}${eventEditModal.period === 1 ? "st" : eventEditModal.period === 2 ? "nd" : "rd"} Period`}
+                          {eventEditModal.period === 4
+                            ? "Overtime"
+                            : `${eventEditModal.period}${eventEditModal.period === 1 ? "st" : eventEditModal.period === 2 ? "nd" : "rd"} Period`}
                         </Text>
                         <Text style={styles.themedSelectChevron}>▾</Text>
                       </Pressable>
@@ -9538,7 +9762,8 @@ export default function App() {
                               ? {
                                   ...prev,
                                   timeInPeriod:
-                                    timeInPeriod.includes(":") && timeInPeriod.length <= 5
+                                    timeInPeriod.includes(":") &&
+                                    timeInPeriod.length <= 5
                                       ? timeInPeriod
                                       : formatEventTimeInput(timeInPeriod),
                                 }
@@ -10359,7 +10584,7 @@ export default function App() {
               <View style={styles.goalModal}>
                 <Text style={styles.goalModalTitle}>Scoreboard Settings</Text>
                 <Text style={styles.goalModalSubtitle}>
-                  Read-only websocket connection to NetFront Gateway (no clock
+                  Read-only websocket connection to TipIn Gateway (no clock
                   control).
                 </Text>
 
@@ -10994,7 +11219,8 @@ export default function App() {
               <View style={styles.eventFilterButtons}>
                 {(["Shot", "Goal", "Penalty"] as const).map((eventType) => {
                   const isActive = eventTypeFilters[eventType];
-                  const label = eventType === "Penalty" ? "Penalties" : `${eventType}s`;
+                  const label =
+                    eventType === "Penalty" ? "Penalties" : `${eventType}s`;
                   return (
                     <Pressable
                       key={eventType}
@@ -11128,7 +11354,10 @@ export default function App() {
                 onPress={() => setRosterPreviewTeam("home")}
               >
                 <Text
-                  style={[styles.secondaryButtonText, styles.dashboardInfoButtonText]}
+                  style={[
+                    styles.secondaryButtonText,
+                    styles.dashboardInfoButtonText,
+                  ]}
                   numberOfLines={2}
                   adjustsFontSizeToFit
                   minimumFontScale={0.85}
@@ -11141,7 +11370,10 @@ export default function App() {
                 onPress={() => setRosterPreviewTeam("away")}
               >
                 <Text
-                  style={[styles.secondaryButtonText, styles.dashboardInfoButtonText]}
+                  style={[
+                    styles.secondaryButtonText,
+                    styles.dashboardInfoButtonText,
+                  ]}
                   numberOfLines={2}
                   adjustsFontSizeToFit
                   minimumFontScale={0.85}
@@ -11153,7 +11385,12 @@ export default function App() {
                 style={[styles.secondaryButton, styles.dashboardInfoButton]}
                 onPress={() => setShowStarterInformation(true)}
               >
-                <Text style={[styles.secondaryButtonText, styles.dashboardInfoButtonText]}>
+                <Text
+                  style={[
+                    styles.secondaryButtonText,
+                    styles.dashboardInfoButtonText,
+                  ]}
+                >
                   Starter Information
                 </Text>
               </Pressable>
@@ -11161,7 +11398,14 @@ export default function App() {
                 style={[styles.secondaryButton, styles.dashboardInfoButton]}
                 onPress={() => setShowOfficialsPreview(true)}
               >
-                <Text style={[styles.secondaryButtonText, styles.dashboardInfoButtonText]}>Officials</Text>
+                <Text
+                  style={[
+                    styles.secondaryButtonText,
+                    styles.dashboardInfoButtonText,
+                  ]}
+                >
+                  Officials
+                </Text>
               </Pressable>
             </View>
 
@@ -12021,9 +12265,28 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   brand: {
-    color: "#E8EDF5",
     fontSize: 19,
     fontWeight: "800",
+  },
+  headerBrandTip: {
+    color: "#0B1424",
+    fontStyle: "italic",
+    fontWeight: "900",
+    textShadowColor: "#D4DBE3",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2.5,
+  },
+  headerBrandIn: {
+    color: "#FF7B00",
+    fontStyle: "italic",
+    fontWeight: "900",
+    textShadowColor: "#D4DBE3",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2.5,
+  },
+  headerBrandProduct: {
+    color: "#E8EDF5",
+    fontStyle: "normal",
   },
   subBrand: {
     color: "#7A8FA8",
@@ -12056,10 +12319,27 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   loginBrandTitle: {
-    color: "#E8EDF5",
     fontSize: 28,
     fontWeight: "800",
     letterSpacing: 0.4,
+  },
+  loginBrandTip: {
+    color: "#0B1424",
+    fontStyle: "italic",
+    textShadowColor: "#D4DBE3",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2.5,
+  },
+  loginBrandIn: {
+    color: "#FF7B00",
+    fontStyle: "italic",
+    textShadowColor: "#D4DBE3",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2.5,
+  },
+  loginBrandScoring: {
+    color: "#E8EDF5",
+    fontStyle: "normal",
   },
   loginBrandSubtitle: {
     color: "#7A8FA8",

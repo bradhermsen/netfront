@@ -240,11 +240,15 @@ export function GameViewMainScreen() {
 
         <div className="game-view-brand">
           <img
-            src="/NF_Logo_Default.png"
-            alt="NetFront"
+            src="/TipIn NoBG.png"
+            alt="TipIn"
             className="game-view-logo"
           />
-          <h1 className="game-view-title">NetFront GameView</h1>
+          <h1 className="game-view-title">
+            <span className="game-view-brand-tip">Tip</span>
+            <span className="game-view-brand-in">In</span>
+            <span className="game-view-brand-product"> GameView</span>
+          </h1>
         </div>
       </header>
 

@@ -34,6 +34,26 @@
   margin-bottom: 10px;
 }
 
+.login-brand-tip,
+.login-brand-in {
+  font-style: italic;
+  font-weight: 800;
+  text-shadow: 0 0 2.5px #d4dbe3;
+}
+
+.login-brand-tip {
+  color: #0b1424;
+}
+
+.login-brand-in {
+  color: #ff7b00;
+}
+
+.login-brand-product {
+  color: #e8edf5;
+  font-style: normal;
+}
+
 .login-left p {
   font-size: 1rem;
   opacity: 0.85;

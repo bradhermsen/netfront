@@ -37,6 +37,20 @@ body,
   width: min(92%, 980px);
 }
 
+.game-view-legal-footer {
+  border-top: 1px solid rgba(212, 219, 227, 0.24);
+  color: #aebdd2;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  margin-top: 28px;
+  padding: 18px 12px 8px;
+  text-align: center;
+}
+
+.game-view-legal-footer p {
+  margin: 0;
+}
+
 .game-view-logo {
   display: block;
   height: 34px;

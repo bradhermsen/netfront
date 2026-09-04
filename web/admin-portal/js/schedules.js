@@ -306,7 +306,7 @@ function updateManagedGatewayStatus() {
   document.getElementById("game-gateway-status").textContent = !rink
     ? "Select a rink to view scoreboard mode."
     : gateway || rink.gatewayAvailable
-      ? "TipIn Gateway configured for this rink."
+      ? "NetFront Gateway configured for this rink."
       : "No gateway configured. Game Manager will use manual scoreboard mode.";
 }
 
@@ -1195,7 +1195,7 @@ async function downloadFinalPdf(gameId) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `TipIn-GameSummary-${gameId}.pdf`;
+    a.download = `NetFront-GameSummary-${gameId}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();

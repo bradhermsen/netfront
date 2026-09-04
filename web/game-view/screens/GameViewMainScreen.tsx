@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LastFinalGamesCard } from "../components/LastFinalGamesCard";
-import { GameViewFooter } from "../components/GameViewFooter";
 import { NextGameCard } from "../components/NextGameCard";
 import { UpcomingScheduleCard } from "../components/UpcomingScheduleCard";
 import {
@@ -241,11 +240,15 @@ export function GameViewMainScreen() {
 
         <div className="game-view-brand">
           <img
-            src="/TipIn_Default_Logo.png"
+            src="/TipIn NoBG.png"
             alt="TipIn"
             className="game-view-logo"
           />
-          <h1 className="game-view-title">TipIn GameView</h1>
+          <h1 className="game-view-title">
+            <span className="game-view-brand-tip">Tip</span>
+            <span className="game-view-brand-in">In</span>
+            <span className="game-view-brand-product"> GameView</span>
+          </h1>
         </div>
       </header>
 
@@ -457,8 +460,6 @@ export function GameViewMainScreen() {
           </section>
         </>
       )}
-
-      <GameViewFooter />
     </main>
   );
 }

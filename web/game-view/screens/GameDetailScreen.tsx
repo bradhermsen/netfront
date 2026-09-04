@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { EventFeed } from "../components/EventFeed";
-import { GameViewFooter } from "../components/GameViewFooter";
 import { MiniScoreboard } from "../components/MiniScoreboard";
 import { RosterTabs, type RosterPlayerRow } from "../components/RosterTabs";
 import type { GameEventRow } from "../components/EventFeed";
@@ -419,11 +418,15 @@ export function GameDetailScreen() {
 
         <div className="game-view-brand">
           <img
-            src="/TipIn_Default_Logo.jpg"
-            alt="TipIn Logo"
+            src="/TipIn NoBG.png"
+            alt="TipIn"
             className="game-view-logo"
           />
-          <h1 className="game-view-title">TipIn GameView</h1>
+          <h1 className="game-view-title">
+            <span className="game-view-brand-tip">Tip</span>
+            <span className="game-view-brand-in">In</span>
+            <span className="game-view-brand-product"> GameView</span>
+          </h1>
         </div>
 
         <p className="game-view-subtitle">{gameTitle || "Loading matchup..."}</p>
@@ -583,8 +586,6 @@ export function GameDetailScreen() {
           </section>
         </>
       )}
-
-      <GameViewFooter />
     </main>
   );
 }

@@ -340,7 +340,7 @@ namespace NetFrontAPI.Services
 
                             row.RelativeItem().PaddingLeft(8).Column(header =>
                             {
-                                header.Item().Text("TipIn Game Manager").Bold().FontSize(16).FontColor(Colors.Blue.Darken3);
+                                header.Item().Text("NetFront Game Manager").Bold().FontSize(16).FontColor(Colors.Blue.Darken3);
                                 header.Item().Text("Game Summary Report").FontColor(Colors.Grey.Darken1);
                             });
                         });
@@ -506,7 +506,7 @@ namespace NetFrontAPI.Services
         public string BuildEmailBody(GameSummaryReport report)
         {
             var builder = new StringBuilder();
-                builder.AppendLine("TipIn Game Manager - Finalized Game");
+            builder.AppendLine("NetFront Game Manager - Finalized Game");
             builder.AppendLine();
             builder.AppendLine(BuildFinalScoreLine(report));
             if (!string.IsNullOrWhiteSpace(report.LeagueName))
@@ -1026,13 +1026,13 @@ namespace NetFrontAPI.Services
             try
             {
                 // Primary location: API Assets folder (always ship logo here)
-                var primaryPath = Path.Combine(AppContext.BaseDirectory, "Assets", "TipIn_Default_Logo.png");
+                var primaryPath = Path.Combine(AppContext.BaseDirectory, "Assets", "NF_Logo_Default.png");
 
                 if (File.Exists(primaryPath))
                     return File.ReadAllBytes(primaryPath);
 
                 // Fallback: current working directory (dev environments)
-                var fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "TipIn_Default_Logo.png");
+                var fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "NF_Logo_Default.png");
 
                 if (File.Exists(fallbackPath))
                     return File.ReadAllBytes(fallbackPath);

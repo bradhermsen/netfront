@@ -1,4 +1,4 @@
-/* TipIn GameView styles should consume existing theme tokens. */
+/* NetFront GameView styles should consume existing theme tokens. */
 
 html,
 body,
@@ -17,20 +17,6 @@ body,
   min-height: 100vh;
   padding: 16px;
   width: 100%;
-}
-
-.game-view-legal-footer {
-  border-top: 1px solid #23446f;
-  color: #a9bddb;
-  font-size: 0.72rem;
-  line-height: 1.45;
-  margin-top: 28px;
-  padding: 14px 0 4px;
-  text-align: center;
-}
-
-.game-view-legal-footer p {
-  margin: 0;
 }
 
 .game-view-header {
@@ -67,12 +53,31 @@ body,
 }
 
 .game-view-title {
-  color: #f26f21;
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.05;
   margin: 0;
   width: auto;
+}
+
+.game-view-brand-tip,
+.game-view-brand-in {
+  font-style: italic;
+  font-weight: 800;
+  text-shadow: 0 0 2.5px #d4dbe3;
+}
+
+.game-view-brand-tip {
+  color: #0b1424;
+}
+
+.game-view-brand-in {
+  color: #ff7b00;
+}
+
+.game-view-brand-product {
+  color: #e8edf5;
+  font-style: normal;
 }
 
 .game-view-subtitle {

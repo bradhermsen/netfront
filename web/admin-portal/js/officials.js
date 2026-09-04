@@ -4,6 +4,7 @@
 
 const OFFICIALS_GROUP_PAGE_SIZE = 10;
 const officialsGroupPaginationState = {};
+const OFFICIALS_REFRESH_INTERVAL_MS = 15000;
 
 function resetOfficialsGroupPagination() {
   Object.keys(officialsGroupPaginationState).forEach((k) => delete officialsGroupPaginationState[k]);
@@ -268,6 +269,34 @@ AdminPage.init({
 
 function applyOfficialFiltersAndSearch() {
   renderOfficialsGrouped(getFilteredOfficials());
+}
+
+async function refreshOfficialsFromServer() {
+  try {
+    AdminPage.allItems = await OfficialsApi.getAll();
+    applyOfficialFiltersAndSearch();
+  } catch (err) {
+    console.error("Failed refreshing officials:", err);
+  }
+}
+
+if (!window.officialsAutoRefreshInitialized) {
+  window.officialsAutoRefreshInitialized = true;
+  window.setInterval(() => {
+    if (!document.hidden && document.getElementById("officialsGroupedList")) {
+      void refreshOfficialsFromServer();
+    }
+  }, OFFICIALS_REFRESH_INTERVAL_MS);
+  window.addEventListener("focus", () => {
+    if (document.getElementById("officialsGroupedList")) {
+      void refreshOfficialsFromServer();
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && document.getElementById("officialsGroupedList")) {
+      void refreshOfficialsFromServer();
+    }
+  });
 }
 
 function wireOfficialFilterEvents() {

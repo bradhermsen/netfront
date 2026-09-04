@@ -1,5 +1,4 @@
 import { StatusBar } from "expo-status-bar";
-import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -472,27 +471,12 @@ type ActiveGameResume = {
   timestampIso: string;
 };
 
-const DEFAULT_PUBLIC_API_BASE = "https://api-dev.netfrontscoring.com/api";
-
-function getDefaultLanApiBase() {
-  const hostUri =
-    (typeof Constants.expoConfig?.hostUri === "string" &&
-      Constants.expoConfig.hostUri) ||
-    "";
-  const host = hostUri.split(":")[0] ?? "";
-  const ipv4Pattern = /^\d{1,3}(\.\d{1,3}){3}$/;
-  if (ipv4Pattern.test(host)) {
-    return `http://${host}:7071/api`;
-  }
-
-  return "http://192.168.68.69:7071/api";
-}
+const DEFAULT_PUBLIC_API_BASE = "https://api-dev.tipinscoring.com/api";
 
 function isValidEmailAddress(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-const DEFAULT_LAN_API_BASE = getDefaultLanApiBase();
 const GOAL_OFFLINE_QUEUE_KEY = "netfront.goalOfflineQueue";
 const SHOT_OFFLINE_QUEUE_KEY = "netfront.shotOfflineQueue";
 const PENALTY_OFFLINE_QUEUE_KEY = "netfront.penaltyOfflineQueue";
@@ -502,7 +486,8 @@ const ACTIVE_GAME_SNAPSHOT_KEY = "netfront.activeGameSnapshot";
 const ACTIVE_GAME_RESUME_KEY = "netfront.activeGameResume";
 const ACTIVE_GAME_MARKER_KEY = "netfront.activeGameMarker";
 const SCOREBOARD_GATEWAY_SETTINGS_KEY = "netfront.scoreboardGatewaySettings";
-const DEFAULT_SCOREBOARD_GATEWAY_HOST = "192.168.68.69";
+const DEFAULT_SCOREBOARD_GATEWAY_HOST = "192.168.68.66";
+const LEGACY_SCOREBOARD_GATEWAY_HOST = "192.168.68.69";
 const DEFAULT_SCOREBOARD_GATEWAY_PORT = "80";
 const VERBOSE_TRACE = false;
 const STORAGE_FALLBACK_DIR = new FileSystem.Directory(
@@ -1546,8 +1531,6 @@ export default function App() {
   const [isClosedGameNotice, setIsClosedGameNotice] = useState(false);
   const [debugTrace, setDebugTrace] = useState<string[]>([]);
 
-  const [useLanApi, setUseLanApi] = useState(false);
-  const [lanApiBase, setLanApiBase] = useState(DEFAULT_LAN_API_BASE);
   const [activeRosterTeam, setActiveRosterTeam] = useState<"home" | "away">(
     "home",
   );
@@ -1759,10 +1742,7 @@ export default function App() {
     onExpire: handleClockExpired,
   });
 
-  const activeApiBase = useMemo(
-    () => (useLanApi ? lanApiBase : DEFAULT_PUBLIC_API_BASE),
-    [useLanApi, lanApiBase],
-  );
+  const activeApiBase = DEFAULT_PUBLIC_API_BASE;
 
   const syncStatusText = useMemo(() => {
     if (syncState === "syncing") {
@@ -2784,11 +2764,13 @@ export default function App() {
         const raw = await storageGetItem(SCOREBOARD_GATEWAY_SETTINGS_KEY);
         if (!raw || cancelled) return;
         const parsed = JSON.parse(raw) as Partial<ScoreboardGatewaySettings>;
+        const savedHost = normalizeScoreboardHost(String(parsed.host ?? ""));
         const normalizedSettings: ScoreboardGatewaySettings = {
           enabled: Boolean(parsed.enabled),
           host:
-            normalizeScoreboardHost(String(parsed.host ?? "")) ||
-            DEFAULT_SCOREBOARD_GATEWAY_HOST,
+            !savedHost || savedHost === LEGACY_SCOREBOARD_GATEWAY_HOST
+              ? DEFAULT_SCOREBOARD_GATEWAY_HOST
+              : savedHost,
           port: normalizeScoreboardPort(String(parsed.port ?? "")),
           tokenSecret: String(parsed.tokenSecret ?? "").trim(),
         };
@@ -7458,28 +7440,6 @@ export default function App() {
                 }}
               />
 
-              <View style={styles.toggleRow}>
-                <Text style={styles.toggleLabel}>
-                  Use LAN API (tablet): {useLanApi ? "On" : "Off"}
-                </Text>
-                <Switch
-                  value={useLanApi}
-                  onValueChange={setUseLanApi}
-                  trackColor={{ false: "#516273", true: "#2f9fe8" }}
-                  thumbColor={useLanApi ? "#dff2ff" : "#d4dbe3"}
-                />
-              </View>
-
-              <TextInput
-                style={styles.inputCompact}
-                value={activeApiBase}
-                autoCapitalize="none"
-                onChangeText={(value) => {
-                  if (useLanApi) setLanApiBase(value);
-                }}
-                placeholder="https://api-dev.netfrontscoring.com/api"
-                placeholderTextColor="#7a8fa8"
-              />
             </View>
 
             <Pressable
@@ -10620,7 +10580,7 @@ export default function App() {
                   }
                   autoCapitalize="none"
                   autoCorrect={false}
-                  placeholder="192.168.68.69"
+                  placeholder="192.168.68.66"
                   placeholderTextColor="#7a8fa8"
                 />
 

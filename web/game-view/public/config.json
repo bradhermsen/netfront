@@ -1,5 +1,5 @@
 {
-  "apiBase": "https://api-dev.netfrontscoring.com/api",
+  "apiBase": "https://api-dev.tipinscoring.com/api",
   "name": "game-view",
   "seasonScope": "current",
   "filters": ["organization", "team", "teamType"]

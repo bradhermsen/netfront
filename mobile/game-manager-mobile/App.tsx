@@ -775,7 +775,7 @@ const ROLE_LABELS: Record<AccessRole, string> = {
   AD: "Admin",
 };
 
-const TIPIN_LOGO = require("./assets/TipIn_Default_Logo.png");
+const NF_LOGO = require("./assets/NF_Logo_Default.png");
 
 function toOfficialRoleLabel(role: string) {
   const roleMap: Record<string, string> = {
@@ -7282,9 +7282,9 @@ export default function App() {
       {stage !== "login" ? (
         <View style={styles.topBar}>
           <View style={styles.topBarLeft}>
-            <Image source={TIPIN_LOGO} style={styles.headerLogo} />
+            <Image source={NF_LOGO} style={styles.headerLogo} />
             <View>
-              <Text style={styles.brand}>TipIn Game Manager</Text>
+              <Text style={styles.brand}>NetFront Game Manager</Text>
             </View>
           </View>
 
@@ -7329,9 +7329,9 @@ export default function App() {
         {stage === "login" ? (
           <View style={styles.loginWrap}>
             <View style={styles.loginBrandRow}>
-              <Image source={TIPIN_LOGO} style={styles.loginLogo} />
+              <Image source={NF_LOGO} style={styles.loginLogo} />
               <View>
-                <Text style={styles.loginBrandTitle}>TipIn Scoring</Text>
+                <Text style={styles.loginBrandTitle}>NetFront Scoring</Text>
                 <Text style={styles.loginBrandSubtitle}>GAME MANAGER</Text>
               </View>
             </View>
@@ -10359,7 +10359,7 @@ export default function App() {
               <View style={styles.goalModal}>
                 <Text style={styles.goalModalTitle}>Scoreboard Settings</Text>
                 <Text style={styles.goalModalSubtitle}>
-                  Read-only websocket connection to TipIn Gateway (no clock
+                  Read-only websocket connection to NetFront Gateway (no clock
                   control).
                 </Text>
 

@@ -13,7 +13,7 @@ window.PageContentRegistry.teams = () => `
     <div class="page-header-row">
       <div class="page-header-text">
         <h1 class="page-header">Teams</h1>
-        <p class="page-subtext">Manage all teams across the TipIn platform</p>
+        <p class="page-subtext">Manage all teams across the NetFront platform</p>
       </div>
       <button id="btnAddTeam" class="nf-btn nf-btn-primary">
         <i class="fa fa-plus"></i> Add Team
@@ -511,7 +511,7 @@ window.PageContentRegistry.settings = () => `
 
       <label class="settings-field">
         <span>From Name</span>
-        <input id="smtp-from-name" class="nf-input" type="text" placeholder="TipIn" />
+        <input id="smtp-from-name" class="nf-input" type="text" placeholder="NetFront" />
       </label>
     </div>
 
@@ -573,13 +573,13 @@ window.PageContentRegistry.settings = () => `
 
       <label class="settings-field">
         <span>Subject</span>
-        <input id="email-test-subject" class="nf-input" type="text" placeholder="TipIn test" />
+        <input id="email-test-subject" class="nf-input" type="text" placeholder="NetFront test" />
       </label>
     </div>
 
     <label class="settings-field mt-3">
       <span>Message</span>
-      <textarea id="email-test-body" class="nf-textarea" rows="4" placeholder="This is a test email from TipIn settings."></textarea>
+      <textarea id="email-test-body" class="nf-textarea" rows="4" placeholder="This is a test email from NetFront settings."></textarea>
     </label>
 
     <div class="settings-actions mt-3">
@@ -1596,7 +1596,7 @@ window.PageContentRegistry.players = () => `
     <div class="page-header-row">
       <div class="page-header-text">
         <h1 class="page-header">Players</h1>
-        <p class="page-subtext">Manage all players across the TipIn platform</p>
+        <p class="page-subtext">Manage all players across the NetFront platform</p>
       </div>
       <button id="btnAddPlayer" class="nf-btn nf-btn-primary">
         <i class="fa fa-plus"></i> Add Player
@@ -1811,7 +1811,7 @@ window.PageContentRegistry.dashboard = () => `
     <div class="page-header-row">
       <div class="page-header-text">
         <h1 class="page-header">Dashboard</h1>
-        <p class="page-subtext">TipIn Game Manager - Organizations, Teams, Players, and Game Schedules</p>
+        <p class="page-subtext">NetFront Game Manager - Organizations, Teams, Players, and Game Schedules</p>
       </div>
     </div>
   </div>

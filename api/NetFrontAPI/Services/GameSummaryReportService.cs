@@ -340,7 +340,13 @@ namespace NetFrontAPI.Services
 
                             row.RelativeItem().PaddingLeft(8).Column(header =>
                             {
-                                header.Item().Text("NetFront Game Manager").Bold().FontSize(16).FontColor(Colors.Blue.Darken3);
+                                header.Item().Text(title =>
+                                {
+                                    title.DefaultTextStyle(x => x.FontSize(16));
+                                    title.Span("Tip").Bold().Italic().FontColor("#0B1424");
+                                    title.Span("In").Bold().Italic().FontColor("#FF7B00");
+                                    title.Span(" Scoring Game Manager").Bold().FontColor("#7A8491");
+                                });
                                 header.Item().Text("Game Summary Report").FontColor(Colors.Grey.Darken1);
                             });
                         });
@@ -496,7 +502,11 @@ namespace NetFrontAPI.Services
                         }
                     });
 
-                    page.Footer().AlignRight().Text($"Game ID: {report.GameId}").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    page.Footer().Row(row =>
+                    {
+                        row.RelativeItem().Text("© 2026 TipIn Scoring. All rights reserved.").FontSize(8).FontColor(Colors.Grey.Darken1);
+                        row.RelativeItem().AlignRight().Text($"Game ID: {report.GameId}").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    });
                 });
             }).GeneratePdf();
 
@@ -506,7 +516,7 @@ namespace NetFrontAPI.Services
         public string BuildEmailBody(GameSummaryReport report)
         {
             var builder = new StringBuilder();
-            builder.AppendLine("NetFront Game Manager - Finalized Game");
+            builder.AppendLine("TipIn Scoring Game Manager - Finalized Game");
             builder.AppendLine();
             builder.AppendLine(BuildFinalScoreLine(report));
             if (!string.IsNullOrWhiteSpace(report.LeagueName))
@@ -1026,13 +1036,13 @@ namespace NetFrontAPI.Services
             try
             {
                 // Primary location: API Assets folder (always ship logo here)
-                var primaryPath = Path.Combine(AppContext.BaseDirectory, "Assets", "NF_Logo_Default.png");
+                var primaryPath = Path.Combine(AppContext.BaseDirectory, "Assets", "TipIn NoBG.png");
 
                 if (File.Exists(primaryPath))
                     return File.ReadAllBytes(primaryPath);
 
                 // Fallback: current working directory (dev environments)
-                var fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "NF_Logo_Default.png");
+                var fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "TipIn NoBG.png");
 
                 if (File.Exists(fallbackPath))
                     return File.ReadAllBytes(fallbackPath);

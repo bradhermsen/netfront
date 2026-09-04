@@ -97,7 +97,7 @@ namespace NetFrontBridgeApp
                 Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
                 ContextMenuStrip = trayMenu,
                 Visible = true,
-                Text = "NetFront Gateway Manager"
+                Text = "TipIn Scoring Bridge"
             };
 
             backgroundPollTimer = new System.Windows.Forms.Timer();
@@ -132,8 +132,8 @@ namespace NetFrontBridgeApp
                     string period = data["period"]?.ToString() ?? "1";
 
                     trayIcon.Text = settings.ClockOnlyMode
-                        ? $"NF Clock: {clock}"
-                        : $"NF: {homeScore}-{awayScore} P{period} ({clock})";
+                        ? $"TipIn Clock: {clock}"
+                        : $"TipIn: {homeScore}-{awayScore} P{period} ({clock})";
 
                     trayMenu.Items[0].Text = $"Status: Connected ({settings.GatewayIp})";
                 }
@@ -141,14 +141,14 @@ namespace NetFrontBridgeApp
                 {
                     isConnected = false;
                     trayMenu.Items[0].Text = "Status: Disconnected";
-                    trayIcon.Text = "NetFront: Disconnected";
+                    trayIcon.Text = "TipIn: Disconnected";
                 }
             }
             catch
             {
                 isConnected = false;
                 trayMenu.Items[0].Text = "Status: Disconnected";
-                trayIcon.Text = "NetFront: Disconnected";
+                trayIcon.Text = "TipIn: Disconnected";
             }
         }
 
@@ -171,7 +171,7 @@ namespace NetFrontBridgeApp
                 prompt.Width = 340;
                 prompt.Height = 220;
                 prompt.FormBorderStyle = FormBorderStyle.FixedDialog;
-                prompt.Text = "NetFront Configuration";
+                prompt.Text = "TipIn Scoring Bridge Configuration";
                 prompt.StartPosition = FormStartPosition.CenterScreen;
                 prompt.MaximizeBox = false;
                 prompt.MinimizeBox = false;
@@ -209,7 +209,7 @@ namespace NetFrontBridgeApp
 
             MessageBox.Show(
                 $"Gateway: {settings.GatewayIp}\nMode: {mode}\nConnected: {isConnected}\n\nvMix JSON File:\n{vmixUrl}",
-                "NetFront Bridge Status",
+                "TipIn Scoring Bridge Status",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );

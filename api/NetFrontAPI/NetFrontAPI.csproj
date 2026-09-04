@@ -35,7 +35,7 @@
   </None>
 </ItemGroup>
   <ItemGroup>
-    <None Update="Assets\NF_Logo_Default">
+    <None Update="Assets\TipIn NoBG.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>

@@ -181,7 +181,7 @@ namespace NetFrontAPI.Functions
                 {
                     To = new List<string> { payload.To.Trim() },
                     Subject = string.IsNullOrWhiteSpace(payload.Subject)
-                        ? "NetFront Email Settings Test"
+                        ? "TipIn Scoring Email Settings Test"
                         : payload.Subject.Trim(),
                     BodyText = string.IsNullOrWhiteSpace(payload.Body)
                         ? "This is a test email from TipIn Admin Settings."

@@ -11,8 +11,8 @@ namespace NetFrontAPI.Services
         public bool UseSsl { get; set; }
         public string? Username { get; set; }
         public string? Password { get; set; }
-        public string FromAddress { get; set; } = "no-reply@netfront.local";
-        public string FromName { get; set; } = "NetFront";
+        public string FromAddress { get; set; } = "no-reply@tipinscoring.local";
+        public string FromName { get; set; } = "TipIn Scoring";
         public bool HasPassword => !string.IsNullOrWhiteSpace(Password);
     }
 

@@ -241,11 +241,11 @@ export function GameViewMainScreen() {
 
         <div className="game-view-brand">
           <img
-            src="/TipIn_Default_Logo.png"
+            src="/TipIn_GameView_Icon.png"
             alt="TipIn"
             className="game-view-logo"
           />
-          <h1 className="game-view-title">TipIn GameView</h1>
+          <h1 className="game-view-title">GameView</h1>
         </div>
       </header>
 

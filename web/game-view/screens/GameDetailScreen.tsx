@@ -419,11 +419,11 @@ export function GameDetailScreen() {
 
         <div className="game-view-brand">
           <img
-            src="/TipIn_Default_Logo.jpg"
+            src="/TipIn_GameView_Icon.png"
             alt="TipIn Logo"
             className="game-view-logo"
           />
-          <h1 className="game-view-title">TipIn GameView</h1>
+          <h1 className="game-view-title">GameView</h1>
         </div>
 
         <p className="game-view-subtitle">{gameTitle || "Loading matchup..."}</p>

@@ -6,6 +6,11 @@
     "jsEngine": "hermes",
     "orientation": "default",
     "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/TipIn NoBG.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1424"
+    },
     "userInterfaceStyle": "light",
     "scheme": "netfront",
     "developmentClient": {
@@ -18,7 +23,7 @@
       "package": "com.netfront.gamemanager",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B1424",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

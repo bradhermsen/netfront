@@ -52,7 +52,10 @@ namespace NetFrontAPI.Functions
                     o.Name AS OrganizationName,
                     o.Abbreviation,
                     o.IsActive AS DirectoryIsActive,
-                    COALESCE(so.ParticipationType, 'NotParticipating') AS ParticipationType,
+                    CASE
+                        WHEN LOWER(LTRIM(RTRIM(o.Name))) IN ('external', 'external team') THEN 'External'
+                        ELSE COALESCE(so.ParticipationType, 'NotParticipating')
+                    END AS ParticipationType,
                     COUNT(t.Id) AS TeamCount
                 FROM dbo.Organizations o
                 LEFT JOIN dbo.SeasonOrganizations so
@@ -94,7 +97,6 @@ namespace NetFrontAPI.Functions
                 return await AuthorizationHelper.BadRequestResponse(req, "Each organization can appear only once");
 
             if (body.Organizations.Any(item =>
-                item.OrganizationId == Guid.Empty ||
                 !AllowedParticipationTypes.Contains(item.ParticipationType?.Trim() ?? string.Empty)))
             {
                 return await AuthorizationHelper.BadRequestResponse(
@@ -107,15 +109,17 @@ namespace NetFrontAPI.Functions
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
             var organizationIds = body.Organizations.Select(item => item.OrganizationId).ToArray();
-            var validOrganizationCount = organizationIds.Length == 0
-                ? 0
-                : await connection.ExecuteScalarAsync<int>(@"
-                    SELECT COUNT(*)
+            var validOrganizations = organizationIds.Length == 0
+                ? new List<SeasonOrganizationDirectoryRow>()
+                : (await connection.QueryAsync<SeasonOrganizationDirectoryRow>(@"
+                    SELECT OrganizationId, Name
                     FROM dbo.Organizations
                     WHERE OrganizationId IN @OrganizationIds;",
-                    new { OrganizationIds = organizationIds });
-            if (validOrganizationCount != organizationIds.Length)
+                    new { OrganizationIds = organizationIds })).ToList();
+            if (validOrganizations.Count != organizationIds.Length)
                 return await AuthorizationHelper.BadRequestResponse(req, "One or more organizations do not exist");
+
+            var organizationsById = validOrganizations.ToDictionary(item => item.OrganizationId);
 
             if (connection.State != ConnectionState.Open) connection.Open();
             using var transaction = connection.BeginTransaction();
@@ -150,9 +154,38 @@ namespace NetFrontAPI.Functions
                     {
                         SeasonId = seasonId,
                         item.OrganizationId,
-                        ParticipationType = NormalizeParticipationType(item.ParticipationType)
+                        ParticipationType = IsExternalDirectoryOrganization(organizationsById[item.OrganizationId].Name)
+                            ? "External"
+                            : NormalizeParticipationType(item.ParticipationType)
                     }, transaction);
                 }
+
+                await connection.ExecuteAsync(@"
+                    INSERT INTO dbo.SeasonOrganizations
+                    (
+                        SeasonId,
+                        OrganizationId,
+                        ParticipationType,
+                        CreatedAt,
+                        UpdatedAt
+                    )
+                    SELECT
+                        @SeasonId,
+                        o.OrganizationId,
+                        'External',
+                        SYSUTCDATETIME(),
+                        SYSUTCDATETIME()
+                    FROM dbo.Organizations o
+                    WHERE LOWER(LTRIM(RTRIM(o.Name))) IN ('external', 'external team')
+                      AND NOT EXISTS
+                      (
+                          SELECT 1
+                          FROM dbo.SeasonOrganizations so
+                          WHERE so.SeasonId = @SeasonId
+                            AND so.OrganizationId = o.OrganizationId
+                      );",
+                    new { SeasonId = seasonId },
+                    transaction);
 
                 transaction.Commit();
             }
@@ -195,6 +228,19 @@ namespace NetFrontAPI.Functions
             if (participationType.Equals("Managed", StringComparison.OrdinalIgnoreCase)) return "Managed";
             if (participationType.Equals("External", StringComparison.OrdinalIgnoreCase)) return "External";
             return "NotParticipating";
+        }
+
+        private static bool IsExternalDirectoryOrganization(string? organizationName)
+        {
+            var normalized = organizationName?.Trim();
+            return string.Equals(normalized, "External", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalized, "External Team", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private sealed class SeasonOrganizationDirectoryRow
+        {
+            public Guid OrganizationId { get; set; }
+            public string Name { get; set; } = string.Empty;
         }
     }
 }

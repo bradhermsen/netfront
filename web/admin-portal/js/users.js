@@ -302,10 +302,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterStatus = document.getElementById("filter-status");
     const searchBar = document.getElementById("user-search-bar");
 
-    if (filterRole) filterRole.onchange = () => AdminPage.refreshUsers();
-    if (filterOrg) filterOrg.onchange = () => AdminPage.refreshUsers();
-    if (filterStatus) filterStatus.onchange = () => AdminPage.refreshUsers();
-    if (searchBar) searchBar.oninput = () => AdminPage.refreshUsers();
+    const applyFilters = () => UsersPage.renderTable(AdminPage.allItems || []);
+    if (filterRole) filterRole.onchange = applyFilters;
+    if (filterOrg) filterOrg.onchange = applyFilters;
+    if (filterStatus) filterStatus.onchange = applyFilters;
+    if (searchBar) searchBar.oninput = applyFilters;
 
     // Password generator
     const btnGen = document.getElementById("btnGeneratePassword");

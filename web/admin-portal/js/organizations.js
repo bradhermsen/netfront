@@ -203,7 +203,10 @@ AdminPage.init({
   addTitle: "Add Organization",
   editTitle: "Edit Organization",
 
-  api: OrgApi,
+  api: {
+    ...OrgApi,
+    getAll: () => OrgApi.getAll({ activeSeasonOnly: true }),
+  },
 
   // -------------------------------------------------------
   // DROPDOWNS

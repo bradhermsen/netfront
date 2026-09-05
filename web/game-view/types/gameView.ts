@@ -1,6 +1,7 @@
 export type TeamType = "Girls" | "Boys";
 
 export interface GameViewFilters {
+  seasonId: string;
   organizationId: string;
   leagueId: string;
   teamLevel: string;
@@ -13,6 +14,8 @@ export interface GameViewFilterOption {
 }
 
 export interface GameViewFilterData {
+  seasons: GameViewFilterOption[];
+  currentSeasonId: string;
   organizations: GameViewFilterOption[];
   leagues: GameViewFilterOption[];
   teamLevels: GameViewFilterOption[];

@@ -382,7 +382,7 @@ async function loadPlayersList() {
       return allPlayers;
     }
 
-    allPlayers = await res.json();
+    allPlayers = await SeasonContext.filterPlayers(await res.json());
     return allPlayers;
   } catch (err) {
     console.error("Failed to load players:", err);
@@ -403,7 +403,7 @@ async function loadTeamsList() {
       return [];
     }
 
-    allTeams = await res.json();
+    allTeams = await SeasonContext.filterTeams(await res.json());
     return allTeams;
   } catch (err) {
     console.error("Failed to load teams:", err);

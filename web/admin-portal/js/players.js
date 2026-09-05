@@ -287,7 +287,7 @@ async function loadPlayerOrganizations() {
       throw new Error(`HTTP ${res.status}`);
     }
 
-    const orgs = await res.json();
+    const orgs = await SeasonContext.filterOrganizations(await res.json());
 
     // Modal org dropdown
     const select = document.getElementById("player-org");
@@ -336,7 +336,7 @@ async function loadTeamsForPlayer(orgId, selectedTeamIds = []) {
       throw new Error(`HTTP ${res.status}`);
     }
 
-    const teams = await res.json();
+    const teams = await SeasonContext.filterTeams(await res.json());
 
     teams.forEach((t) => {
       const row = document.createElement("div");
@@ -380,7 +380,7 @@ async function loadPlayerTeamsForFilter() {
       throw new Error(`HTTP ${res.status}`);
     }
 
-    const teams = await res.json();
+    const teams = await SeasonContext.filterTeams(await res.json());
 
     teams.forEach((t) => {
       const opt = document.createElement("option");
@@ -413,7 +413,7 @@ async function reloadTeamFilterByOrg(orgId) {
       throw new Error(`HTTP ${res.status}`);
     }
 
-    const teams = await res.json();
+    const teams = await SeasonContext.filterTeams(await res.json());
 
     teams.forEach((t) => {
       const opt = document.createElement("option");

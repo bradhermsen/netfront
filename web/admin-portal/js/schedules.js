@@ -69,7 +69,7 @@ async function loadScheduleLookups() {
       throw new Error("Failed to load schedule lookups");
     }
 
-    allTeams = await teamsRes.json();
+    allTeams = await SeasonContext.filterTeams(await teamsRes.json());
     allGameTypes = await typesRes.json();
     allGameRounds = await roundsRes.json();
     allOfficials = await officialsRes.json();
@@ -969,7 +969,7 @@ async function loadGames() {
       throw new Error(`HTTP ${res.status}`);
     }
 
-    allGames = await res.json();
+    allGames = await SeasonContext.filterGames(await res.json());
     renderGamesGrouped(allGames);
   } catch (err) {
     console.error("Failed to load games:", err);

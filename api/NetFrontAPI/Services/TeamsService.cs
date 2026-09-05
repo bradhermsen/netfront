@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using NetFrontAPI.DTOs;
+using NetFrontAPI.Infrastructure.Database;
 using NetFrontAPI.Repositories;
 using NetFrontAPI.Models;
 
@@ -12,6 +14,7 @@ namespace NetFrontAPI.Services
     {
         private readonly ITeamsRepository _repo;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly ISqlConnectionFactory _connectionFactory;
 
         private static readonly Dictionary<string, string> AllowedTeamTypes =
             new(StringComparer.OrdinalIgnoreCase)
@@ -24,10 +27,14 @@ namespace NetFrontAPI.Services
                 ["women"] = "Women"
             };
 
-        public TeamsService(ITeamsRepository repo, IOrganizationRepository organizationRepository)
+        public TeamsService(
+            ITeamsRepository repo,
+            IOrganizationRepository organizationRepository,
+            ISqlConnectionFactory connectionFactory)
         {
             _repo = repo;
             _organizationRepository = organizationRepository;
+            _connectionFactory = connectionFactory;
         }
 
         public Task<IEnumerable<TeamsListItemDto>> GetAllAsync() =>
@@ -83,6 +90,11 @@ namespace NetFrontAPI.Services
 
             if (dto.IsExternal)
             {
+                var externalOrganizationId = dto.OrganizationId ?? Guid.Empty;
+                await ValidateSeasonParticipationAsync(
+                    dto.SeasonId,
+                    externalOrganizationId,
+                    "External");
                 return;
             }
 
@@ -90,6 +102,11 @@ namespace NetFrontAPI.Services
             {
                 throw new ArgumentException("Organization is required for internal teams.");
             }
+
+            await ValidateSeasonParticipationAsync(
+                dto.SeasonId,
+                dto.OrganizationId.Value,
+                "Managed");
 
             if (!string.IsNullOrWhiteSpace(dto.TeamMascot))
             {
@@ -108,6 +125,28 @@ namespace NetFrontAPI.Services
             }
 
             dto.TeamMascot = org.Mascot.Trim();
+        }
+
+        private async Task ValidateSeasonParticipationAsync(
+            Guid seasonId,
+            Guid organizationId,
+            string requiredParticipationType)
+        {
+            using var connection = _connectionFactory.CreateConnection();
+            var participationType = await connection.QuerySingleOrDefaultAsync<string>(@"
+                SELECT ParticipationType
+                FROM dbo.SeasonOrganizations
+                WHERE SeasonId = @SeasonId
+                  AND OrganizationId = @OrganizationId;",
+                new { SeasonId = seasonId, OrganizationId = organizationId });
+
+            if (!string.Equals(participationType, requiredParticipationType, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    requiredParticipationType == "External"
+                        ? "External Team is not enabled for the selected season."
+                        : "The selected organization is not enabled as Managed for this season.");
+            }
         }
 
         private static string? NormalizeTeamType(string? value)

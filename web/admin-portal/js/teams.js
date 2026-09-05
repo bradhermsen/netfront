@@ -331,7 +331,7 @@ async function loadTeamOrganizations() {
       throw new Error(`HTTP ${res.status}`);
     }
 
-    const orgs = await res.json();
+    const orgs = await SeasonContext.filterOrganizations(await res.json());
     if (!Array.isArray(orgs)) {
       throw new Error(orgs?.error || "Organizations response was not an array");
     }

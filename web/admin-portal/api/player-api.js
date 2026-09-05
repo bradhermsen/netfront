@@ -9,7 +9,7 @@ const PlayerApi = {
   async getAll() {
     const res = await authFetch(`/players/dto`);
     if (!res.ok) throw new Error("Failed to load players");
-    return await res.json();
+    return await SeasonContext.filterPlayers(await res.json());
   },
 
   // -------------------------------------------------------

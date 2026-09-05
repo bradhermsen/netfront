@@ -24,9 +24,10 @@ const TeamApi = {
       throw new Error(`HTTP ${res.status}`);
     }
     const payload = await res.json();
-    return Array.isArray(payload)
+    const normalized = Array.isArray(payload)
       ? payload.map((t) => this.normalizeTeam(t))
       : [];
+    return await SeasonContext.filterTeams(normalized);
   },
 
   async getById(id) {

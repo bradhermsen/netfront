@@ -4,7 +4,7 @@ const OrgApi = {
   async getAll() {
     const res = await authFetch("/organizations");
     if (!res.ok) throw new Error("Failed to load organizations");
-    return await res.json();
+    return await SeasonContext.filterOrganizations(await res.json());
   },
 
   async getById(id) {

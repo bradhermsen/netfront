@@ -53,9 +53,6 @@ const STATUS_GROUP_ORDER = [
   "Cancelled / Postponed",
 ];
 
-const STATUS_PAGE_SIZE = 10;
-const statusPaginationState = {};
-
 // =========================================================
 // LOOKUPS
 // =========================================================
@@ -897,12 +894,6 @@ function getMonthGroupLabel(dt) {
   return parsed.toLocaleString("en-US", { month: "long", year: "numeric" });
 }
 
-function resetStatusPagination() {
-  Object.keys(statusPaginationState).forEach((key) => {
-    delete statusPaginationState[key];
-  });
-}
-
 // =========================================================
 // FILTERS
 // =========================================================
@@ -955,7 +946,6 @@ function wireGameFilters() {
       if (id === "filter-game-org") {
         populateScheduleFilters();
       }
-      resetStatusPagination();
       applyGameFilters();
     });
 
@@ -963,7 +953,6 @@ function wireGameFilters() {
       if (id === "filter-game-org") {
         populateScheduleFilters();
       }
-      resetStatusPagination();
       applyGameFilters();
     });
   });
@@ -981,7 +970,6 @@ async function loadGames() {
     }
 
     allGames = await res.json();
-    resetStatusPagination();
     renderGamesGrouped(allGames);
   } catch (err) {
     console.error("Failed to load games:", err);
@@ -1019,15 +1007,8 @@ function renderGamesGrouped(list) {
   container.innerHTML = statusKeys
     .map((statusKey, statusIndex) => {
       const statusGames = groups.get(statusKey) || [];
-      const totalPages = Math.max(1, Math.ceil(statusGames.length / STATUS_PAGE_SIZE));
-      const currentPage = Math.min(statusPaginationState[statusKey] || 1, totalPages);
-      statusPaginationState[statusKey] = currentPage;
-
-      const start = (currentPage - 1) * STATUS_PAGE_SIZE;
-      const pagedGames = statusGames.slice(start, start + STATUS_PAGE_SIZE);
-
       const monthGroups = new Map();
-      pagedGames.forEach((game) => {
+      statusGames.forEach((game) => {
         const monthLabel = getMonthGroupLabel(game.gameDateTime);
         if (!monthGroups.has(monthLabel)) {
           monthGroups.set(monthLabel, []);
@@ -1107,14 +1088,6 @@ function renderGamesGrouped(list) {
 
           <div class="schedule-status-content">
             ${monthMarkup}
-
-            ${statusGames.length > STATUS_PAGE_SIZE ? `
-            <div class="schedule-pagination">
-              <button class="nf-btn nf-btn-secondary schedule-page-btn" data-status-key="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
-              <span>Page ${currentPage} of ${totalPages}</span>
-              <button class="nf-btn nf-btn-secondary schedule-page-btn" data-status-key="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
-            </div>
-            ` : ""}
           </div>
         </details>
       `;
@@ -1122,25 +1095,6 @@ function renderGamesGrouped(list) {
     .join("");
 
   wireGameRowButtons();
-  wireStatusPaginationButtons();
-}
-
-function wireStatusPaginationButtons() {
-  document.querySelectorAll(".schedule-page-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const statusKey = btn.dataset.statusKey;
-      const direction = btn.dataset.direction;
-      const current = statusPaginationState[statusKey] || 1;
-
-      if (direction === "prev") {
-        statusPaginationState[statusKey] = Math.max(1, current - 1);
-      } else {
-        statusPaginationState[statusKey] = current + 1;
-      }
-
-      applyGameFilters();
-    };
-  });
 }
 
 function wireGameRowButtons() {

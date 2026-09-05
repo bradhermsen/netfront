@@ -38,9 +38,6 @@ const allowedTeamTypes = new Map([
   ["women", "Women"],
 ]);
 
-const TEAMS_GROUP_PAGE_SIZE = 10;
-const teamsGroupPaginationState = {};
-
 function getOrgIdFromTeamsQuery() {
   const params = new URLSearchParams(window.location.search || "");
   return params.get("orgId") || "";
@@ -50,10 +47,6 @@ function clearTeamsDeepLinkQuery() {
   if (!window.location.search) return;
   const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
   window.history.replaceState({}, document.title, cleanUrl);
-}
-
-function resetTeamsGroupPagination() {
-  Object.keys(teamsGroupPaginationState).forEach((k) => delete teamsGroupPaginationState[k]);
 }
 
 function normalizeTeamTypeValue(value) {
@@ -651,14 +644,9 @@ function renderTeamsGrouped(teams) {
   container.innerHTML = statusOrder
     .map((statusKey, statusIndex) => {
       const statusItems = [...statusGroups[statusKey]].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-      const totalPages = Math.max(1, Math.ceil(statusItems.length / TEAMS_GROUP_PAGE_SIZE));
-      const currentPage = Math.min(teamsGroupPaginationState[statusKey] || 1, totalPages);
-      teamsGroupPaginationState[statusKey] = currentPage;
-
-      const paged = statusItems.slice((currentPage - 1) * TEAMS_GROUP_PAGE_SIZE, currentPage * TEAMS_GROUP_PAGE_SIZE);
       const orgGroups = new Map();
 
-      paged.forEach((team) => {
+      statusItems.forEach((team) => {
         const orgLabel = team.organizationName || "External Team";
         if (!orgGroups.has(orgLabel)) orgGroups.set(orgLabel, []);
         orgGroups.get(orgLabel).push(team);
@@ -722,13 +710,6 @@ function renderTeamsGrouped(teams) {
           </summary>
           <div class="nf-group-content">
             ${orgMarkup}
-            ${statusItems.length > TEAMS_GROUP_PAGE_SIZE ? `
-              <div class="nf-pagination">
-                <button class="nf-btn nf-btn-secondary team-page-btn" data-status="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
-                <span>Page ${currentPage} of ${totalPages}</span>
-                <button class="nf-btn nf-btn-secondary team-page-btn" data-status="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
-              </div>
-            ` : ""}
           </div>
         </details>
       `;
@@ -736,7 +717,6 @@ function renderTeamsGrouped(teams) {
     .join("");
 
   wireTeamCardActions();
-  wireTeamPagination();
 }
 
 function wireTeamCardActions() {
@@ -754,22 +734,6 @@ function wireTeamCardActions() {
 
   document.querySelectorAll(".team-delete-btn").forEach((btn) => {
     btn.onclick = () => openDeleteTeam(btn.dataset.id);
-  });
-}
-
-function wireTeamPagination() {
-  document.querySelectorAll(".team-page-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const status = btn.dataset.status;
-      const direction = btn.dataset.direction;
-      const current = teamsGroupPaginationState[status] || 1;
-
-      teamsGroupPaginationState[status] = direction === "prev"
-        ? Math.max(1, current - 1)
-        : current + 1;
-
-      applyTeamFiltersAndSearch();
-    };
   });
 }
 
@@ -838,7 +802,6 @@ function initTeamsPage() {
       // Keep a copy for abbreviation duplicate detection
       window.loadedTeams = teams || [];
       populateTeamTypeFilterFromTeams(teams);
-      resetTeamsGroupPagination();
       applyTeamFiltersAndSearch();
     },
 
@@ -1301,13 +1264,11 @@ function wireTeamFilterEvents() {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener("input", () => {
-          resetTeamsGroupPagination();
           applyTeamFiltersAndSearch();
         });
       }
       if (el) {
         el.addEventListener("change", () => {
-          resetTeamsGroupPagination();
           applyTeamFiltersAndSearch();
         });
       }

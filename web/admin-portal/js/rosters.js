@@ -29,13 +29,6 @@ let globalFilters = {
   showExternal: false,
 };
 
-const ROSTERS_GROUP_PAGE_SIZE = 25; // Keep 25 teams per status page
-const rostersGroupPaginationState = {};
-
-function resetRostersGroupPagination() {
-  Object.keys(rostersGroupPaginationState).forEach((k) => delete rostersGroupPaginationState[k]);
-}
-
 // =========================================================
 // RESTORE MODAL VISUAL STATE
 // =========================================================
@@ -148,7 +141,6 @@ await loadTeamsList();
     if (teamFilter) {
       teamFilter.value = deepLinkTeamId;
       globalFilters.teamId = deepLinkTeamId;
-      resetRostersGroupPagination();
       applyMainRosterFilters();
     }
 
@@ -230,7 +222,6 @@ function attachGlobalFilterEvents() {
   if (searchEl) {
     searchEl.addEventListener("input", (e) => {
       globalFilters.search = e.target.value.toLowerCase();
-      resetRostersGroupPagination();
       applyMainRosterFilters();
     });
   }
@@ -239,7 +230,6 @@ function attachGlobalFilterEvents() {
   if (orgFilter) {
     orgFilter.onchange = (e) => {
       globalFilters.organization = e.target.value;
-      resetRostersGroupPagination();
       applyMainRosterFilters();
     };
   }
@@ -248,7 +238,6 @@ function attachGlobalFilterEvents() {
   if (teamFilter) {
     teamFilter.onchange = (e) => {
       globalFilters.teamId = e.target.value;
-      resetRostersGroupPagination();
       applyMainRosterFilters();
     };
   }
@@ -257,7 +246,6 @@ function attachGlobalFilterEvents() {
   if (levelFilter) {
     levelFilter.onchange = (e) => {
       globalFilters.levelId = e.target.value;
-      resetRostersGroupPagination();
       applyMainRosterFilters();
     };
   }
@@ -266,7 +254,6 @@ function attachGlobalFilterEvents() {
   if (statusFilter) {
     statusFilter.onchange = (e) => {
       globalFilters.status = e.target.value;
-      resetRostersGroupPagination();
       applyMainRosterFilters();
     };
   }
@@ -276,7 +263,6 @@ function attachGlobalFilterEvents() {
     showExternalToggle.checked = false;
     showExternalToggle.onchange = (e) => {
       globalFilters.showExternal = !!e.target.checked;
-      resetRostersGroupPagination();
       applyMainRosterFilters();
     };
   }
@@ -447,14 +433,9 @@ function renderTeamsTable(teams) {
   container.innerHTML = statusOrder
     .map((statusKey, statusIndex) => {
       const statusItems = [...statusGroups[statusKey]].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-      const totalPages = Math.max(1, Math.ceil(statusItems.length / ROSTERS_GROUP_PAGE_SIZE));
-      const currentPage = Math.min(rostersGroupPaginationState[statusKey] || 1, totalPages);
-      rostersGroupPaginationState[statusKey] = currentPage;
-
-      const paged = statusItems.slice((currentPage - 1) * ROSTERS_GROUP_PAGE_SIZE, currentPage * ROSTERS_GROUP_PAGE_SIZE);
       const orgGroups = new Map();
 
-      paged.forEach((team) => {
+      statusItems.forEach((team) => {
         const orgLabel = team.organizationName || "External Team";
         if (!orgGroups.has(orgLabel)) orgGroups.set(orgLabel, []);
         orgGroups.get(orgLabel).push(team);
@@ -489,7 +470,7 @@ function renderTeamsTable(teams) {
             .join("");
 
           return `
-            <details class="nf-subgroup" open>
+            <details class="nf-subgroup roster-organization-group">
               <summary>
                 <span>${orgLabel}</span>
                 <span class="nf-group-count">${orgTeams.length}</span>
@@ -508,13 +489,6 @@ function renderTeamsTable(teams) {
           </summary>
           <div class="nf-group-content">
             ${orgMarkup}
-            ${statusItems.length > ROSTERS_GROUP_PAGE_SIZE ? `
-              <div class="nf-pagination">
-                <button class="nf-btn nf-btn-secondary rosters-page-btn" data-status="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
-                <span>Page ${currentPage} of ${totalPages}</span>
-                <button class="nf-btn nf-btn-secondary rosters-page-btn" data-status="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
-              </div>
-            ` : ""}
           </div>
         </details>
       `;
@@ -522,28 +496,11 @@ function renderTeamsTable(teams) {
     .join("");
 
   wireRosterGroupedActions();
-  wireRostersPagination();
 }
 
 function wireRosterGroupedActions() {
   document.querySelectorAll(".roster-manage-btn").forEach((btn) => {
     btn.onclick = () => openRosterManager(btn.dataset.teamId);
-  });
-}
-
-function wireRostersPagination() {
-  document.querySelectorAll(".rosters-page-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const status = btn.dataset.status;
-      const direction = btn.dataset.direction;
-      const current = rostersGroupPaginationState[status] || 1;
-
-      rostersGroupPaginationState[status] = direction === "prev"
-        ? Math.max(1, current - 1)
-        : current + 1;
-
-      applyMainRosterFilters();
-    };
   });
 }
 

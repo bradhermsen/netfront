@@ -103,6 +103,8 @@ function normalizeOrganization(row: unknown): ApiOrganization {
   const obj = asObject(row) || {};
   return {
     organizationId: pickString(obj, "organizationId", "OrganizationId"),
+    leagueId: pickString(obj, "leagueId", "LeagueId") || null,
+    leagueName: pickString(obj, "leagueName", "LeagueName") || null,
     name: pickString(obj, "name", "Name") || null,
     abbreviation: pickString(obj, "abbreviation", "Abbreviation") || null,
     mascot: pickString(obj, "mascot", "Mascot") || null,
@@ -116,6 +118,7 @@ function normalizeTeam(row: unknown): ApiTeam {
     teamId: pickString(obj, "teamId", "TeamId", "id", "Id"),
     organizationId:
       pickString(obj, "organizationId", "OrganizationId") || null,
+    leagueId: pickString(obj, "leagueId", "LeagueId") || null,
     seasonId: pickString(obj, "seasonId", "SeasonId") || null,
     name: pickString(obj, "name", "Name") || null,
     teamType: pickString(obj, "teamType", "TeamType") || null,

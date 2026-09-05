@@ -135,8 +135,16 @@ async function loadScopedTeams(filters: GameViewFilters): Promise<{
     );
   }
 
-  if (filters.teamId) {
-    teams = teams.filter((team) => String(team.teamId) === filters.teamId);
+  if (filters.leagueId) {
+    teams = teams.filter(
+      (team) => String(team.leagueId || "") === filters.leagueId,
+    );
+  }
+
+  if (filters.teamLevel) {
+    teams = teams.filter(
+      (team) => String(team.levelName || "").trim() === filters.teamLevel,
+    );
   }
 
   return { seasonId, teams };
@@ -170,7 +178,8 @@ export async function fetchFilterData(
     getOrganizations(),
     loadScopedTeams({
       organizationId: filters?.organizationId || "",
-      teamId: "",
+      leagueId: filters?.leagueId || "",
+      teamLevel: "",
       teamType: filters?.teamType || "",
     }),
   ]);
@@ -185,18 +194,34 @@ export async function fetchFilterData(
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  const teamOptions = scoped.teams
-    .map((team) => ({
-      id: String(team.teamId),
-      label: displayTeamNameWithMascot(displayTeamName(team), team.teamMascot),
-      teamType: normalizeTeamType(team.teamType),
-      seasonId: team.seasonId ? String(team.seasonId) : "",
-    }))
+  const leagueOptions = Array.from(
+    new Map(
+      (organizations || [])
+        .filter((organization) => organization.leagueId && organization.leagueName)
+        .map((organization) => [
+          String(organization.leagueId),
+          {
+            id: String(organization.leagueId),
+            label: String(organization.leagueName),
+          },
+        ]),
+    ).values(),
+  ).sort((a, b) => a.label.localeCompare(b.label));
+
+  const teamLevelOptions = Array.from(
+    new Set(
+      scoped.teams
+        .map((team) => String(team.levelName || "").trim())
+        .filter(Boolean),
+    ),
+  )
+    .map((level) => ({ id: level, label: level }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
   return {
     organizations: organizationOptions,
-    teams: teamOptions,
+    leagues: leagueOptions,
+    teamLevels: teamLevelOptions,
   };
 }
 

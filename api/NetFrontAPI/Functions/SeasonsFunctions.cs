@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
@@ -106,6 +107,16 @@ namespace NetFrontAPI.Functions
 
             var dto = await req.ReadFromJsonAsync<CreateSeasonDto>();
 
+            if (dto == null || string.IsNullOrWhiteSpace(dto.SeasonName))
+                return await AuthorizationHelper.BadRequestResponse(req, "Season name is required");
+
+            if (dto.StartDate >= dto.EndDate)
+                return await AuthorizationHelper.BadRequestResponse(req, "Season end date must be after the start date");
+
+            var existingSeasons = await _service.GetAllAsync();
+            if (existingSeasons.Any(season => string.Equals(season.SeasonName?.Trim(), dto.SeasonName.Trim(), StringComparison.OrdinalIgnoreCase)))
+                return await AuthorizationHelper.BadRequestResponse(req, "A season with this name already exists");
+
             await _service.CreateAsync(dto);
 
             return req.CreateResponse(HttpStatusCode.Created);
@@ -129,6 +140,16 @@ namespace NetFrontAPI.Functions
 
             var dto = await req.ReadFromJsonAsync<UpdateSeasonDto>();
 
+            if (dto == null || string.IsNullOrWhiteSpace(dto.SeasonName))
+                return await AuthorizationHelper.BadRequestResponse(req, "Season name is required");
+
+            if (dto.StartDate >= dto.EndDate)
+                return await AuthorizationHelper.BadRequestResponse(req, "Season end date must be after the start date");
+
+            var existingSeasons = await _service.GetAllAsync();
+            if (existingSeasons.Any(season => season.SeasonId != id && string.Equals(season.SeasonName?.Trim(), dto.SeasonName.Trim(), StringComparison.OrdinalIgnoreCase)))
+                return await AuthorizationHelper.BadRequestResponse(req, "A season with this name already exists");
+
             await _service.UpdateAsync(id, dto);
 
             return req.CreateResponse(HttpStatusCode.NoContent);
@@ -149,6 +170,12 @@ namespace NetFrontAPI.Functions
 
             if (!_authorizationService.HasAnyRole(role, "SuperAdmin", "OrgAdmin"))
                 return await AuthorizationHelper.ForbiddenResponse(req, "Insufficient role");
+
+            var season = await _service.GetByIdAsync(id);
+            if (season == null)
+                return req.CreateResponse(HttpStatusCode.NotFound);
+            if (season.IsActive)
+                return await AuthorizationHelper.BadRequestResponse(req, "Deactivate the season before deleting it");
 
             await _service.DeleteAsync(id);
 

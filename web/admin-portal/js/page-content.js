@@ -1245,6 +1245,77 @@ window.PageContentRegistry.officialsModals = () => `
 `;
 
 //=================================================================
+// SEASONS PAGE CONTENT
+//=================================================================
+window.PageContentRegistry.seasons = () => `
+  <div class="page-header-block">
+    <div class="page-header-row">
+      <div class="page-header-text">
+        <h1 class="page-header">Seasons</h1>
+        <p class="page-subtext">Manage season dates and select the active season used for new teams.</p>
+      </div>
+      <button id="btnAddSeason" class="nf-btn nf-btn-primary">
+        <i class="fa fa-plus"></i> Add Season
+      </button>
+    </div>
+  </div>
+
+  <div class="nf-card">
+    <div class="nf-filter-bar">
+      <input id="seasons-search" class="nf-search" type="text" placeholder="Search seasons" />
+    </div>
+  </div>
+
+  <div class="nf-card mt-4">
+    <div id="seasonsList"></div>
+  </div>
+`;
+
+window.PageContentRegistry.seasonsModals = () => `
+  <div id="seasonModalOverlay" class="nf-modal-overlay hidden">
+    <div class="nf-modal medium">
+      <div class="nf-modal-header">
+        <h2 id="seasonModalTitle">Add Season</h2>
+        <button class="modal-close" type="button">×</button>
+      </div>
+
+      <div class="nf-modal-body">
+        <div class="full-width-section">
+          <div class="two-col">
+            <div class="full-width">
+              <label>Season Name</label>
+              <input id="season-name" class="nf-input" placeholder="2026-2027" />
+            </div>
+            <div>
+              <label>Start Date</label>
+              <input id="season-start-date" class="nf-input" type="date" />
+            </div>
+            <div>
+              <label>End Date</label>
+              <input id="season-end-date" class="nf-input" type="date" />
+            </div>
+            <div class="full-width">
+              <label class="checkbox-inline">
+                <input id="season-active" type="checkbox" />
+                Active Season
+              </label>
+              <p id="season-activation-warning" class="season-activation-warning hidden">
+                Activating this season will deactivate the currently active season.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="seasonCancel" class="nf-btn nf-btn-secondary" type="button">Cancel</button>
+        <button id="seasonSave" class="nf-btn nf-btn-primary" type="button">Save Season</button>
+      </div>
+    </div>
+  </div>
+`;
+
+//=================================================================
 // GAME SCHEDULES PAGE CONTENT (FULL CRUD)
 //=================================================================
 window.PageContentRegistry.schedules = () => `

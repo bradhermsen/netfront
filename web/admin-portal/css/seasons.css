@@ -1,0 +1,35 @@
+#seasonsList {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.season-item-card {
+  min-width: 0;
+}
+
+.season-item-active {
+  border-color: rgba(255, 123, 0, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 123, 0, 0.16);
+}
+
+.season-activation-warning {
+  border-left: 3px solid var(--nf-accent);
+  color: var(--nf-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 10px;
+  padding: 9px 11px;
+}
+
+@media (max-width: 1100px) and (min-width: 769px) {
+  #seasonsList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  #seasonsList {
+    grid-template-columns: 1fr;
+  }
+}

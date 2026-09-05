@@ -184,6 +184,12 @@ async function deleteSeason(id) {
 function renderSeasonOrganizations() {
   const container = document.getElementById("seasonOrganizationsList");
   const search = (document.getElementById("season-organizations-search")?.value || "").trim().toLowerCase();
+  seasonsState.organizations.forEach((organization) => {
+    const isExternalDirectory = ["external", "external team"].includes(
+      String(organization.organizationName || "").trim().toLowerCase(),
+    );
+    if (isExternalDirectory) organization.participationType = "External";
+  });
   const organizations = seasonsState.organizations.filter((organization) =>
     !search || JSON.stringify(organization).toLowerCase().includes(search),
   );
@@ -194,19 +200,24 @@ function renderSeasonOrganizations() {
     `${seasonsState.organizations.filter((item) => item.participationType === "NotParticipating").length} not participating`;
 
   container.innerHTML = organizations.length
-    ? organizations.map((organization) => `
+    ? organizations.map((organization) => {
+      const isExternalDirectory = ["external", "external team"].includes(
+        String(organization.organizationName || "").trim().toLowerCase(),
+      );
+      return `
       <div class="season-organization-row">
         <div class="season-organization-meta">
           <strong>${escapeSeasonHtml(organization.organizationName)}</strong>
           <span>${escapeSeasonHtml(organization.abbreviation || "No abbreviation")} · ${organization.teamCount || 0} destination-season teams${organization.directoryIsActive ? "" : " · Directory inactive"}</span>
         </div>
-        <select class="nf-select season-organization-participation" data-id="${organization.organizationId}">
+        <select class="nf-select season-organization-participation" data-id="${organization.organizationId}" ${isExternalDirectory ? "disabled" : ""}>
           <option value="Managed" ${organization.participationType === "Managed" ? "selected" : ""}>Managed</option>
           <option value="External" ${organization.participationType === "External" ? "selected" : ""}>External</option>
           <option value="NotParticipating" ${organization.participationType === "NotParticipating" ? "selected" : ""}>Not Participating</option>
         </select>
       </div>
-    `).join("")
+    `;
+    }).join("")
     : '<div class="nf-empty-state">No organizations match your search.</div>';
 
   container.querySelectorAll(".season-organization-participation").forEach((select) => {
@@ -250,7 +261,10 @@ function closeSeasonOrganizations() {
 
 function setAllSeasonOrganizations(participationType) {
   seasonsState.organizations.forEach((organization) => {
-    organization.participationType = participationType;
+    const isExternalDirectory = ["external", "external team"].includes(
+      String(organization.organizationName || "").trim().toLowerCase(),
+    );
+    organization.participationType = isExternalDirectory ? "External" : participationType;
   });
   renderSeasonOrganizations();
 }

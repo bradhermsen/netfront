@@ -8,5 +8,11 @@ function hasGameIdInQuery() {
 }
 
 export function App() {
-  return hasGameIdInQuery() ? <GameDetailScreen /> : <GameViewMainScreen />;
+  return (
+    <div className="tipin-site-shell">
+      <div className="tipin-product-surface" data-product="gameview">
+        {hasGameIdInQuery() ? <GameDetailScreen /> : <GameViewMainScreen />}
+      </div>
+    </div>
+  );
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { GameViewBrand } from "../components/GameViewBrand";
 import { GameViewFooter } from "../components/GameViewFooter";
 import { LastFinalGamesCard } from "../components/LastFinalGamesCard";
 import { NextGameCard } from "../components/NextGameCard";
@@ -244,18 +245,7 @@ export function GameViewMainScreen() {
           ☰
         </button>
 
-        <div className="game-view-brand">
-          <img
-            src="/TipIn NoBG.png"
-            alt="TipIn"
-            className="game-view-logo"
-          />
-          <h1 className="game-view-title">
-            <span className="game-view-brand-tip">Tip</span>
-            <span className="game-view-brand-in">In</span>
-            <span className="game-view-brand-product"> GameView</span>
-          </h1>
-        </div>
+        <GameViewBrand />
       </header>
 
       <div className="game-view-header-separator" aria-hidden="true" />

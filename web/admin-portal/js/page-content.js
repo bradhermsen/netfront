@@ -1340,6 +1340,57 @@ window.PageContentRegistry.seasonsModals = () => `
       </div>
     </div>
   </div>
+
+  <div id="seasonTeamImportOverlay" class="nf-modal-overlay hidden">
+    <div class="nf-modal large">
+      <div class="nf-modal-header">
+        <h2 id="seasonTeamImportTitle">Import Teams</h2>
+        <button class="modal-close" type="button">×</button>
+      </div>
+
+      <div class="nf-modal-body full">
+        <p class="season-setup-intro">
+          Import selected team structures only. Rosters, coaches, schedules, games, statistics, and prior access codes are not copied.
+        </p>
+
+        <div class="season-team-import-source-row">
+          <label for="season-team-import-source">Source Season</label>
+          <select id="season-team-import-source" class="nf-select"></select>
+        </div>
+
+        <div class="season-setup-toolbar">
+          <input id="season-team-import-search" class="nf-search" type="text" placeholder="Search team name, level, type, or organization" />
+          <select id="season-team-import-level" class="nf-select">
+            <option value="">Level: All</option>
+          </select>
+          <select id="season-team-import-type" class="nf-select">
+            <option value="">Type: All</option>
+          </select>
+        </div>
+
+        <div class="season-team-import-actions">
+          <p id="seasonTeamImportCount" class="season-setup-count"></p>
+          <button id="seasonTeamImportSelectVisible" class="nf-btn nf-btn-secondary" type="button">Select Visible</button>
+          <button id="seasonTeamImportClearVisible" class="nf-btn nf-btn-secondary" type="button">Clear Visible</button>
+        </div>
+
+        <div class="season-team-import-heading" aria-hidden="true">
+          <span></span>
+          <span>Team Name</span>
+          <span>Level</span>
+          <span>Type</span>
+          <span>Organization</span>
+          <span>Status</span>
+        </div>
+        <div id="seasonTeamImportList" class="season-team-import-list"></div>
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="seasonTeamImportCancel" class="nf-btn nf-btn-secondary" type="button">Cancel</button>
+        <button id="seasonTeamImportSave" class="nf-btn nf-btn-primary" type="button">Import Selected Teams</button>
+      </div>
+    </div>
+  </div>
 `;
 
 //=================================================================

@@ -3,6 +3,15 @@ const seasonsState = {
   editingId: null,
   setupSeasonId: null,
   organizations: [],
+  importTargetSeasonId: null,
+  importSourceSeasonId: null,
+  importCandidates: [],
+  selectedTeamIds: new Set(),
+  organizationImportTargetSeasonId: null,
+  organizationImportSourceSeasonId: null,
+  organizationImportCandidates: [],
+  organizationImportTargetOrganizations: [],
+  selectedOrganizationIds: new Set(),
 };
 
 function escapeSeasonHtml(value) {
@@ -62,7 +71,9 @@ function renderSeasons() {
         <span><i class="fa fa-calendar-check"></i> ${formatSeasonDate(season.endDate)}</span>
       </div>
       <div class="nf-item-card-actions">
-        <button class="nf-btn nf-btn-secondary season-setup-btn" data-id="${season.seasonId}" type="button">Setup Organizations</button>
+        <button class="nf-btn nf-btn-secondary season-setup-btn" data-id="${season.seasonId}" type="button">Manage Participation</button>
+        ${season.isActive ? `<button class="nf-btn nf-btn-secondary season-org-import-btn" data-id="${season.seasonId}" type="button">Import Organizations</button>` : ""}
+        ${season.isActive ? `<button class="nf-btn nf-btn-primary season-import-btn" data-id="${season.seasonId}" type="button">Import Teams</button>` : ""}
         <button class="nf-btn-icon edit season-edit-btn" data-id="${season.seasonId}" title="Edit season"><i class="fa-solid fa-pen-to-square"></i></button>
         <button class="nf-btn-icon delete season-delete-btn" data-id="${season.seasonId}" title="Delete season"><i class="fa-solid fa-trash"></i></button>
       </div>
@@ -74,6 +85,12 @@ function renderSeasons() {
   });
   container.querySelectorAll(".season-setup-btn").forEach((button) => {
     button.onclick = () => openSeasonOrganizations(button.dataset.id);
+  });
+  container.querySelectorAll(".season-import-btn").forEach((button) => {
+    button.onclick = () => openTeamImport(button.dataset.id);
+  });
+  container.querySelectorAll(".season-org-import-btn").forEach((button) => {
+    button.onclick = () => openOrganizationImport(button.dataset.id);
   });
   container.querySelectorAll(".season-delete-btn").forEach((button) => {
     button.onclick = () => deleteSeason(button.dataset.id);
@@ -290,6 +307,184 @@ async function saveSeasonOrganizations() {
   }
 }
 
+function getFilteredTeamImportCandidates() {
+  const search = (document.getElementById("season-team-import-search")?.value || "").trim().toLowerCase();
+  const level = document.getElementById("season-team-import-level")?.value || "";
+  const type = document.getElementById("season-team-import-type")?.value || "";
+
+  return seasonsState.importCandidates.filter((team) => {
+    const matchesSearch = !search || [team.teamName, team.organizationName, team.levelName, team.teamType]
+      .join(" ")
+      .toLowerCase()
+      .includes(search);
+    const matchesLevel = !level || team.levelName === level;
+    const matchesType = !type || team.teamType === type;
+    return matchesSearch && matchesLevel && matchesType;
+  });
+}
+
+function populateTeamImportFilters() {
+  const levelSelect = document.getElementById("season-team-import-level");
+  const typeSelect = document.getElementById("season-team-import-type");
+  const selectedLevel = levelSelect.value;
+  const selectedType = typeSelect.value;
+  const levels = [...new Set(seasonsState.importCandidates.map((team) => team.levelName).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right));
+  const types = [...new Set(seasonsState.importCandidates.map((team) => team.teamType).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right));
+
+  levelSelect.innerHTML = '<option value="">Level: All</option>' +
+    levels.map((level) => `<option value="${escapeSeasonHtml(level)}">${escapeSeasonHtml(level)}</option>`).join("");
+  typeSelect.innerHTML = '<option value="">Type: All</option>' +
+    types.map((type) => `<option value="${escapeSeasonHtml(type)}">${escapeSeasonHtml(type)}</option>`).join("");
+  if (levels.includes(selectedLevel)) levelSelect.value = selectedLevel;
+  if (types.includes(selectedType)) typeSelect.value = selectedType;
+}
+
+function renderTeamImportCandidates() {
+  const container = document.getElementById("seasonTeamImportList");
+  const candidates = getFilteredTeamImportCandidates();
+  const eligibleCount = seasonsState.importCandidates.filter((team) => team.isEligible).length;
+  document.getElementById("seasonTeamImportCount").textContent =
+    `${seasonsState.selectedTeamIds.size} selected · ${eligibleCount} eligible · ${seasonsState.importCandidates.length} total`;
+
+  container.innerHTML = candidates.length
+    ? candidates.map((team) => {
+      const disabled = !team.isEligible;
+      const checked = seasonsState.selectedTeamIds.has(team.sourceTeamId);
+      return `
+        <label class="season-team-import-row ${disabled ? "season-team-import-disabled" : ""}">
+          <input
+            class="season-team-import-checkbox"
+            type="checkbox"
+            value="${team.sourceTeamId}"
+            ${checked ? "checked" : ""}
+            ${disabled ? "disabled" : ""}
+          />
+          <span class="season-team-import-name">${escapeSeasonHtml(team.teamName)}</span>
+          <span>${escapeSeasonHtml(team.levelName || "No level")}</span>
+          <span>${escapeSeasonHtml(team.teamType || "No type")}</span>
+          <span>${escapeSeasonHtml(team.organizationName || "External Team")}</span>
+          <small>${disabled ? escapeSeasonHtml(team.ineligibleReason || "Unavailable") : "Ready to import"}</small>
+        </label>
+      `;
+    }).join("")
+    : '<div class="nf-empty-state">No teams match the current filters.</div>';
+
+  container.querySelectorAll(".season-team-import-checkbox").forEach((checkbox) => {
+    checkbox.onchange = () => {
+      if (checkbox.checked) seasonsState.selectedTeamIds.add(checkbox.value);
+      else seasonsState.selectedTeamIds.delete(checkbox.value);
+      renderTeamImportCandidates();
+    };
+  });
+}
+
+async function loadTeamImportCandidates() {
+  const sourceSeasonId = document.getElementById("season-team-import-source").value;
+  seasonsState.importSourceSeasonId = sourceSeasonId || null;
+  seasonsState.importCandidates = [];
+  seasonsState.selectedTeamIds.clear();
+  document.getElementById("seasonTeamImportList").innerHTML = '<div class="nf-empty-state">Loading teams...</div>';
+  if (!seasonsState.importTargetSeasonId || !sourceSeasonId) {
+    renderTeamImportCandidates();
+    return;
+  }
+
+  try {
+    seasonsState.importCandidates = await SeasonsApi.getTeamImportCandidates(
+      seasonsState.importTargetSeasonId,
+      sourceSeasonId,
+    );
+    populateTeamImportFilters();
+    renderTeamImportCandidates();
+  } catch (error) {
+    notifySeason(error.message || "Failed to load import teams", "error");
+    seasonsState.importCandidates = [];
+    renderTeamImportCandidates();
+  }
+}
+
+async function openTeamImport(targetSeasonId) {
+  const targetSeason = seasonsState.items.find((season) => season.seasonId === targetSeasonId);
+  if (!targetSeason?.isActive) {
+    notifySeason("Teams can only be imported into the active season", "error");
+    return;
+  }
+
+  const sourceSeasons = seasonsState.items
+    .filter((season) => season.seasonId !== targetSeasonId)
+    .sort((left, right) => String(right.startDate).localeCompare(String(left.startDate)));
+  if (!sourceSeasons.length) {
+    notifySeason("No prior season is available to import from", "error");
+    return;
+  }
+
+  seasonsState.importTargetSeasonId = targetSeasonId;
+  seasonsState.importSourceSeasonId = sourceSeasons[0].seasonId;
+  seasonsState.importCandidates = [];
+  seasonsState.selectedTeamIds.clear();
+
+  document.getElementById("seasonTeamImportTitle").textContent = `Import Teams into ${targetSeason.seasonName}`;
+  document.getElementById("season-team-import-source").innerHTML = sourceSeasons
+    .map((season) => `<option value="${season.seasonId}">${escapeSeasonHtml(season.seasonName)}</option>`)
+    .join("");
+  document.getElementById("season-team-import-search").value = "";
+  document.getElementById("season-team-import-level").innerHTML = '<option value="">Level: All</option>';
+  document.getElementById("season-team-import-type").innerHTML = '<option value="">Type: All</option>';
+
+  const overlay = document.getElementById("seasonTeamImportOverlay");
+  overlay.classList.remove("hidden");
+  overlay.classList.add("active");
+  await loadTeamImportCandidates();
+}
+
+function closeTeamImport() {
+  seasonsState.importTargetSeasonId = null;
+  seasonsState.importSourceSeasonId = null;
+  seasonsState.importCandidates = [];
+  seasonsState.selectedTeamIds.clear();
+  const overlay = document.getElementById("seasonTeamImportOverlay");
+  overlay.classList.remove("active");
+  overlay.classList.add("hidden");
+}
+
+function selectVisibleImportTeams(selected) {
+  getFilteredTeamImportCandidates()
+    .filter((team) => team.isEligible)
+    .forEach((team) => {
+      if (selected) seasonsState.selectedTeamIds.add(team.sourceTeamId);
+      else seasonsState.selectedTeamIds.delete(team.sourceTeamId);
+    });
+  renderTeamImportCandidates();
+}
+
+async function importSelectedTeams() {
+  if (!seasonsState.importTargetSeasonId || !seasonsState.importSourceSeasonId) return;
+  if (!seasonsState.selectedTeamIds.size) {
+    notifySeason("Select at least one eligible team", "error");
+    return;
+  }
+
+  const importButton = document.getElementById("seasonTeamImportSave");
+  importButton.disabled = true;
+  try {
+    const result = await SeasonsApi.importTeams(
+      seasonsState.importTargetSeasonId,
+      seasonsState.importSourceSeasonId,
+      [...seasonsState.selectedTeamIds],
+    );
+    closeTeamImport();
+    await loadSeasons();
+    if (window.SeasonContext) window.SeasonContext.clear();
+    notifySeason(`${result.importedCount} team${result.importedCount === 1 ? "" : "s"} imported`, "success");
+  } catch (error) {
+    notifySeason(error.message || "Failed to import teams", "error");
+  } finally {
+    importButton.disabled = false;
+  }
+}
+
 function initializeSeasonsPage() {
   if (!document.getElementById("seasonsList") || window.seasonsPageInitialized) return;
   window.seasonsPageInitialized = true;
@@ -308,6 +503,15 @@ function initializeSeasonsPage() {
   document.getElementById("seasonOrganizationsAllManaged").onclick = () => setAllSeasonOrganizations("Managed");
   document.getElementById("seasonOrganizationsAllNone").onclick = () => setAllSeasonOrganizations("NotParticipating");
   document.querySelector("#seasonOrganizationsOverlay .modal-close").onclick = closeSeasonOrganizations;
+  document.getElementById("seasonTeamImportCancel").onclick = closeTeamImport;
+  document.getElementById("seasonTeamImportSave").onclick = importSelectedTeams;
+  document.getElementById("season-team-import-source").onchange = loadTeamImportCandidates;
+  document.getElementById("season-team-import-search").oninput = renderTeamImportCandidates;
+  document.getElementById("season-team-import-level").onchange = renderTeamImportCandidates;
+  document.getElementById("season-team-import-type").onchange = renderTeamImportCandidates;
+  document.getElementById("seasonTeamImportSelectVisible").onclick = () => selectVisibleImportTeams(true);
+  document.getElementById("seasonTeamImportClearVisible").onclick = () => selectVisibleImportTeams(false);
+  document.querySelector("#seasonTeamImportOverlay .modal-close").onclick = closeTeamImport;
 
   void loadSeasons();
 }

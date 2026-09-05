@@ -2,13 +2,7 @@
 // OFFICIALS PAGE
 // =========================================================
 
-const OFFICIALS_GROUP_PAGE_SIZE = 10;
-const officialsGroupPaginationState = {};
 const OFFICIALS_REFRESH_INTERVAL_MS = 15000;
-
-function resetOfficialsGroupPagination() {
-  Object.keys(officialsGroupPaginationState).forEach((k) => delete officialsGroupPaginationState[k]);
-}
 
 function getOfficialRoleState(roleValue) {
   const role = (roleValue || "").toString().toLowerCase();
@@ -88,14 +82,8 @@ function renderOfficialsGrouped(officials) {
         return left.localeCompare(right);
       });
 
-      const totalPages = Math.max(1, Math.ceil(statusItems.length / OFFICIALS_GROUP_PAGE_SIZE));
-      const currentPage = Math.min(officialsGroupPaginationState[statusKey] || 1, totalPages);
-      officialsGroupPaginationState[statusKey] = currentPage;
-
-      const paged = statusItems.slice((currentPage - 1) * OFFICIALS_GROUP_PAGE_SIZE, currentPage * OFFICIALS_GROUP_PAGE_SIZE);
-
       const roleGroups = new Map();
-      paged.forEach((official) => {
+      statusItems.forEach((official) => {
         const roleLabel = formatOfficialRoleLabel(official.role) || "Unassigned Role";
         if (!roleGroups.has(roleLabel)) roleGroups.set(roleLabel, []);
         roleGroups.get(roleLabel).push(official);
@@ -145,13 +133,6 @@ function renderOfficialsGrouped(officials) {
           </summary>
           <div class="nf-group-content">
             ${roleMarkup}
-            ${statusItems.length > OFFICIALS_GROUP_PAGE_SIZE ? `
-              <div class="nf-pagination">
-                <button class="nf-btn nf-btn-secondary official-page-btn" data-status="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
-                <span>Page ${currentPage} of ${totalPages}</span>
-                <button class="nf-btn nf-btn-secondary official-page-btn" data-status="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
-              </div>
-            ` : ""}
           </div>
         </details>
       `;
@@ -159,7 +140,6 @@ function renderOfficialsGrouped(officials) {
     .join("");
 
   wireOfficialCardActions();
-  wireOfficialPagination();
 }
 
 function wireOfficialCardActions() {
@@ -169,22 +149,6 @@ function wireOfficialCardActions() {
 
   document.querySelectorAll(".official-delete-btn").forEach((btn) => {
     btn.onclick = () => openDeleteOfficial(btn.dataset.id);
-  });
-}
-
-function wireOfficialPagination() {
-  document.querySelectorAll(".official-page-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const status = btn.dataset.status;
-      const direction = btn.dataset.direction;
-      const current = officialsGroupPaginationState[status] || 1;
-
-      officialsGroupPaginationState[status] = direction === "prev"
-        ? Math.max(1, current - 1)
-        : current + 1;
-
-      applyOfficialFiltersAndSearch();
-    };
   });
 }
 
@@ -306,21 +270,18 @@ function wireOfficialFilterEvents() {
 
   if (search) {
     search.addEventListener("input", () => {
-      resetOfficialsGroupPagination();
       applyOfficialFiltersAndSearch();
     });
   }
 
   if (role) {
     role.addEventListener("change", () => {
-      resetOfficialsGroupPagination();
       applyOfficialFiltersAndSearch();
     });
   }
 
   if (status) {
     status.addEventListener("change", () => {
-      resetOfficialsGroupPagination();
       applyOfficialFiltersAndSearch();
     });
   }

@@ -21,6 +21,7 @@ return;
     "permissions.html": [window.ROLES.SuperAdmin],
     "users.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin],
     "organizations.html": [window.ROLES.SuperAdmin],
+    "seasons.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin],
     "teams.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.TeamManager],
     "schedules.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.TeamManager, window.ROLES.Coach],
     "rosters.html": [window.ROLES.SuperAdmin, window.ROLES.OrgAdmin, window.ROLES.Coach, window.ROLES.TeamManager],

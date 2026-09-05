@@ -52,6 +52,11 @@ namespace NetFrontAPI.Repositories
         public async Task CreateAsync(CreateSeasonDto dto)
         {
             var sql = @"
+                IF @IsActive = 1
+                BEGIN
+                    UPDATE Seasons SET IsActive = 0 WHERE IsActive = 1;
+                END;
+
                 INSERT INTO Seasons (SeasonId, SeasonName, StartDate, EndDate, IsActive)
                 VALUES (@SeasonId, @SeasonName, @StartDate, @EndDate, @IsActive)";
 
@@ -69,6 +74,11 @@ namespace NetFrontAPI.Repositories
         public async Task UpdateAsync(Guid id, UpdateSeasonDto dto)
         {
             var sql = @"
+                IF @IsActive = 1
+                BEGIN
+                    UPDATE Seasons SET IsActive = 0 WHERE SeasonId <> @Id AND IsActive = 1;
+                END;
+
                 UPDATE Seasons
                 SET 
                     SeasonName = @SeasonName,

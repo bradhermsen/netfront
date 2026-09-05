@@ -22,7 +22,7 @@ const PAGE_SIZE = 5;
 
 function readFiltersFromLocation(): GameViewFilters {
   if (typeof window === "undefined") {
-    return { organizationId: "", teamId: "", teamType: "" };
+    return { organizationId: "", leagueId: "", teamLevel: "", teamType: "" };
   }
 
   const params = new URLSearchParams(window.location.search);
@@ -31,7 +31,8 @@ function readFiltersFromLocation(): GameViewFilters {
 
   return {
     organizationId: params.get("organizationId") || "",
-    teamId: params.get("teamId") || "",
+    leagueId: params.get("leagueId") || "",
+    teamLevel: params.get("teamLevel") || "",
     teamType,
   };
 }
@@ -43,8 +44,13 @@ function syncFiltersToLocation(filters: GameViewFilters) {
   if (filters.organizationId) params.set("organizationId", filters.organizationId);
   else params.delete("organizationId");
 
-  if (filters.teamId) params.set("teamId", filters.teamId);
-  else params.delete("teamId");
+  params.delete("teamId");
+
+  if (filters.leagueId) params.set("leagueId", filters.leagueId);
+  else params.delete("leagueId");
+
+  if (filters.teamLevel) params.set("teamLevel", filters.teamLevel);
+  else params.delete("teamLevel");
 
   if (filters.teamType) params.set("teamType", filters.teamType);
   else params.delete("teamType");
@@ -65,7 +71,8 @@ export function GameViewMainScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterData, setFilterData] = useState<GameViewFilterData>({
     organizations: [],
-    teams: [],
+    leagues: [],
+    teamLevels: [],
   });
   const [nextGames, setNextGames] = useState<NextGameCardModel[]>([]);
   const [upcomingGames, setUpcomingGames] = useState<UpcomingScheduleItemModel[]>([]);
@@ -90,14 +97,17 @@ export function GameViewMainScreen() {
       try {
         const scopedFilterData = await fetchFilterData({
           organizationId: filters.organizationId,
+          leagueId: filters.leagueId,
           teamType: filters.teamType,
         });
 
         if (cancelled) return;
 
-        const teamExists = scopedFilterData.teams.some((team) => team.id === filters.teamId);
-        if (filters.teamId && !teamExists) {
-          setFilters((prev) => ({ ...prev, teamId: "" }));
+        const levelExists = scopedFilterData.teamLevels.some(
+          (level) => level.id === filters.teamLevel,
+        );
+        if (filters.teamLevel && !levelExists) {
+          setFilters((prev) => ({ ...prev, teamLevel: "" }));
           return;
         }
 
@@ -130,11 +140,6 @@ export function GameViewMainScreen() {
       cancelled = true;
     };
   }, [filters]);
-
-  const filteredTeams = useMemo(() => {
-    if (!filters.teamType) return filterData.teams;
-    return filterData.teams.filter((team) => team.teamType === filters.teamType);
-  }, [filterData.teams, filters.teamType]);
 
   const visibleNextGames = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -283,7 +288,7 @@ export function GameViewMainScreen() {
                     setFilters((prev) => ({
                       ...prev,
                       organizationId: event.target.value,
-                      teamId: "",
+                      teamLevel: "",
                     }))
                   }
                 >
@@ -307,7 +312,7 @@ export function GameViewMainScreen() {
                         event.target.value === "Girls" || event.target.value === "Boys"
                           ? event.target.value
                           : "",
-                      teamId: "",
+                      teamLevel: "",
                     }))
                   }
                 >
@@ -318,17 +323,38 @@ export function GameViewMainScreen() {
               </label>
 
               <label className="game-view-filter-field">
-                <span>Team</span>
+                <span>Team Level</span>
                 <select
-                  value={filters.teamId}
+                  value={filters.teamLevel}
                   onChange={(event) =>
-                    setFilters((prev) => ({ ...prev, teamId: event.target.value }))
+                    setFilters((prev) => ({ ...prev, teamLevel: event.target.value }))
                   }
                 >
-                  <option value="">All Teams</option>
-                  {filteredTeams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.label}
+                  <option value="">All Levels</option>
+                  {filterData.teamLevels.map((level) => (
+                    <option key={level.id} value={level.id}>
+                      {level.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="game-view-filter-field">
+                <span>League</span>
+                <select
+                  value={filters.leagueId}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      leagueId: event.target.value,
+                      teamLevel: "",
+                    }))
+                  }
+                >
+                  <option value="">All Leagues</option>
+                  {filterData.leagues.map((league) => (
+                    <option key={league.id} value={league.id}>
+                      {league.label}
                     </option>
                   ))}
                 </select>

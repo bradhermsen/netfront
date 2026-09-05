@@ -9,7 +9,8 @@ export interface GameViewState {
 export const initialGameViewState: GameViewState = {
   filters: {
     organizationId: "",
-    teamId: "",
+    leagueId: "",
+    teamLevel: "",
     teamType: "",
   },
   isLoading: false,

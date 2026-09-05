@@ -6,9 +6,10 @@ export function useGameViewFilters(filters: GameViewFilters) {
     const query = new URLSearchParams();
 
     if (filters.organizationId) query.set("organizationId", filters.organizationId);
-    if (filters.teamId) query.set("teamId", filters.teamId);
+    if (filters.leagueId) query.set("leagueId", filters.leagueId);
+    if (filters.teamLevel) query.set("teamLevel", filters.teamLevel);
     if (filters.teamType) query.set("teamType", filters.teamType);
 
     return query;
-  }, [filters.organizationId, filters.teamId, filters.teamType]);
+  }, [filters.organizationId, filters.leagueId, filters.teamLevel, filters.teamType]);
 }

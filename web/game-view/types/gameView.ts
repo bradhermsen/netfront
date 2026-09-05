@@ -2,7 +2,8 @@ export type TeamType = "Girls" | "Boys";
 
 export interface GameViewFilters {
   organizationId: string;
-  teamId: string;
+  leagueId: string;
+  teamLevel: string;
   teamType: TeamType | "";
 }
 
@@ -13,7 +14,8 @@ export interface GameViewFilterOption {
 
 export interface GameViewFilterData {
   organizations: GameViewFilterOption[];
-  teams: Array<GameViewFilterOption & { teamType?: string; seasonId?: string }>;
+  leagues: GameViewFilterOption[];
+  teamLevels: GameViewFilterOption[];
 }
 
 export interface NextGameCardModel {
@@ -61,6 +63,8 @@ export interface ApiSeason {
 
 export interface ApiOrganization {
   organizationId: string;
+  leagueId?: string | null;
+  leagueName?: string | null;
   name?: string | null;
   abbreviation?: string | null;
   mascot?: string | null;
@@ -70,6 +74,7 @@ export interface ApiOrganization {
 export interface ApiTeam {
   teamId: string;
   organizationId?: string | null;
+  leagueId?: string | null;
   seasonId?: string | null;
   name?: string | null;
   teamType?: string | null;

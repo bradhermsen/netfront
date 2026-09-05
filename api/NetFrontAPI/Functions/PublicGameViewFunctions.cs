@@ -47,6 +47,8 @@ namespace NetFrontAPI.Functions
                 .Select(item => new
                 {
                     item.OrganizationId,
+                    item.LeagueId,
+                    item.LeagueName,
                     item.Name,
                     item.Abbreviation,
                     item.Mascot,
@@ -86,6 +88,8 @@ namespace NetFrontAPI.Functions
             var organizationId = ParseGuid(query, "organizationId");
             var seasonId = ParseGuid(query, "seasonId");
             var teamType = ParseString(query, "teamType");
+            var organizations = (await _organizationService.GetAllAsync())
+                .ToDictionary(item => item.OrganizationId, item => item.LeagueId);
 
             var teams = (await _teamsService.GetAllAsync())
                 .Where(team => !organizationId.HasValue || team.OrganizationId == organizationId.Value)
@@ -96,6 +100,9 @@ namespace NetFrontAPI.Functions
                 {
                     team.TeamId,
                     team.OrganizationId,
+                    LeagueId = team.OrganizationId.HasValue && organizations.TryGetValue(team.OrganizationId.Value, out var leagueId)
+                        ? leagueId
+                        : Guid.Empty,
                     team.SeasonId,
                     team.Name,
                     team.TeamType,

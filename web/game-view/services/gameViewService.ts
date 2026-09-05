@@ -121,7 +121,10 @@ async function loadScopedTeams(filters: GameViewFilters): Promise<{
       : getTeams(),
   ]);
 
-  const seasonId = pickCurrentSeasonId(seasons);
+  const requestedSeasonId = String(filters.seasonId || "");
+  const seasonId = seasons.some((season) => String(season.seasonId) === requestedSeasonId)
+    ? requestedSeasonId
+    : pickCurrentSeasonId(seasons);
 
   let teams = Array.isArray(teamsRaw) ? teamsRaw : [];
 
@@ -174,15 +177,24 @@ function buildScorePreviewFromSummary(
 export async function fetchFilterData(
   filters?: Partial<GameViewFilters>,
 ): Promise<GameViewFilterData> {
-  const [organizations, scoped] = await Promise.all([
+  const [organizations, seasons, scoped] = await Promise.all([
     getOrganizations(),
+    getSeasons(),
     loadScopedTeams({
+      seasonId: filters?.seasonId || "",
       organizationId: filters?.organizationId || "",
       leagueId: filters?.leagueId || "",
       teamLevel: "",
       teamType: filters?.teamType || "",
     }),
   ]);
+
+  const seasonOptions = (seasons || [])
+    .map((season) => ({
+      id: String(season.seasonId),
+      label: String(season.seasonName || "Season"),
+    }))
+    .sort((a, b) => b.label.localeCompare(a.label));
 
   const organizationOptions = (organizations || [])
     .filter((organization) => organization?.isActive)
@@ -219,6 +231,8 @@ export async function fetchFilterData(
     .sort((a, b) => a.label.localeCompare(b.label));
 
   return {
+    seasons: seasonOptions,
+    currentSeasonId: pickCurrentSeasonId(seasons),
     organizations: organizationOptions,
     leagues: leagueOptions,
     teamLevels: teamLevelOptions,

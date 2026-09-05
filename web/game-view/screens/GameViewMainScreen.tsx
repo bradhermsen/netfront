@@ -23,7 +23,7 @@ const PAGE_SIZE = 5;
 
 function readFiltersFromLocation(): GameViewFilters {
   if (typeof window === "undefined") {
-    return { organizationId: "", leagueId: "", teamLevel: "", teamType: "" };
+    return { seasonId: "", organizationId: "", leagueId: "", teamLevel: "", teamType: "" };
   }
 
   const params = new URLSearchParams(window.location.search);
@@ -31,6 +31,7 @@ function readFiltersFromLocation(): GameViewFilters {
   const teamType = teamTypeRaw === "Girls" || teamTypeRaw === "Boys" ? teamTypeRaw : "";
 
   return {
+    seasonId: params.get("seasonId") || "",
     organizationId: params.get("organizationId") || "",
     leagueId: params.get("leagueId") || "",
     teamLevel: params.get("teamLevel") || "",
@@ -42,6 +43,9 @@ function syncFiltersToLocation(filters: GameViewFilters) {
   if (typeof window === "undefined") return;
 
   const params = new URLSearchParams(window.location.search);
+  if (filters.seasonId) params.set("seasonId", filters.seasonId);
+  else params.delete("seasonId");
+
   if (filters.organizationId) params.set("organizationId", filters.organizationId);
   else params.delete("organizationId");
 
@@ -71,6 +75,8 @@ export function GameViewMainScreen() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterData, setFilterData] = useState<GameViewFilterData>({
+    seasons: [],
+    currentSeasonId: "",
     organizations: [],
     leagues: [],
     teamLevels: [],
@@ -97,12 +103,25 @@ export function GameViewMainScreen() {
 
       try {
         const scopedFilterData = await fetchFilterData({
+          seasonId: filters.seasonId,
           organizationId: filters.organizationId,
           leagueId: filters.leagueId,
           teamType: filters.teamType,
         });
 
         if (cancelled) return;
+
+        const seasonExists = scopedFilterData.seasons.some(
+          (season) => season.id === filters.seasonId,
+        );
+        if (!seasonExists && scopedFilterData.currentSeasonId) {
+          setFilters((prev) => ({
+            ...prev,
+            seasonId: scopedFilterData.currentSeasonId,
+            teamLevel: "",
+          }));
+          return;
+        }
 
         const levelExists = scopedFilterData.teamLevels.some(
           (level) => level.id === filters.teamLevel,
@@ -270,6 +289,26 @@ export function GameViewMainScreen() {
             </div>
 
             <section className="game-view-filter-panel">
+              <label className="game-view-filter-field">
+                <span>Season</span>
+                <select
+                  value={filters.seasonId}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      seasonId: event.target.value,
+                      teamLevel: "",
+                    }))
+                  }
+                >
+                  {filterData.seasons.map((season) => (
+                    <option key={season.id} value={season.id}>
+                      {season.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <label className="game-view-filter-field">
                 <span>Organization</span>
                 <select

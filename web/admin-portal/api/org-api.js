@@ -1,10 +1,13 @@
 // org-api.js
 
 const OrgApi = {
-  async getAll() {
+  async getAll(options = {}) {
     const res = await authFetch("/organizations");
     if (!res.ok) throw new Error("Failed to load organizations");
-    return await SeasonContext.filterOrganizations(await res.json());
+    const organizations = await res.json();
+    return options.activeSeasonOnly
+      ? await SeasonContext.filterOrganizations(organizations)
+      : organizations;
   },
 
   async getById(id) {

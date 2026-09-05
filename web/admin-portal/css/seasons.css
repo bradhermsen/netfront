@@ -83,6 +83,82 @@
   font-size: 12px;
 }
 
+.season-team-import-source-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 120px minmax(180px, 280px);
+  margin-top: 14px;
+}
+
+.season-team-import-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.season-team-import-actions .season-setup-count {
+  margin: 0 auto 0 0;
+}
+
+.season-team-import-heading,
+.season-team-import-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 26px minmax(150px, 1.3fr) minmax(80px, 0.7fr) minmax(80px, 0.7fr) minmax(140px, 1fr) minmax(150px, 1fr);
+}
+
+.season-team-import-heading {
+  color: var(--nf-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  text-transform: uppercase;
+}
+
+.season-team-import-list {
+  display: grid;
+  gap: 6px;
+  max-height: min(52vh, 560px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.season-team-import-row {
+  background: #0f192d;
+  border: 1px solid #263a5f;
+  border-radius: var(--nf-radius-md);
+  color: var(--nf-text);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 9px 12px;
+}
+
+.season-team-import-row input {
+  accent-color: var(--nf-accent);
+}
+
+.season-team-import-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.season-team-import-row small {
+  color: #8fd6a8;
+}
+
+.season-team-import-disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.season-team-import-disabled small {
+  color: #d7a0a0;
+}
+
 @media (max-width: 1100px) and (min-width: 769px) {
   #seasonsList {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -97,5 +173,23 @@
   .season-organization-row {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .season-team-import-source-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .season-team-import-heading {
+    display: none;
+  }
+
+  .season-team-import-row {
+    grid-template-columns: 26px minmax(0, 1fr);
+  }
+
+  .season-team-import-row > span:not(.season-team-import-name),
+  .season-team-import-row > small {
+    grid-column: 2;
   }
 }

@@ -43,6 +43,25 @@ window.SeasonsApi = {
     if (!response.ok) throw new Error(await this.readError(response, "Failed to save season organizations"));
   },
 
+  async getTeamImportCandidates(targetSeasonId, sourceSeasonId) {
+    const response = await authFetch(
+      `/seasons/${targetSeasonId}/team-import-candidates?sourceSeasonId=${encodeURIComponent(sourceSeasonId)}`,
+      { cache: "no-store" },
+    );
+    if (!response.ok) throw new Error(await this.readError(response, "Failed to load team import candidates"));
+    return await response.json();
+  },
+
+  async importTeams(targetSeasonId, sourceSeasonId, teamIds) {
+    const response = await authFetch(`/seasons/${targetSeasonId}/teams/import`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceSeasonId, teamIds }),
+    });
+    if (!response.ok) throw new Error(await this.readError(response, "Failed to import teams"));
+    return await response.json();
+  },
+
   async readError(response, fallback) {
     try {
       const payload = await response.json();

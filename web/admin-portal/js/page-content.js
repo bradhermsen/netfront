@@ -1313,6 +1313,33 @@ window.PageContentRegistry.seasonsModals = () => `
       </div>
     </div>
   </div>
+
+  <div id="seasonOrganizationsOverlay" class="nf-modal-overlay hidden">
+    <div class="nf-modal large">
+      <div class="nf-modal-header">
+        <h2 id="seasonOrganizationsTitle">Season Organization Setup</h2>
+        <button class="modal-close" type="button">×</button>
+      </div>
+
+      <div class="nf-modal-body full">
+        <p class="season-setup-intro">
+          Choose how each directory organization participates in this season. This does not copy teams, rosters, schedules, or history.
+        </p>
+        <div class="season-setup-toolbar">
+          <input id="season-organizations-search" class="nf-search" type="text" placeholder="Search organizations" />
+          <button id="seasonOrganizationsAllManaged" class="nf-btn nf-btn-secondary" type="button">Set All Managed</button>
+          <button id="seasonOrganizationsAllNone" class="nf-btn nf-btn-secondary" type="button">Set All Not Participating</button>
+        </div>
+        <p id="seasonOrganizationsCount" class="season-setup-count"></p>
+        <div id="seasonOrganizationsList" class="season-organizations-list"></div>
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="seasonOrganizationsCancel" class="nf-btn nf-btn-secondary" type="button">Cancel</button>
+        <button id="seasonOrganizationsSave" class="nf-btn nf-btn-primary" type="button">Save Organization Setup</button>
+      </div>
+    </div>
+  </div>
 `;
 
 //=================================================================

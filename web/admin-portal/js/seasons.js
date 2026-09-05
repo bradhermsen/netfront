@@ -1,6 +1,8 @@
 const seasonsState = {
   items: [],
   editingId: null,
+  setupSeasonId: null,
+  organizations: [],
 };
 
 function escapeSeasonHtml(value) {
@@ -60,6 +62,7 @@ function renderSeasons() {
         <span><i class="fa fa-calendar-check"></i> ${formatSeasonDate(season.endDate)}</span>
       </div>
       <div class="nf-item-card-actions">
+        <button class="nf-btn nf-btn-secondary season-setup-btn" data-id="${season.seasonId}" type="button">Setup Organizations</button>
         <button class="nf-btn-icon edit season-edit-btn" data-id="${season.seasonId}" title="Edit season"><i class="fa-solid fa-pen-to-square"></i></button>
         <button class="nf-btn-icon delete season-delete-btn" data-id="${season.seasonId}" title="Delete season"><i class="fa-solid fa-trash"></i></button>
       </div>
@@ -68,6 +71,9 @@ function renderSeasons() {
 
   container.querySelectorAll(".season-edit-btn").forEach((button) => {
     button.onclick = () => openSeasonModal(button.dataset.id);
+  });
+  container.querySelectorAll(".season-setup-btn").forEach((button) => {
+    button.onclick = () => openSeasonOrganizations(button.dataset.id);
   });
   container.querySelectorAll(".season-delete-btn").forEach((button) => {
     button.onclick = () => deleteSeason(button.dataset.id);
@@ -175,6 +181,101 @@ async function deleteSeason(id) {
   }
 }
 
+function renderSeasonOrganizations() {
+  const container = document.getElementById("seasonOrganizationsList");
+  const search = (document.getElementById("season-organizations-search")?.value || "").trim().toLowerCase();
+  const organizations = seasonsState.organizations.filter((organization) =>
+    !search || JSON.stringify(organization).toLowerCase().includes(search),
+  );
+
+  document.getElementById("seasonOrganizationsCount").textContent =
+    `${seasonsState.organizations.filter((item) => item.participationType === "Managed").length} managed · ` +
+    `${seasonsState.organizations.filter((item) => item.participationType === "External").length} external · ` +
+    `${seasonsState.organizations.filter((item) => item.participationType === "NotParticipating").length} not participating`;
+
+  container.innerHTML = organizations.length
+    ? organizations.map((organization) => `
+      <div class="season-organization-row">
+        <div class="season-organization-meta">
+          <strong>${escapeSeasonHtml(organization.organizationName)}</strong>
+          <span>${escapeSeasonHtml(organization.abbreviation || "No abbreviation")} · ${organization.teamCount || 0} destination-season teams${organization.directoryIsActive ? "" : " · Directory inactive"}</span>
+        </div>
+        <select class="nf-select season-organization-participation" data-id="${organization.organizationId}">
+          <option value="Managed" ${organization.participationType === "Managed" ? "selected" : ""}>Managed</option>
+          <option value="External" ${organization.participationType === "External" ? "selected" : ""}>External</option>
+          <option value="NotParticipating" ${organization.participationType === "NotParticipating" ? "selected" : ""}>Not Participating</option>
+        </select>
+      </div>
+    `).join("")
+    : '<div class="nf-empty-state">No organizations match your search.</div>';
+
+  container.querySelectorAll(".season-organization-participation").forEach((select) => {
+    select.onchange = () => {
+      const organization = seasonsState.organizations.find((item) => item.organizationId === select.dataset.id);
+      if (organization) organization.participationType = select.value;
+      renderSeasonOrganizations();
+    };
+  });
+}
+
+async function openSeasonOrganizations(seasonId) {
+  const season = seasonsState.items.find((item) => item.seasonId === seasonId);
+  if (!season) return;
+
+  seasonsState.setupSeasonId = seasonId;
+  document.getElementById("seasonOrganizationsTitle").textContent = `${season.seasonName} Organization Setup`;
+  document.getElementById("season-organizations-search").value = "";
+  document.getElementById("seasonOrganizationsList").innerHTML = '<div class="nf-empty-state">Loading organizations...</div>';
+
+  const overlay = document.getElementById("seasonOrganizationsOverlay");
+  overlay.classList.remove("hidden");
+  overlay.classList.add("active");
+
+  try {
+    seasonsState.organizations = await SeasonsApi.getOrganizations(seasonId);
+    renderSeasonOrganizations();
+  } catch (error) {
+    notifySeason(error.message || "Failed to load season organizations", "error");
+    closeSeasonOrganizations();
+  }
+}
+
+function closeSeasonOrganizations() {
+  seasonsState.setupSeasonId = null;
+  seasonsState.organizations = [];
+  const overlay = document.getElementById("seasonOrganizationsOverlay");
+  overlay.classList.remove("active");
+  overlay.classList.add("hidden");
+}
+
+function setAllSeasonOrganizations(participationType) {
+  seasonsState.organizations.forEach((organization) => {
+    organization.participationType = participationType;
+  });
+  renderSeasonOrganizations();
+}
+
+async function saveSeasonOrganizations() {
+  if (!seasonsState.setupSeasonId) return;
+  const saveButton = document.getElementById("seasonOrganizationsSave");
+  saveButton.disabled = true;
+  try {
+    await SeasonsApi.saveOrganizations(
+      seasonsState.setupSeasonId,
+      seasonsState.organizations.map((organization) => ({
+        organizationId: organization.organizationId,
+        participationType: organization.participationType,
+      })),
+    );
+    closeSeasonOrganizations();
+    notifySeason("Season organization setup saved", "success");
+  } catch (error) {
+    notifySeason(error.message || "Failed to save season organizations", "error");
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
 function initializeSeasonsPage() {
   if (!document.getElementById("seasonsList") || window.seasonsPageInitialized) return;
   window.seasonsPageInitialized = true;
@@ -187,6 +288,12 @@ function initializeSeasonsPage() {
   };
   document.getElementById("seasons-search").oninput = renderSeasons;
   document.querySelector("#seasonModalOverlay .modal-close").onclick = closeSeasonModal;
+  document.getElementById("seasonOrganizationsCancel").onclick = closeSeasonOrganizations;
+  document.getElementById("seasonOrganizationsSave").onclick = saveSeasonOrganizations;
+  document.getElementById("season-organizations-search").oninput = renderSeasonOrganizations;
+  document.getElementById("seasonOrganizationsAllManaged").onclick = () => setAllSeasonOrganizations("Managed");
+  document.getElementById("seasonOrganizationsAllNone").onclick = () => setAllSeasonOrganizations("NotParticipating");
+  document.querySelector("#seasonOrganizationsOverlay .modal-close").onclick = closeSeasonOrganizations;
 
   void loadSeasons();
 }

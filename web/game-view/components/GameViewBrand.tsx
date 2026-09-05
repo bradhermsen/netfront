@@ -2,11 +2,11 @@ export function GameViewBrand() {
   return (
     <div className="game-view-brand" aria-label="TipIn GameView">
       <img
-        src="/TipIn_Header_Icon.png"
+        src="/TipIn_Header_Mark.svg"
         alt=""
         aria-hidden="true"
-        width="442"
-        height="442"
+        width="128"
+        height="128"
         className="game-view-logo"
       />
       <h1 className="game-view-title">

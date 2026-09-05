@@ -8,6 +8,14 @@
   min-width: 0;
 }
 
+.season-item-card .nf-item-card-actions {
+  flex-wrap: wrap;
+}
+
+.season-setup-btn {
+  margin-right: auto;
+}
+
 .season-item-active {
   border-color: rgba(255, 123, 0, 0.72);
   box-shadow: inset 0 0 0 1px rgba(255, 123, 0, 0.16);
@@ -22,6 +30,59 @@
   padding: 9px 11px;
 }
 
+.season-setup-intro,
+.season-setup-count {
+  color: var(--nf-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.season-setup-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.season-setup-toolbar .nf-search {
+  flex: 1 1 260px;
+}
+
+.season-setup-count {
+  margin-bottom: 10px;
+}
+
+.season-organizations-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(58vh, 620px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.season-organization-row {
+  align-items: center;
+  background: #0f192d;
+  border: 1px solid #263a5f;
+  border-radius: var(--nf-radius-md);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  padding: 10px 12px;
+}
+
+.season-organization-meta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.season-organization-meta span {
+  color: var(--nf-text-muted);
+  font-size: 12px;
+}
+
 @media (max-width: 1100px) and (min-width: 769px) {
   #seasonsList {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -30,6 +91,11 @@
 
 @media (max-width: 768px) {
   #seasonsList {
+    grid-template-columns: 1fr;
+  }
+
+  .season-organization-row {
+    align-items: stretch;
     grid-template-columns: 1fr;
   }
 }

@@ -5602,12 +5602,17 @@ export default function App() {
     });
     const officialsByRole = new Map<string, OfficialVerification>();
     normalizedOfficials.forEach((official) => {
-      if (!officialsByRole.has(official.role)) officialsByRole.set(official.role, official);
+      if (!officialsByRole.has(official.role))
+        officialsByRole.set(official.role, official);
     });
     return [...officialsByRole.values()].sort(
       (left, right) =>
-        OFFICIAL_ASSIGNMENT_ROLES.indexOf(left.role as (typeof OFFICIAL_ASSIGNMENT_ROLES)[number]) -
-        OFFICIAL_ASSIGNMENT_ROLES.indexOf(right.role as (typeof OFFICIAL_ASSIGNMENT_ROLES)[number]),
+        OFFICIAL_ASSIGNMENT_ROLES.indexOf(
+          left.role as (typeof OFFICIAL_ASSIGNMENT_ROLES)[number],
+        ) -
+        OFFICIAL_ASSIGNMENT_ROLES.indexOf(
+          right.role as (typeof OFFICIAL_ASSIGNMENT_ROLES)[number],
+        ),
     );
   }
 
@@ -7458,7 +7463,6 @@ export default function App() {
                   setError("");
                 }}
               />
-
             </View>
 
             <Pressable

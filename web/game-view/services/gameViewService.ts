@@ -32,6 +32,8 @@ const FINAL_STATUSES = new Set(["FINAL", "COMPLETED", "CLOSED"]);
 
 const LIVE_STATUS_KEYS = new Set(["LIVE", "INPROGRESS"]);
 
+const LEGACY_EXTERNAL_ORGANIZATION_ID = "00000000-0000-0000-0000-000000000000";
+
 function toStatusKey(status?: string | null): string {
   return String(status || "")
     .trim()
@@ -197,7 +199,12 @@ export async function fetchFilterData(
     .sort((a, b) => b.label.localeCompare(a.label));
 
   const organizationOptions = (organizations || [])
-    .filter((organization) => organization?.isActive)
+    .filter(
+      (organization) =>
+        organization?.isActive &&
+        String(organization.organizationId).toLowerCase() !==
+          LEGACY_EXTERNAL_ORGANIZATION_ID,
+    )
     .map((organization) => ({
       id: String(organization.organizationId),
       label:
@@ -245,7 +252,7 @@ export async function fetchNextGamesByTeam(
   const scoped = await loadScopedTeams(filters);
   const teamMap = new Map(scoped.teams.map((team) => [String(team.teamId), team]));
   const filteredTeamIds = new Set(scoped.teams.map((team) => String(team.teamId)));
-  const games = await getGames();
+  const games = await getGames(scoped.seasonId);
 
   const gameCandidates = (games || [])
     .filter((game) => {
@@ -331,9 +338,8 @@ export async function fetchUpcomingSchedule(
   const scoped = await loadScopedTeams(filters);
   const teamMap = new Map(scoped.teams.map((team) => [String(team.teamId), team]));
   const filteredTeamIds = new Set(scoped.teams.map((team) => String(team.teamId)));
-  const now = Date.now();
 
-  const games = await getGames();
+  const games = await getGames(scoped.seasonId);
   return (games || [])
     .filter((game) => {
       const homeId = String(game.homeTeamId || "");
@@ -346,7 +352,7 @@ export async function fetchUpcomingSchedule(
       const startMs = new Date(game.gameDateTime).getTime();
       if (Number.isNaN(startMs)) return false;
 
-      return startMs >= now;
+      return true;
     })
     .sort(
       (a, b) =>
@@ -391,7 +397,7 @@ export async function fetchLastFinalGamesByTeam(
   const scoped = await loadScopedTeams(filters);
   const teamMap = new Map(scoped.teams.map((team) => [String(team.teamId), team]));
   const filteredTeamIds = new Set(scoped.teams.map((team) => String(team.teamId)));
-  const games = await getGames();
+  const games = await getGames(scoped.seasonId);
 
   const finalGames = (games || [])
     .filter((game) => {

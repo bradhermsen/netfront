@@ -24,7 +24,9 @@ const OrgApi = {
     });
 
     if (!res.ok) throw new Error("Failed to create organization");
-    return await res.json();
+    const result = await res.json();
+    if (window.SeasonContext) window.SeasonContext.clear();
+    return result;
   },
 
   async update(id, dto) {

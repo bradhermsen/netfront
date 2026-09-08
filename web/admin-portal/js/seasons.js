@@ -307,6 +307,179 @@ async function saveSeasonOrganizations() {
   }
 }
 
+function getFilteredOrganizationImportCandidates() {
+  const search = (document.getElementById("season-org-import-search")?.value || "").trim().toLowerCase();
+  const priorType = document.getElementById("season-org-import-prior-type")?.value || "";
+  return seasonsState.organizationImportCandidates.filter((organization) => {
+    const matchesSearch = !search || [organization.organizationName, organization.abbreviation]
+      .join(" ")
+      .toLowerCase()
+      .includes(search);
+    return matchesSearch && (!priorType || organization.priorParticipationType === priorType);
+  });
+}
+
+function renderOrganizationImportCandidates() {
+  const container = document.getElementById("seasonOrganizationImportList");
+  const candidates = getFilteredOrganizationImportCandidates();
+  document.getElementById("seasonOrganizationImportCount").textContent =
+    `${seasonsState.selectedOrganizationIds.size} selected · ${seasonsState.organizationImportCandidates.length} available`;
+
+  container.innerHTML = candidates.length
+    ? candidates.map((organization) => `
+      <div class="season-organization-import-row">
+        <input
+          class="season-organization-import-checkbox"
+          type="checkbox"
+          value="${organization.organizationId}"
+          ${seasonsState.selectedOrganizationIds.has(organization.organizationId) ? "checked" : ""}
+        />
+        <div class="season-organization-meta">
+          <strong>${escapeSeasonHtml(organization.organizationName)}</strong>
+          <span>${escapeSeasonHtml(organization.abbreviation || "No abbreviation")} · ${organization.teamCount || 0} prior teams</span>
+        </div>
+        <span>${organization.priorParticipationType === "Managed" ? "Managed" : "External"}</span>
+        <select class="nf-select season-organization-import-type" data-id="${organization.organizationId}">
+          <option value="Managed" ${organization.destinationParticipationType === "Managed" ? "selected" : ""}>Managed</option>
+          <option value="External" ${organization.destinationParticipationType === "External" ? "selected" : ""}>External</option>
+        </select>
+      </div>
+    `).join("")
+    : '<div class="nf-empty-state">No organizations match the current filters.</div>';
+
+  container.querySelectorAll(".season-organization-import-checkbox").forEach((checkbox) => {
+    checkbox.onchange = () => {
+      if (checkbox.checked) seasonsState.selectedOrganizationIds.add(checkbox.value);
+      else seasonsState.selectedOrganizationIds.delete(checkbox.value);
+      renderOrganizationImportCandidates();
+    };
+  });
+  container.querySelectorAll(".season-organization-import-type").forEach((select) => {
+    select.onchange = () => {
+      const organization = seasonsState.organizationImportCandidates.find((item) => item.organizationId === select.dataset.id);
+      if (organization) organization.destinationParticipationType = select.value;
+    };
+  });
+}
+
+async function loadOrganizationImportCandidates() {
+  const sourceSeasonId = document.getElementById("season-org-import-source").value;
+  seasonsState.organizationImportSourceSeasonId = sourceSeasonId || null;
+  seasonsState.organizationImportCandidates = [];
+  seasonsState.selectedOrganizationIds.clear();
+  document.getElementById("seasonOrganizationImportList").innerHTML = '<div class="nf-empty-state">Loading organizations...</div>';
+  if (!sourceSeasonId || !seasonsState.organizationImportTargetSeasonId) return;
+
+  try {
+    const sourceOrganizations = await SeasonsApi.getOrganizations(sourceSeasonId);
+    seasonsState.organizationImportCandidates = sourceOrganizations
+      .filter((organization) => organization.participationType !== "NotParticipating")
+      .filter((organization) => !["external", "external team"].includes(String(organization.organizationName || "").trim().toLowerCase()))
+      .map((organization) => ({
+        ...organization,
+        priorParticipationType: organization.participationType,
+        destinationParticipationType: organization.participationType,
+      }));
+    renderOrganizationImportCandidates();
+  } catch (error) {
+    notifySeason(error.message || "Failed to load organization import candidates", "error");
+    renderOrganizationImportCandidates();
+  }
+}
+
+async function openOrganizationImport(targetSeasonId) {
+  const targetSeason = seasonsState.items.find((season) => season.seasonId === targetSeasonId);
+  if (!targetSeason?.isActive) {
+    notifySeason("Organizations can only be imported into the active season", "error");
+    return;
+  }
+  const sourceSeasons = seasonsState.items
+    .filter((season) => season.seasonId !== targetSeasonId)
+    .sort((left, right) => String(right.startDate).localeCompare(String(left.startDate)));
+  if (!sourceSeasons.length) {
+    notifySeason("No prior season is available to import from", "error");
+    return;
+  }
+
+  seasonsState.organizationImportTargetSeasonId = targetSeasonId;
+  seasonsState.organizationImportSourceSeasonId = sourceSeasons[0].seasonId;
+  seasonsState.organizationImportCandidates = [];
+  seasonsState.selectedOrganizationIds.clear();
+
+  document.getElementById("seasonOrganizationImportTitle").textContent = `Import Organizations into ${targetSeason.seasonName}`;
+  document.getElementById("season-org-import-source").innerHTML = sourceSeasons
+    .map((season) => `<option value="${season.seasonId}">${escapeSeasonHtml(season.seasonName)}</option>`)
+    .join("");
+  document.getElementById("season-org-import-search").value = "";
+  document.getElementById("season-org-import-prior-type").value = "";
+
+  const overlay = document.getElementById("seasonOrganizationImportOverlay");
+  overlay.classList.remove("hidden");
+  overlay.classList.add("active");
+
+  try {
+    seasonsState.organizationImportTargetOrganizations = await SeasonsApi.getOrganizations(targetSeasonId);
+    await loadOrganizationImportCandidates();
+  } catch (error) {
+    notifySeason(error.message || "Failed to open organization import", "error");
+    closeOrganizationImport();
+  }
+}
+
+function closeOrganizationImport() {
+  seasonsState.organizationImportTargetSeasonId = null;
+  seasonsState.organizationImportSourceSeasonId = null;
+  seasonsState.organizationImportCandidates = [];
+  seasonsState.organizationImportTargetOrganizations = [];
+  seasonsState.selectedOrganizationIds.clear();
+  const overlay = document.getElementById("seasonOrganizationImportOverlay");
+  overlay.classList.remove("active");
+  overlay.classList.add("hidden");
+}
+
+function selectVisibleOrganizations(selected) {
+  getFilteredOrganizationImportCandidates().forEach((organization) => {
+    if (selected) seasonsState.selectedOrganizationIds.add(organization.organizationId);
+    else seasonsState.selectedOrganizationIds.delete(organization.organizationId);
+  });
+  renderOrganizationImportCandidates();
+}
+
+async function importSelectedOrganizations() {
+  if (!seasonsState.organizationImportTargetSeasonId) return;
+  if (!seasonsState.selectedOrganizationIds.size) {
+    notifySeason("Select at least one organization", "error");
+    return;
+  }
+
+  const importedById = new Map(
+    seasonsState.organizationImportCandidates
+      .filter((organization) => seasonsState.selectedOrganizationIds.has(organization.organizationId))
+      .map((organization) => [organization.organizationId, organization.destinationParticipationType]),
+  );
+  const mergedOrganizations = seasonsState.organizationImportTargetOrganizations.map((organization) => ({
+    organizationId: organization.organizationId,
+    participationType: importedById.get(organization.organizationId) || organization.participationType,
+  }));
+
+  const saveButton = document.getElementById("seasonOrganizationImportSave");
+  saveButton.disabled = true;
+  try {
+    await SeasonsApi.saveOrganizations(
+      seasonsState.organizationImportTargetSeasonId,
+      mergedOrganizations,
+    );
+    const importedCount = seasonsState.selectedOrganizationIds.size;
+    closeOrganizationImport();
+    if (window.SeasonContext) window.SeasonContext.clear();
+    notifySeason(`${importedCount} organization${importedCount === 1 ? "" : "s"} imported`, "success");
+  } catch (error) {
+    notifySeason(error.message || "Failed to import organizations", "error");
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
 function getFilteredTeamImportCandidates() {
   const search = (document.getElementById("season-team-import-search")?.value || "").trim().toLowerCase();
   const level = document.getElementById("season-team-import-level")?.value || "";
@@ -503,6 +676,14 @@ function initializeSeasonsPage() {
   document.getElementById("seasonOrganizationsAllManaged").onclick = () => setAllSeasonOrganizations("Managed");
   document.getElementById("seasonOrganizationsAllNone").onclick = () => setAllSeasonOrganizations("NotParticipating");
   document.querySelector("#seasonOrganizationsOverlay .modal-close").onclick = closeSeasonOrganizations;
+  document.getElementById("seasonOrganizationImportCancel").onclick = closeOrganizationImport;
+  document.getElementById("seasonOrganizationImportSave").onclick = importSelectedOrganizations;
+  document.getElementById("season-org-import-source").onchange = loadOrganizationImportCandidates;
+  document.getElementById("season-org-import-search").oninput = renderOrganizationImportCandidates;
+  document.getElementById("season-org-import-prior-type").onchange = renderOrganizationImportCandidates;
+  document.getElementById("seasonOrganizationImportSelectVisible").onclick = () => selectVisibleOrganizations(true);
+  document.getElementById("seasonOrganizationImportClearVisible").onclick = () => selectVisibleOrganizations(false);
+  document.querySelector("#seasonOrganizationImportOverlay .modal-close").onclick = closeOrganizationImport;
   document.getElementById("seasonTeamImportCancel").onclick = closeTeamImport;
   document.getElementById("seasonTeamImportSave").onclick = importSelectedTeams;
   document.getElementById("season-team-import-source").onchange = loadTeamImportCandidates;

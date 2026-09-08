@@ -1341,6 +1341,50 @@ window.PageContentRegistry.seasonsModals = () => `
     </div>
   </div>
 
+  <div id="seasonOrganizationImportOverlay" class="nf-modal-overlay hidden">
+    <div class="nf-modal large">
+      <div class="nf-modal-header">
+        <h2 id="seasonOrganizationImportTitle">Import Organizations</h2>
+        <button class="modal-close" type="button">×</button>
+      </div>
+
+      <div class="nf-modal-body full">
+        <p class="season-setup-intro">
+          Import season participation only. Permanent organization records and historical teams are not duplicated or changed. External Team is automatic.
+        </p>
+        <div class="season-team-import-source-row">
+          <label for="season-org-import-source">Source Season</label>
+          <select id="season-org-import-source" class="nf-select"></select>
+        </div>
+        <div class="season-setup-toolbar">
+          <input id="season-org-import-search" class="nf-search" type="text" placeholder="Search organizations" />
+          <select id="season-org-import-prior-type" class="nf-select">
+            <option value="">Prior Status: All</option>
+            <option value="Managed">Managed</option>
+            <option value="External">External</option>
+          </select>
+        </div>
+        <div class="season-team-import-actions">
+          <p id="seasonOrganizationImportCount" class="season-setup-count"></p>
+          <button id="seasonOrganizationImportSelectVisible" class="nf-btn nf-btn-secondary" type="button">Select Visible</button>
+          <button id="seasonOrganizationImportClearVisible" class="nf-btn nf-btn-secondary" type="button">Clear Visible</button>
+        </div>
+        <div class="season-organization-import-heading" aria-hidden="true">
+          <span></span>
+          <span>Organization</span>
+          <span>Prior Status</span>
+          <span>New Status</span>
+        </div>
+        <div id="seasonOrganizationImportList" class="season-organization-import-list"></div>
+      </div>
+
+      <div class="nf-modal-footer">
+        <button id="seasonOrganizationImportCancel" class="nf-btn nf-btn-secondary" type="button">Cancel</button>
+        <button id="seasonOrganizationImportSave" class="nf-btn nf-btn-primary" type="button">Import Selected Organizations</button>
+      </div>
+    </div>
+  </div>
+
   <div id="seasonTeamImportOverlay" class="nf-modal-overlay hidden">
     <div class="nf-modal large">
       <div class="nf-modal-header">

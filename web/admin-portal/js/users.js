@@ -65,7 +65,9 @@ window.UsersPage = {
   // LOAD ORGANIZATION DROPDOWNS (Modal + Filter Bar)
   // -------------------------------------------------------
   async loadDropdowns() {
-    const orgs = await OrgApi.getAll();
+    const orgs = (await OrgApi.getAll()).filter(
+      (organization) => organization.organizationType !== "External",
+    );
 
     // Modal dropdown
     const select = document.getElementById("user-organization");

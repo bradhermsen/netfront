@@ -33,6 +33,7 @@ function getFilteredOrganizations() {
   const source = Array.isArray(AdminPage?.allItems) ? AdminPage.allItems : [];
   const searchTerm = (document.getElementById("org-search-bar")?.value || "").toLowerCase();
   const leagueFilter = document.getElementById("filter-league")?.value || "";
+  const typeFilter = document.getElementById("filter-organization-type")?.value || "";
   const statusFilter = document.getElementById("filter-status")?.value || "";
 
   return source.filter((org) => {
@@ -42,9 +43,10 @@ function getFilteredOrganizations() {
 
     const matchesSearch = !searchTerm || orgText.includes(searchTerm);
     const matchesLeague = !leagueFilter || orgLeague === leagueFilter;
+    const matchesType = !typeFilter || org.organizationType === typeFilter;
     const matchesStatus = !statusFilter || orgStatus === statusFilter;
 
-    return matchesSearch && matchesLeague && matchesStatus;
+    return matchesSearch && matchesLeague && matchesType && matchesStatus;
   });
 }
 
@@ -96,6 +98,7 @@ function renderOrganizationsGrouped(orgs) {
                   <span class="status-badge ${org.isActive ? "active" : "inactive"}">${org.isActive ? "Active" : "Inactive"}</span>
                 </div>
                 <div class="nf-item-card-meta">
+                  <span><i class="fa fa-circle-nodes"></i> ${org.organizationType === "External" ? "External Organization" : "Managed Organization"}</span>
                   <span><i class="fa fa-building"></i> ${org.abbreviation || "No abbreviation"}</span>
                   <span><i class="fa fa-map-marker-alt"></i> ${org.city || "Unknown city"}${org.state ? `, ${org.state}` : ""}</span>
                   <span><i class="fa fa-users"></i> ${org.teamCount || 0} teams</span>
@@ -203,6 +206,28 @@ AdminPage.init({
   addTitle: "Add Organization",
   editTitle: "Edit Organization",
 
+  saveHandler: async () => {
+    const payload = AdminPage.config.collectFormData();
+    const previousType = window.editingOrganizationType || "Managed";
+    if (AdminPage.editingId && previousType !== payload.organizationType) {
+      const message = payload.organizationType === "External"
+        ? "Convert this organization to External? Team access codes will be removed and organization users will no longer be able to sign in. Historical data will be preserved."
+        : "Convert this organization to Managed? Historical data will be preserved. Portal users and new team access codes can then be configured.";
+      if (!window.confirm(message)) return;
+    }
+
+    if (AdminPage.editingId) {
+      await OrgApi.update(AdminPage.editingId, payload);
+    } else {
+      await OrgApi.create(payload);
+    }
+
+    window.editingOrganizationType = null;
+    if (window.SeasonContext) window.SeasonContext.clear();
+    AdminPage.closeModal();
+    await AdminPage.loadData();
+  },
+
   api: {
     ...OrgApi,
     getAll: () => OrgApi.getAll({ activeSeasonOnly: true }),
@@ -248,6 +273,8 @@ AdminPage.init({
     ].forEach((id) => (document.getElementById(id).value = ""));
 
     document.getElementById("org-league").value = "";
+    document.getElementById("org-type-managed").checked = true;
+    document.getElementById("org-type-external").checked = false;
     document.getElementById("org-active").checked = true;
   },
 
@@ -255,6 +282,7 @@ AdminPage.init({
   // POPULATE FORM
   // -------------------------------------------------------
   populateForm: (org) => {
+    window.editingOrganizationType = org.organizationType || "Managed";
     document.getElementById("org-name").value = org.name;
     document.getElementById("org-abbrev").value = org.abbreviation;
 
@@ -265,6 +293,8 @@ AdminPage.init({
     document.getElementById("org-country").value = org.country ?? "";
     document.getElementById("org-mascot").value = org.mascot ?? "";
     document.getElementById("org-league").value = org.leagueId ?? "";
+    document.getElementById("org-type-managed").checked = org.organizationType !== "External";
+    document.getElementById("org-type-external").checked = org.organizationType === "External";
 
     document.getElementById("org-contact-first").value =
       org.primaryContactFirstName ?? "";
@@ -300,6 +330,7 @@ AdminPage.init({
     country: document.getElementById("org-country").value,
     mascot: document.getElementById("org-mascot").value,
     leagueId: document.getElementById("org-league").value,
+    organizationType: document.querySelector('input[name="organization-type"]:checked')?.value || "Managed",
 
     primaryContactFirstName: document.getElementById("org-contact-first").value,
     primaryContactLastName: document.getElementById("org-contact-last").value,
@@ -359,6 +390,7 @@ async function loadLeagues() {
 function wireOrgFilterEvents() {
   const search = document.getElementById("org-search-bar");
   const league = document.getElementById("filter-league");
+  const organizationType = document.getElementById("filter-organization-type");
   const status = document.getElementById("filter-status");
 
   if (search) {
@@ -370,6 +402,13 @@ function wireOrgFilterEvents() {
 
   if (league) {
     league.addEventListener("change", () => {
+      resetOrgGroupPagination();
+      applyOrgFiltersAndSearch();
+    });
+  }
+
+  if (organizationType) {
+    organizationType.addEventListener("change", () => {
       resetOrgGroupPagination();
       applyOrgFiltersAndSearch();
     });
@@ -388,6 +427,7 @@ function wireOrgFilterEvents() {
 // =========================================================
 function openAddOrganization() {
   AdminPage.editingId = null;
+  window.editingOrganizationType = null;
   AdminPage.config.clearForm();
   document.getElementById("orgModalTitle").textContent = "Add Organization";
   document.getElementById("org-facilities-section")?.classList.add("hidden");

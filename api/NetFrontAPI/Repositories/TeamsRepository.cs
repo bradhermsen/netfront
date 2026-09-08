@@ -35,6 +35,8 @@ namespace NetFrontAPI.Repositories
                     t.TeamType,
                     COALESCE(NULLIF(t.TeamMascot, ''), o.Mascot) AS TeamMascot,
                     o.Name AS OrganizationName,
+                       COALESCE(o.OrganizationType, CASE WHEN t.IsExternal = 1 THEN 'External' ELSE 'Managed' END) AS OrganizationType,
+                       COALESCE(o.OrganizationType, CASE WHEN t.IsExternal = 1 THEN 'External' ELSE 'Managed' END) AS OrganizationType,
                     cd.Name AS ConferenceDistrictName,
                     sr.Name AS SectionRegionName,
                     l.Name AS LevelName,

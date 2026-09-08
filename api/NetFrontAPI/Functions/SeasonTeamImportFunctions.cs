@@ -56,19 +56,17 @@ namespace NetFrontAPI.Functions
                     COALESCE(levels.Name, '') AS LevelName,
                     COALESCE(source.TeamType, '') AS TeamType,
                     source.OrganizationId,
-                    COALESCE(org.Name, 'External Team') AS OrganizationName,
-                    CAST(ISNULL(source.IsExternal, 0) AS bit) AS IsExternal,
+                    COALESCE(org.Name, 'Organization') AS OrganizationName,
+                    CAST(CASE WHEN org.OrganizationType = 'External' THEN 1 ELSE 0 END AS bit) AS IsExternal,
                     CAST(CASE WHEN target.Id IS NULL THEN 0 ELSE 1 END AS bit) AS AlreadyImported,
                     CAST(CASE
                         WHEN target.Id IS NOT NULL THEN 0
-                        WHEN ISNULL(source.IsExternal, 0) = 1 AND so.ParticipationType = 'External' THEN 1
-                        WHEN ISNULL(source.IsExternal, 0) = 0 AND so.ParticipationType = 'Managed' THEN 1
+                        WHEN so.ParticipationType = org.OrganizationType THEN 1
                         ELSE 0
                     END AS bit) AS IsEligible,
                     CASE
                         WHEN target.Id IS NOT NULL THEN 'Already imported'
-                        WHEN ISNULL(source.IsExternal, 0) = 1 AND ISNULL(so.ParticipationType, '') <> 'External' THEN 'External Team is not enabled for the target season'
-                        WHEN ISNULL(source.IsExternal, 0) = 0 AND ISNULL(so.ParticipationType, '') <> 'Managed' THEN 'Organization is not enabled as Managed for the target season'
+                        WHEN ISNULL(so.ParticipationType, '') <> org.OrganizationType THEN 'Organization is not participating in the target season'
                         ELSE NULL
                     END AS IneligibleReason
                 FROM dbo.Teams source
@@ -83,7 +81,7 @@ namespace NetFrontAPI.Functions
                    AND target.LevelId = source.LevelId
                    AND ISNULL(target.TeamType, '') = ISNULL(source.TeamType, '')
                 WHERE source.SeasonId = @SourceSeasonId
-                ORDER BY COALESCE(org.Name, 'External Team'), source.Name, levels.Name, source.TeamType;",
+                ORDER BY COALESCE(org.Name, 'Organization'), source.Name, levels.Name, source.TeamType;",
                 new { SourceSeasonId = sourceSeasonId, TargetSeasonId = targetSeasonId });
 
             var response = req.CreateResponse(HttpStatusCode.OK);
@@ -132,10 +130,12 @@ namespace NetFrontAPI.Functions
                     source.Abbreviation,
                     source.TeamType,
                     source.TeamMascot,
-                    source.IsExternal,
+                    CASE WHEN org.OrganizationType = 'External' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS IsExternal,
+                    org.OrganizationType,
                     so.ParticipationType,
                     target.Id AS ExistingTargetTeamId
                 FROM dbo.Teams source
+                INNER JOIN dbo.Organizations org ON org.OrganizationId = source.OrganizationId
                 LEFT JOIN dbo.SeasonOrganizations so
                     ON so.SeasonId = @TargetSeasonId
                    AND so.OrganizationId = source.OrganizationId
@@ -158,8 +158,7 @@ namespace NetFrontAPI.Functions
 
             var ineligible = sourceTeams.FirstOrDefault(team =>
                 team.ExistingTargetTeamId.HasValue ||
-                (team.IsExternal && !string.Equals(team.ParticipationType, "External", StringComparison.OrdinalIgnoreCase)) ||
-                (!team.IsExternal && !string.Equals(team.ParticipationType, "Managed", StringComparison.OrdinalIgnoreCase)));
+                !string.Equals(team.ParticipationType, team.OrganizationType, StringComparison.OrdinalIgnoreCase));
             if (ineligible != null)
             {
                 var reason = ineligible.ExistingTargetTeamId.HasValue
@@ -244,8 +243,8 @@ namespace NetFrontAPI.Functions
                         team.Abbreviation,
                         team.TeamType,
                         team.TeamMascot,
-                        GameManagerCode = _accessCodeService.GenerateGameManagerCode(),
-                        StatManagerCode = _accessCodeService.GenerateStatManagerCode(),
+                        GameManagerCode = team.IsExternal ? null : _accessCodeService.GenerateGameManagerCode(),
+                        StatManagerCode = team.IsExternal ? null : _accessCodeService.GenerateStatManagerCode(),
                         team.IsExternal
                     }, transaction);
                 }
@@ -301,6 +300,7 @@ namespace NetFrontAPI.Functions
             public string? TeamType { get; set; }
             public string? TeamMascot { get; set; }
             public bool IsExternal { get; set; }
+            public string OrganizationType { get; set; } = "Managed";
             public string? ParticipationType { get; set; }
             public Guid? ExistingTargetTeamId { get; set; }
         }

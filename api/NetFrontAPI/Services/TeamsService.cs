@@ -88,35 +88,37 @@ namespace NetFrontAPI.Services
             dto.TeamType = teamType;
             dto.TeamMascot = string.IsNullOrWhiteSpace(dto.TeamMascot) ? null : dto.TeamMascot.Trim();
 
-            if (dto.IsExternal)
+            if (!dto.OrganizationId.HasValue)
             {
-                var externalOrganizationId = dto.OrganizationId ?? Guid.Empty;
-                await ValidateSeasonParticipationAsync(
-                    dto.SeasonId,
-                    externalOrganizationId,
-                    "External");
-                return;
-            }
-
-            if (!dto.OrganizationId.HasValue || dto.OrganizationId.Value == Guid.Empty)
-            {
-                throw new ArgumentException("Organization is required for internal teams.");
-            }
-
-            await ValidateSeasonParticipationAsync(
-                dto.SeasonId,
-                dto.OrganizationId.Value,
-                "Managed");
-
-            if (!string.IsNullOrWhiteSpace(dto.TeamMascot))
-            {
-                return;
+                throw new ArgumentException("Organization is required for every team.");
             }
 
             var org = await _organizationRepository.GetByIdAsync(dto.OrganizationId.Value);
             if (org == null)
             {
                 throw new ArgumentException("Selected organization was not found.");
+            }
+
+            var organizationType = string.Equals(org.OrganizationType, "External", StringComparison.OrdinalIgnoreCase)
+                ? "External"
+                : "Managed";
+            dto.IsExternal = organizationType == "External";
+
+            await ValidateSeasonParticipationAsync(
+                dto.SeasonId,
+                dto.OrganizationId.Value,
+                organizationType);
+
+            if (dto.IsExternal)
+            {
+                dto.GameManagerCode = null;
+                dto.StatManagerCode = null;
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.TeamMascot))
+            {
+                return;
             }
 
             if (string.IsNullOrWhiteSpace(org.Mascot))
@@ -143,9 +145,7 @@ namespace NetFrontAPI.Services
             if (!string.Equals(participationType, requiredParticipationType, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    requiredParticipationType == "External"
-                        ? "External Team is not enabled for the selected season."
-                        : "The selected organization is not enabled as Managed for this season.");
+                    "The selected organization is not participating in this season.");
             }
         }
 

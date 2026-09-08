@@ -9,6 +9,8 @@ namespace NetFrontAPI.DTOs
         public string OrganizationName { get; set; } = string.Empty;
         public string? Abbreviation { get; set; }
         public bool DirectoryIsActive { get; set; }
+        public string OrganizationType { get; set; } = "Managed";
+        public bool IsParticipating { get; set; }
         public string ParticipationType { get; set; } = "NotParticipating";
         public int TeamCount { get; set; }
     }
@@ -21,6 +23,7 @@ namespace NetFrontAPI.DTOs
     public class SaveSeasonOrganizationDto
     {
         public Guid OrganizationId { get; set; }
+        public bool? IsParticipating { get; set; }
         public string ParticipationType { get; set; } = "NotParticipating";
     }
 }

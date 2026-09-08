@@ -285,13 +285,7 @@ function attachTeamsTableSortEvents() {
 
 function isExternalTeam(team) {
   if (!team) return false;
-
-  if (team.isExternal === true || team.external === true) {
-    return true;
-  }
-
-  const organizationName = (team.organizationName ?? "").toString().trim().toLowerCase();
-  return organizationName === "external team" || organizationName === "external";
+  return team.organizationType === "External";
 }
 
 function sortTeamsForTable(teams) {

@@ -43,8 +43,17 @@ namespace NetFrontAPI.Functions
 
                 using var conn = _connectionFactory.CreateConnection();
 
-                var user = await conn.QueryFirstOrDefaultAsync<AuthUser>(
-                    "SELECT TOP 1 * FROM AuthUsers WHERE Email = @Email AND IsActive = 1",
+                var user = await conn.QueryFirstOrDefaultAsync<AuthUser>(@"
+                    SELECT TOP 1
+                        au.Id,
+                        au.Email,
+                        au.PasswordHash,
+                        au.Role,
+                        o.OrganizationType
+                    FROM dbo.AuthUsers au
+                    LEFT JOIN dbo.Users u ON u.Id = au.Id
+                    LEFT JOIN dbo.Organizations o ON o.OrganizationId = u.OrganizationId
+                    WHERE au.Email = @Email AND au.IsActive = 1;",
                     new { Email = body.Email });
 
                 if (user == null)
@@ -60,6 +69,14 @@ namespace NetFrontAPI.Functions
                     var unauthorized = req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
                     await unauthorized.WriteStringAsync("Invalid login.");
                     return unauthorized;
+                }
+
+                if (!string.Equals(user.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(user.OrganizationType, "External", StringComparison.OrdinalIgnoreCase))
+                {
+                    var forbidden = req.CreateResponse(System.Net.HttpStatusCode.Forbidden);
+                    await forbidden.WriteStringAsync("External Organizations do not have portal access.");
+                    return forbidden;
                 }
 
                 // Generate JWT
@@ -119,6 +136,7 @@ namespace NetFrontAPI.Functions
             public string Email { get; set; }
             public string PasswordHash { get; set; }
             public string Role { get; set; }
+            public string? OrganizationType { get; set; }
         }
     }
 }

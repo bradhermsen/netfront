@@ -1,3 +1,15 @@
+export interface Organization {
+  organizationId: string;
+  name: string;
+  abbreviation?: string;
+  leagueId?: string;
+  leagueName?: string;
+  city?: string;
+  state?: string;
+  teamCount?: number;
+  organizationType: "Managed" | "External";
+  isActive: boolean;
+}
 export interface ConferenceDistrict {
   id: string;
   name: string;
@@ -21,6 +33,7 @@ export interface OrganizationDto {
   city?: string;
   state?: string;
   teamCount?: number;
+  organizationType: "Managed" | "External";
   isActive: boolean;
 }
 
@@ -28,6 +41,7 @@ export interface TeamDto {
   teamId: string;
   organizationId?: string;
   organizationName?: string;
+  organizationType?: "Managed" | "External";
   levelId?: string;
   levelName?: string;
   seasonId?: string;

@@ -71,17 +71,7 @@ function getOrganizationMascot(orgId) {
 
 function isExternalOrganizationById(orgId) {
   if (!orgId) return false;
-
-  const orgName = (teamOrganizationState.byId.get(orgId)?.name || "")
-    .toString()
-    .trim()
-    .toLowerCase();
-
-  return (
-    orgName === "external" ||
-    orgName === "external team" ||
-    orgName.includes("external team")
-  );
+  return teamOrganizationState.byId.get(orgId)?.organizationType === "External";
 }
 
 function updateAccessCodeGeneratorState() {
@@ -342,6 +332,7 @@ async function loadTeamOrganizations() {
         teamOrganizationState.byId.set(o.organizationId, {
           name: o.name || "",
           mascot: o.mascot || "",
+          organizationType: o.organizationType || "Managed",
         });
       }
     });
@@ -561,17 +552,7 @@ function wireTeamAbbreviation() {
 
 function isExternalTeamRow(team) {
   if (!team) return false;
-
-  if (team.isExternal === true || team.external === true) {
-    return true;
-  }
-
-  const organizationName = (team.organizationName ?? "")
-    .toString()
-    .trim()
-    .toLowerCase();
-
-  return organizationName === "external team" || organizationName === "external";
+  return team.organizationType === "External";
 }
 
 function navigateToRosterEditor(teamId) {

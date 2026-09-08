@@ -17,6 +17,7 @@ namespace NetFrontAPI.DTOs
         public string? TeamType { get; set; }
         public string? TeamMascot { get; set; }
         public string? OrganizationName { get; set; }
+        public string OrganizationType { get; set; } = "Managed";
         public string? ConferenceDistrictName { get; set; }
         public string? SectionRegionName { get; set; }
         public string? LevelName { get; set; }

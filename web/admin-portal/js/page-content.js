@@ -626,6 +626,12 @@ window.PageContentRegistry.organizations = () => `
         <option value="">League: All</option>
       </select>
 
+      <select id="filter-organization-type" class="nf-select">
+        <option value="">Type: All</option>
+        <option value="Managed">Managed Organizations</option>
+        <option value="External">External Organizations</option>
+      </select>
+
       <!-- Status Filter -->
       <select id="filter-status" class="nf-select">
         <option value="">Status: All</option>
@@ -683,6 +689,22 @@ window.PageContentRegistry.organizationsModals = () => `
               <select id="org-league" class="nf-input">
                 <option value="">None</option>
               </select>
+            </div>
+
+            <div class="full-width">
+              <label>Organization Type</label>
+              <div class="organization-type-control" role="radiogroup" aria-label="Organization Type">
+                <label>
+                  <input type="radio" name="organization-type" id="org-type-managed" value="Managed" checked />
+                  <span>Managed Organization</span>
+                  <small>TipIn customer with portal, team management, and access-code capabilities.</small>
+                </label>
+                <label>
+                  <input type="radio" name="organization-type" id="org-type-external" value="External" />
+                  <span>External Organization</span>
+                  <small>Non-customer organization maintained for schedules and competition records.</small>
+                </label>
+              </div>
             </div>
 
           </div>
@@ -1323,11 +1345,11 @@ window.PageContentRegistry.seasonsModals = () => `
 
       <div class="nf-modal-body full">
         <p class="season-setup-intro">
-          Choose how each directory organization participates in this season. This does not copy teams, rosters, schedules, or history.
+          Choose whether each Managed or External Organization participates in this season. Organization type is managed on the Organizations page.
         </p>
         <div class="season-setup-toolbar">
           <input id="season-organizations-search" class="nf-search" type="text" placeholder="Search organizations" />
-          <button id="seasonOrganizationsAllManaged" class="nf-btn nf-btn-secondary" type="button">Set All Managed</button>
+          <button id="seasonOrganizationsAllManaged" class="nf-btn nf-btn-secondary" type="button">Set All Participating</button>
           <button id="seasonOrganizationsAllNone" class="nf-btn nf-btn-secondary" type="button">Set All Not Participating</button>
         </div>
         <p id="seasonOrganizationsCount" class="season-setup-count"></p>
@@ -1350,7 +1372,7 @@ window.PageContentRegistry.seasonsModals = () => `
 
       <div class="nf-modal-body full">
         <p class="season-setup-intro">
-          Import season participation only. Permanent organization records and historical teams are not duplicated or changed. External Team is automatic.
+          Import season participation only. Permanent organization records, organization types, and historical teams are not duplicated or changed.
         </p>
         <div class="season-team-import-source-row">
           <label for="season-org-import-source">Source Season</label>
@@ -1359,7 +1381,7 @@ window.PageContentRegistry.seasonsModals = () => `
         <div class="season-setup-toolbar">
           <input id="season-org-import-search" class="nf-search" type="text" placeholder="Search organizations" />
           <select id="season-org-import-prior-type" class="nf-select">
-            <option value="">Prior Status: All</option>
+            <option value="">Organization Type: All</option>
             <option value="Managed">Managed</option>
             <option value="External">External</option>
           </select>
@@ -1372,8 +1394,8 @@ window.PageContentRegistry.seasonsModals = () => `
         <div class="season-organization-import-heading" aria-hidden="true">
           <span></span>
           <span>Organization</span>
-          <span>Prior Status</span>
-          <span>New Status</span>
+          <span>Previous Type</span>
+          <span>Current Type</span>
         </div>
         <div id="seasonOrganizationImportList" class="season-organization-import-list"></div>
       </div>

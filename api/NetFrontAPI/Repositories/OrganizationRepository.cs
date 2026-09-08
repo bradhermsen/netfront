@@ -159,6 +159,33 @@ VALUES (
     GETUTCDATE(),
     GETUTCDATE()
 );
+
+IF OBJECT_ID(N'dbo.SeasonOrganizations', N'U') IS NOT NULL
+BEGIN
+    INSERT INTO dbo.SeasonOrganizations
+    (
+        SeasonId,
+        OrganizationId,
+        ParticipationType,
+        CreatedAt,
+        UpdatedAt
+    )
+    SELECT
+        s.SeasonId,
+        @OrganizationId,
+        'Managed',
+        SYSUTCDATETIME(),
+        SYSUTCDATETIME()
+    FROM dbo.Seasons s
+    WHERE s.IsActive = 1
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM dbo.SeasonOrganizations so
+          WHERE so.SeasonId = s.SeasonId
+            AND so.OrganizationId = @OrganizationId
+      );
+END;
 ";
 
             await _db.ExecuteAsync(sql, new

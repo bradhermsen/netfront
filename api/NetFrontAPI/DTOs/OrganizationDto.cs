@@ -29,6 +29,7 @@ namespace NetFrontAPI.DTOs
 
         public string? DistrictConference { get; set; }
         public string? Mascot { get; set; }
+        public string OrganizationType { get; set; } = "Managed";
 
         public bool IsActive { get; set; }
 

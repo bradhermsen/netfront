@@ -4,6 +4,7 @@ public class TeamDetailDto
 {
     public Guid TeamId { get; set; }
     public Guid? OrganizationId { get; set; }
+    public string OrganizationType { get; set; } = "Managed";
     public Guid? ConferenceDistrictId { get; set; }
     public Guid? SectionRegionId { get; set; }
     public Guid LevelId { get; set; }

@@ -55,6 +55,7 @@ namespace NetFrontAPI.Services
 
                 DistrictConference = dto.DistrictConference,
                 Mascot = dto.Mascot,
+                OrganizationType = NormalizeOrganizationType(dto.OrganizationType),
                 IsActive = dto.IsActive,
 
                 CreatedAt = DateTime.UtcNow
@@ -67,6 +68,11 @@ namespace NetFrontAPI.Services
         // ⭐ Auto-create OrgOwner
         public async Task CreateOrgOwnerForOrganizationAsync(Organization org)
         {
+            if (!string.Equals(org.OrganizationType, "Managed", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             var tempPassword = "NetFront2024!";
             var hash = BCrypt.Net.BCrypt.HashPassword(tempPassword, 10);
 
@@ -82,9 +88,19 @@ namespace NetFrontAPI.Services
         }
 
         public Task UpdateAsync(Guid id, UpdateOrganizationDto dto)
-            => _repo.UpdateAsync(id, dto);
+        {
+            dto.OrganizationType = NormalizeOrganizationType(dto.OrganizationType);
+            return _repo.UpdateAsync(id, dto);
+        }
 
         public Task DeleteAsync(Guid id)
             => _repo.DeleteAsync(id);
+
+        private static string NormalizeOrganizationType(string? organizationType)
+        {
+            return string.Equals(organizationType?.Trim(), "External", StringComparison.OrdinalIgnoreCase)
+                ? "External"
+                : "Managed";
+        }
     }
 }

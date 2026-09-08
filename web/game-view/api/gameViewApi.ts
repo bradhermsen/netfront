@@ -108,6 +108,7 @@ function normalizeOrganization(row: unknown): ApiOrganization {
     name: pickString(obj, "name", "Name") || null,
     abbreviation: pickString(obj, "abbreviation", "Abbreviation") || null,
     mascot: pickString(obj, "mascot", "Mascot") || null,
+    organizationType: pickString(obj, "organizationType", "OrganizationType") || null,
     isActive: pickBoolean(obj, "isActive", "IsActive"),
   };
 }
@@ -119,6 +120,7 @@ function normalizeTeam(row: unknown): ApiTeam {
     organizationId:
       pickString(obj, "organizationId", "OrganizationId") || null,
     leagueId: pickString(obj, "leagueId", "LeagueId") || null,
+    organizationType: pickString(obj, "organizationType", "OrganizationType") || null,
     seasonId: pickString(obj, "seasonId", "SeasonId") || null,
     name: pickString(obj, "name", "Name") || null,
     teamType: pickString(obj, "teamType", "TeamType") || null,

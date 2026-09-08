@@ -33,6 +33,7 @@ SELECT
     o.StreetAddress,
     o.ZipCode,
     o.Mascot,
+    o.OrganizationType,
     o.LeagueId,
     l.Name AS LeagueName,
     COUNT(t.Id) AS TeamCount,
@@ -55,6 +56,7 @@ GROUP BY
     o.StreetAddress,
     o.ZipCode,
     o.Mascot,
+    o.OrganizationType,
     o.LeagueId,
     l.Name,
     o.PrimaryContactFirstName,
@@ -85,6 +87,7 @@ SELECT
     o.StreetAddress,
     o.ZipCode,
     o.Mascot,
+    o.OrganizationType,
     o.LeagueId,
     o.PrimaryContactFirstName,
     o.PrimaryContactLastName,
@@ -111,6 +114,9 @@ WHERE o.OrganizationId = @Id;
         public async Task CreateAsync(Organization org)
         {
             var sql = @"
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+
 INSERT INTO Organizations (
     OrganizationId,
     Name,
@@ -121,6 +127,7 @@ INSERT INTO Organizations (
     StreetAddress,
     ZipCode,
     Mascot,
+    OrganizationType,
     LeagueId,
     PrimaryContactFirstName,
     PrimaryContactLastName,
@@ -145,6 +152,7 @@ VALUES (
     @StreetAddress,
     @ZipCode,
     @Mascot,
+    @OrganizationType,
     @LeagueId,
     @PrimaryContactFirstName,
     @PrimaryContactLastName,
@@ -173,7 +181,7 @@ BEGIN
     SELECT
         s.SeasonId,
         @OrganizationId,
-        'Managed',
+        @OrganizationType,
         SYSUTCDATETIME(),
         SYSUTCDATETIME()
     FROM dbo.Seasons s
@@ -186,6 +194,8 @@ BEGIN
             AND so.OrganizationId = @OrganizationId
       );
 END;
+
+COMMIT TRANSACTION;
 ";
 
             await _db.ExecuteAsync(sql, new
@@ -199,6 +209,7 @@ END;
                 org.StreetAddress,
                 org.ZipCode,
                 org.Mascot,
+                org.OrganizationType,
                 org.LeagueId,
                 org.PrimaryContactFirstName,
                 org.PrimaryContactLastName,
@@ -219,6 +230,9 @@ END;
         public async Task UpdateAsync(Guid id, UpdateOrganizationDto dto)
         {
             var sql = @"
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+
 UPDATE Organizations
 SET
     Name = @Name,
@@ -229,6 +243,7 @@ SET
     StreetAddress = @StreetAddress,
     ZipCode = @ZipCode,
     Mascot = @Mascot,
+    OrganizationType = @OrganizationType,
     LeagueId = @LeagueId,
     PrimaryContactFirstName = @PrimaryContactFirstName,
     PrimaryContactLastName = @PrimaryContactLastName,
@@ -242,6 +257,25 @@ SET
     IsActive = @IsActive,
     UpdatedAt = GETUTCDATE()
 WHERE OrganizationId = @Id;
+
+IF OBJECT_ID(N'dbo.SeasonOrganizations', N'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.SeasonOrganizations
+    SET ParticipationType = CASE
+            WHEN ParticipationType = N'NotParticipating' THEN N'NotParticipating'
+            ELSE @OrganizationType
+        END,
+        UpdatedAt = SYSUTCDATETIME()
+    WHERE OrganizationId = @Id;
+END;
+
+UPDATE dbo.Teams
+SET IsExternal = CASE WHEN @OrganizationType = N'External' THEN 1 ELSE 0 END,
+    ScorekeeperCode = CASE WHEN @OrganizationType = N'External' THEN NULL ELSE ScorekeeperCode END,
+    StatManagerCode = CASE WHEN @OrganizationType = N'External' THEN NULL ELSE StatManagerCode END
+WHERE OrganizationId = @Id;
+
+COMMIT TRANSACTION;
 ";
 
             await _db.ExecuteAsync(sql, new
@@ -255,6 +289,7 @@ WHERE OrganizationId = @Id;
                 dto.StreetAddress,
                 dto.ZipCode,
                 dto.Mascot,
+                dto.OrganizationType,
                 dto.LeagueId,
                 dto.PrimaryContactFirstName,
                 dto.PrimaryContactLastName,

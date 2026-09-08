@@ -48,6 +48,8 @@ namespace NetFrontAPI.Services
             string lastName,
             List<Guid> teamIds)
         {
+            await EnsureManagedOrganizationAsync(organizationId);
+
             var existing = await _repo.GetAuthUserByEmailAsync(email);
             if (existing != null)
                 throw new InvalidOperationException("User already exists.");
@@ -109,6 +111,8 @@ namespace NetFrontAPI.Services
             string lastName,
             List<Guid> teamIds)
         {
+            await EnsureManagedOrganizationAsync(organizationId);
+
             var existing = await _repo.GetAuthUserByEmailAsync(email);
             if (existing != null)
                 throw new InvalidOperationException("User already exists.");
@@ -192,6 +196,8 @@ namespace NetFrontAPI.Services
             string? password,
             List<Guid> teamIds)
         {
+            await EnsureManagedOrganizationAsync(organizationId);
+
             using var conn = _connectionFactory.CreateConnection();
             using var tx = conn.BeginTransaction();
 
@@ -234,6 +240,25 @@ namespace NetFrontAPI.Services
         {
             var hash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             await _repo.UpdatePasswordHashAsync(id, hash);
+        }
+
+        private async Task EnsureManagedOrganizationAsync(Guid? organizationId)
+        {
+            if (!organizationId.HasValue)
+            {
+                return;
+            }
+
+            var organization = await _orgRepo.GetByIdAsync(organizationId.Value);
+            if (organization == null)
+            {
+                throw new ArgumentException("Selected organization was not found.");
+            }
+
+            if (!string.Equals(organization.OrganizationType, "Managed", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Portal users can only be assigned to Managed Organizations.");
+            }
         }
 
         // ============================================================

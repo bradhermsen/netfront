@@ -71,6 +71,7 @@ export interface ApiOrganization {
   name?: string | null;
   abbreviation?: string | null;
   mascot?: string | null;
+  organizationType?: string | null;
   isActive: boolean;
 }
 
@@ -78,6 +79,7 @@ export interface ApiTeam {
   teamId: string;
   organizationId?: string | null;
   leagueId?: string | null;
+  organizationType?: string | null;
   seasonId?: string | null;
   name?: string | null;
   teamType?: string | null;

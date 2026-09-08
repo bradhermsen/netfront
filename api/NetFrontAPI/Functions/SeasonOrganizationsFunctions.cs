@@ -16,13 +16,6 @@ namespace NetFrontAPI.Functions
 {
     public class SeasonOrganizationsFunctions
     {
-        private static readonly HashSet<string> AllowedParticipationTypes = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "Managed",
-            "External",
-            "NotParticipating"
-        };
-
         private readonly ISqlConnectionFactory _connectionFactory;
         private readonly IAuthorizationService _authorizationService;
 
@@ -52,10 +45,10 @@ namespace NetFrontAPI.Functions
                     o.Name AS OrganizationName,
                     o.Abbreviation,
                     o.IsActive AS DirectoryIsActive,
-                    CASE
-                        WHEN LOWER(LTRIM(RTRIM(o.Name))) IN ('external', 'external team') THEN 'External'
-                        ELSE COALESCE(so.ParticipationType, 'NotParticipating')
-                    END AS ParticipationType,
+                    o.OrganizationType,
+                    CAST(CASE WHEN so.ParticipationType IS NOT NULL AND so.ParticipationType <> 'NotParticipating' THEN 1 ELSE 0 END AS bit) AS IsParticipating,
+                    CASE WHEN so.ParticipationType IS NOT NULL AND so.ParticipationType <> 'NotParticipating'
+                        THEN o.OrganizationType ELSE 'NotParticipating' END AS ParticipationType,
                     COUNT(t.Id) AS TeamCount
                 FROM dbo.Organizations o
                 LEFT JOIN dbo.SeasonOrganizations so
@@ -69,6 +62,7 @@ namespace NetFrontAPI.Functions
                     o.Name,
                     o.Abbreviation,
                     o.IsActive,
+                    o.OrganizationType,
                     so.ParticipationType
                 ORDER BY o.Name;";
 
@@ -96,14 +90,6 @@ namespace NetFrontAPI.Functions
             if (duplicateOrganization != null)
                 return await AuthorizationHelper.BadRequestResponse(req, "Each organization can appear only once");
 
-            if (body.Organizations.Any(item =>
-                !AllowedParticipationTypes.Contains(item.ParticipationType?.Trim() ?? string.Empty)))
-            {
-                return await AuthorizationHelper.BadRequestResponse(
-                    req,
-                    "Participation type must be Managed, External, or NotParticipating");
-            }
-
             using var connection = _connectionFactory.CreateConnection();
             if (!await SeasonExists(connection, seasonId))
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -112,7 +98,7 @@ namespace NetFrontAPI.Functions
             var validOrganizations = organizationIds.Length == 0
                 ? new List<SeasonOrganizationDirectoryRow>()
                 : (await connection.QueryAsync<SeasonOrganizationDirectoryRow>(@"
-                    SELECT OrganizationId, Name
+                    SELECT OrganizationId, Name, OrganizationType
                     FROM dbo.Organizations
                     WHERE OrganizationId IN @OrganizationIds;",
                     new { OrganizationIds = organizationIds })).ToList();
@@ -154,38 +140,11 @@ namespace NetFrontAPI.Functions
                     {
                         SeasonId = seasonId,
                         item.OrganizationId,
-                        ParticipationType = IsExternalDirectoryOrganization(organizationsById[item.OrganizationId].Name)
-                            ? "External"
-                            : NormalizeParticipationType(item.ParticipationType)
+                        ParticipationType = IsParticipating(item)
+                            ? NormalizeOrganizationType(organizationsById[item.OrganizationId].OrganizationType)
+                            : "NotParticipating"
                     }, transaction);
                 }
-
-                await connection.ExecuteAsync(@"
-                    INSERT INTO dbo.SeasonOrganizations
-                    (
-                        SeasonId,
-                        OrganizationId,
-                        ParticipationType,
-                        CreatedAt,
-                        UpdatedAt
-                    )
-                    SELECT
-                        @SeasonId,
-                        o.OrganizationId,
-                        'External',
-                        SYSUTCDATETIME(),
-                        SYSUTCDATETIME()
-                    FROM dbo.Organizations o
-                    WHERE LOWER(LTRIM(RTRIM(o.Name))) IN ('external', 'external team')
-                      AND NOT EXISTS
-                      (
-                          SELECT 1
-                          FROM dbo.SeasonOrganizations so
-                          WHERE so.SeasonId = @SeasonId
-                            AND so.OrganizationId = o.OrganizationId
-                      );",
-                    new { SeasonId = seasonId },
-                    transaction);
 
                 transaction.Commit();
             }
@@ -223,24 +182,24 @@ namespace NetFrontAPI.Functions
                 new { SeasonId = seasonId });
         }
 
-        private static string NormalizeParticipationType(string participationType)
+        private static bool IsParticipating(SaveSeasonOrganizationDto item)
         {
-            if (participationType.Equals("Managed", StringComparison.OrdinalIgnoreCase)) return "Managed";
-            if (participationType.Equals("External", StringComparison.OrdinalIgnoreCase)) return "External";
-            return "NotParticipating";
+            return item.IsParticipating ??
+                !string.Equals(item.ParticipationType, "NotParticipating", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsExternalDirectoryOrganization(string? organizationName)
+        private static string NormalizeOrganizationType(string? organizationType)
         {
-            var normalized = organizationName?.Trim();
-            return string.Equals(normalized, "External", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(normalized, "External Team", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(organizationType, "External", StringComparison.OrdinalIgnoreCase)
+                ? "External"
+                : "Managed";
         }
 
         private sealed class SeasonOrganizationDirectoryRow
         {
             public Guid OrganizationId { get; set; }
             public string Name { get; set; } = string.Empty;
+            public string OrganizationType { get; set; } = "Managed";
         }
     }
 }

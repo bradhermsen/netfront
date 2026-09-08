@@ -58,27 +58,7 @@ namespace NetFrontAPI.Repositories
                 END;
 
                 INSERT INTO Seasons (SeasonId, SeasonName, StartDate, EndDate, IsActive)
-                VALUES (@SeasonId, @SeasonName, @StartDate, @EndDate, @IsActive);
-
-                IF OBJECT_ID(N'dbo.SeasonOrganizations', N'U') IS NOT NULL
-                BEGIN
-                    INSERT INTO dbo.SeasonOrganizations
-                    (
-                        SeasonId,
-                        OrganizationId,
-                        ParticipationType,
-                        CreatedAt,
-                        UpdatedAt
-                    )
-                    SELECT
-                        @SeasonId,
-                        o.OrganizationId,
-                        'External',
-                        SYSUTCDATETIME(),
-                        SYSUTCDATETIME()
-                    FROM dbo.Organizations o
-                    WHERE LOWER(LTRIM(RTRIM(o.Name))) IN ('external', 'external team');
-                END;";
+                VALUES (@SeasonId, @SeasonName, @StartDate, @EndDate, @IsActive);";
 
             await _db.ExecuteAsync(sql, new
             {

@@ -201,46 +201,36 @@ async function deleteSeason(id) {
 function renderSeasonOrganizations() {
   const container = document.getElementById("seasonOrganizationsList");
   const search = (document.getElementById("season-organizations-search")?.value || "").trim().toLowerCase();
-  seasonsState.organizations.forEach((organization) => {
-    const isExternalDirectory = ["external", "external team"].includes(
-      String(organization.organizationName || "").trim().toLowerCase(),
-    );
-    if (isExternalDirectory) organization.participationType = "External";
-  });
   const organizations = seasonsState.organizations.filter((organization) =>
     !search || JSON.stringify(organization).toLowerCase().includes(search),
   );
 
   document.getElementById("seasonOrganizationsCount").textContent =
-    `${seasonsState.organizations.filter((item) => item.participationType === "Managed").length} managed · ` +
-    `${seasonsState.organizations.filter((item) => item.participationType === "External").length} external · ` +
-    `${seasonsState.organizations.filter((item) => item.participationType === "NotParticipating").length} not participating`;
+    `${seasonsState.organizations.filter((item) => item.isParticipating).length} participating · ` +
+    `${seasonsState.organizations.filter((item) => !item.isParticipating).length} not participating`;
 
   container.innerHTML = organizations.length
-    ? organizations.map((organization) => {
-      const isExternalDirectory = ["external", "external team"].includes(
-        String(organization.organizationName || "").trim().toLowerCase(),
-      );
-      return `
+    ? organizations.map((organization) => `
       <div class="season-organization-row">
         <div class="season-organization-meta">
           <strong>${escapeSeasonHtml(organization.organizationName)}</strong>
-          <span>${escapeSeasonHtml(organization.abbreviation || "No abbreviation")} · ${organization.teamCount || 0} destination-season teams${organization.directoryIsActive ? "" : " · Directory inactive"}</span>
+          <span>${organization.organizationType === "External" ? "External Organization" : "Managed Organization"} · ${organization.teamCount || 0} destination-season teams${organization.directoryIsActive ? "" : " · Directory inactive"}</span>
         </div>
-        <select class="nf-select season-organization-participation" data-id="${organization.organizationId}" ${isExternalDirectory ? "disabled" : ""}>
-          <option value="Managed" ${organization.participationType === "Managed" ? "selected" : ""}>Managed</option>
-          <option value="External" ${organization.participationType === "External" ? "selected" : ""}>External</option>
-          <option value="NotParticipating" ${organization.participationType === "NotParticipating" ? "selected" : ""}>Not Participating</option>
-        </select>
+        <label class="checkbox-inline season-participation-toggle">
+          <input class="season-organization-participation" type="checkbox" data-id="${organization.organizationId}" ${organization.isParticipating ? "checked" : ""} />
+          Participating
+        </label>
       </div>
-    `;
-    }).join("")
+    `).join("")
     : '<div class="nf-empty-state">No organizations match your search.</div>';
 
-  container.querySelectorAll(".season-organization-participation").forEach((select) => {
-    select.onchange = () => {
-      const organization = seasonsState.organizations.find((item) => item.organizationId === select.dataset.id);
-      if (organization) organization.participationType = select.value;
+  container.querySelectorAll(".season-organization-participation").forEach((checkbox) => {
+    checkbox.onchange = () => {
+      const organization = seasonsState.organizations.find((item) => item.organizationId === checkbox.dataset.id);
+      if (organization) {
+        organization.isParticipating = checkbox.checked;
+        organization.participationType = checkbox.checked ? organization.organizationType : "NotParticipating";
+      }
       renderSeasonOrganizations();
     };
   });
@@ -278,10 +268,8 @@ function closeSeasonOrganizations() {
 
 function setAllSeasonOrganizations(participationType) {
   seasonsState.organizations.forEach((organization) => {
-    const isExternalDirectory = ["external", "external team"].includes(
-      String(organization.organizationName || "").trim().toLowerCase(),
-    );
-    organization.participationType = isExternalDirectory ? "External" : participationType;
+    organization.isParticipating = participationType !== "NotParticipating";
+    organization.participationType = organization.isParticipating ? organization.organizationType : "NotParticipating";
   });
   renderSeasonOrganizations();
 }
@@ -295,6 +283,7 @@ async function saveSeasonOrganizations() {
       seasonsState.setupSeasonId,
       seasonsState.organizations.map((organization) => ({
         organizationId: organization.organizationId,
+        isParticipating: organization.isParticipating,
         participationType: organization.participationType,
       })),
     );
@@ -338,11 +327,8 @@ function renderOrganizationImportCandidates() {
           <strong>${escapeSeasonHtml(organization.organizationName)}</strong>
           <span>${escapeSeasonHtml(organization.abbreviation || "No abbreviation")} · ${organization.teamCount || 0} prior teams</span>
         </div>
-        <span>${organization.priorParticipationType === "Managed" ? "Managed" : "External"}</span>
-        <select class="nf-select season-organization-import-type" data-id="${organization.organizationId}">
-          <option value="Managed" ${organization.destinationParticipationType === "Managed" ? "selected" : ""}>Managed</option>
-          <option value="External" ${organization.destinationParticipationType === "External" ? "selected" : ""}>External</option>
-        </select>
+        <span>${organization.organizationType === "External" ? "External Organization" : "Managed Organization"}</span>
+        <span>Participating</span>
       </div>
     `).join("")
     : '<div class="nf-empty-state">No organizations match the current filters.</div>';
@@ -352,12 +338,6 @@ function renderOrganizationImportCandidates() {
       if (checkbox.checked) seasonsState.selectedOrganizationIds.add(checkbox.value);
       else seasonsState.selectedOrganizationIds.delete(checkbox.value);
       renderOrganizationImportCandidates();
-    };
-  });
-  container.querySelectorAll(".season-organization-import-type").forEach((select) => {
-    select.onchange = () => {
-      const organization = seasonsState.organizationImportCandidates.find((item) => item.organizationId === select.dataset.id);
-      if (organization) organization.destinationParticipationType = select.value;
     };
   });
 }
@@ -373,12 +353,10 @@ async function loadOrganizationImportCandidates() {
   try {
     const sourceOrganizations = await SeasonsApi.getOrganizations(sourceSeasonId);
     seasonsState.organizationImportCandidates = sourceOrganizations
-      .filter((organization) => organization.participationType !== "NotParticipating")
-      .filter((organization) => !["external", "external team"].includes(String(organization.organizationName || "").trim().toLowerCase()))
+      .filter((organization) => organization.isParticipating)
       .map((organization) => ({
         ...organization,
-        priorParticipationType: organization.participationType,
-        destinationParticipationType: organization.participationType,
+        priorParticipationType: organization.organizationType,
       }));
     renderOrganizationImportCandidates();
   } catch (error) {
@@ -455,11 +433,14 @@ async function importSelectedOrganizations() {
   const importedById = new Map(
     seasonsState.organizationImportCandidates
       .filter((organization) => seasonsState.selectedOrganizationIds.has(organization.organizationId))
-      .map((organization) => [organization.organizationId, organization.destinationParticipationType]),
+      .map((organization) => [organization.organizationId, true]),
   );
   const mergedOrganizations = seasonsState.organizationImportTargetOrganizations.map((organization) => ({
     organizationId: organization.organizationId,
-    participationType: importedById.get(organization.organizationId) || organization.participationType,
+    isParticipating: importedById.get(organization.organizationId) || organization.isParticipating,
+    participationType: importedById.get(organization.organizationId)
+      ? organization.organizationType
+      : organization.participationType,
   }));
 
   const saveButton = document.getElementById("seasonOrganizationImportSave");

@@ -321,6 +321,8 @@ namespace NetFrontAPI.Functions
                 var team = await _service.GetByIdAsync(id);
                 if (team == null)
                     return req.CreateResponse(HttpStatusCode.NotFound);
+                if (string.Equals(team.OrganizationType, "External", StringComparison.OrdinalIgnoreCase))
+                    return await AuthorizationHelper.BadRequestResponse(req, "Access codes are available only for Managed Organizations");
 
                 // Generate new access codes
                 var gameManagerCode = _accessCodeService.GenerateGameManagerCode();

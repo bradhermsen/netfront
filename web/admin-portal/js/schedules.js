@@ -345,7 +345,7 @@ function populateOpponentOrganizationDropdown(selectedOpponentId = "") {
   select.innerHTML = `<option value="">All Organizations</option>${getOrganizations()
     .map((org) => `<option value="${org.organizationId}">${org.organizationName}</option>`)
     .join("")}<option value="external">External Teams</option>`;
-  select.value = selectedOpponent?.isExternal || !selectedOpponent?.organizationId
+  select.value = selectedOpponent?.organizationType === "External" || !selectedOpponent?.organizationId
     ? "external"
     : selectedOpponent?.organizationId || "";
 }
@@ -372,7 +372,7 @@ function populateGameTeamDropdowns({ selectedHomeTeamId = "", selectedAwayTeamId
     .filter((team) => (normalizeTeamTypeValue(team.teamType) || normalizeTeamTypeValue(team.gender)) === organizationTeamType)
     .filter((team) => organizationTeam?.levelId ? team.levelId === organizationTeam.levelId : team.levelName === organizationTeam?.levelName)
     .filter((team) => opponentOrganization === "external"
-      ? team.isExternal || !team.organizationId
+      ? team.organizationType === "External"
       : !opponentOrganization || team.organizationId === opponentOrganization)
     .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
   opponentSelect.innerHTML = opponents.map((team) => `<option value="${team.teamId}">${teamLabel(team)}</option>`).join("");

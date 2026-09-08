@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using NetFrontAPI.DTOs;
 using NetFrontAPI.Infrastructure.Database;
 using NetFrontAPI.Services;
 
@@ -52,6 +53,7 @@ namespace NetFrontAPI.Functions
                     item.Name,
                     item.Abbreviation,
                     item.Mascot,
+                    item.OrganizationType,
                     item.IsActive,
                 });
 
@@ -89,26 +91,34 @@ namespace NetFrontAPI.Functions
             var seasonId = ParseGuid(query, "seasonId");
             var teamType = ParseString(query, "teamType");
             var organizations = (await _organizationService.GetAllAsync())
-                .ToDictionary(item => item.OrganizationId, item => item.LeagueId);
+                .ToDictionary(item => item.OrganizationId);
 
             var teams = (await _teamsService.GetAllAsync())
                 .Where(team => !organizationId.HasValue || team.OrganizationId == organizationId.Value)
                 .Where(team => !seasonId.HasValue || team.SeasonId == seasonId.Value)
                 .Where(team => string.IsNullOrWhiteSpace(teamType) || string.Equals(team.TeamType, teamType, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(team => team.Name)
-                .Select(team => new
+                .Select(team =>
                 {
-                    team.TeamId,
-                    team.OrganizationId,
-                    LeagueId = team.OrganizationId.HasValue && organizations.TryGetValue(team.OrganizationId.Value, out var leagueId)
-                        ? leagueId
-                        : Guid.Empty,
-                    team.SeasonId,
-                    team.Name,
-                    team.TeamType,
-                    team.LevelName,
-                    team.TeamMascot,
-                    team.IsActive,
+                    OrganizationListItemDto? organization = null;
+                    if (team.OrganizationId.HasValue)
+                    {
+                        organizations.TryGetValue(team.OrganizationId.Value, out organization);
+                    }
+
+                    return new
+                    {
+                        team.TeamId,
+                        team.OrganizationId,
+                        LeagueId = organization?.LeagueId ?? Guid.Empty,
+                        OrganizationType = organization?.OrganizationType ?? "Managed",
+                        team.SeasonId,
+                        team.Name,
+                        team.TeamType,
+                        team.LevelName,
+                        team.TeamMascot,
+                        team.IsActive,
+                    };
                 });
 
             var response = req.CreateResponse(HttpStatusCode.OK);

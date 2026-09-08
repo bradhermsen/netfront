@@ -39,15 +39,22 @@ export function MiniScoreboard({
   currentPeriodNumber,
   isInProgress = false,
 }: Props) {
-  const statusText = String(statusLabel || "").trim().toUpperCase();
-  const periodText = String(periodLabel || "").trim().toUpperCase();
+  const statusText = String(statusLabel || "")
+    .trim()
+    .toUpperCase();
+  const periodText = String(periodLabel || "")
+    .trim()
+    .toUpperCase();
   const statusDetailText = String(statusDetail || "").trim();
 
   function formatPeriodShots(value: number | undefined, period: 1 | 2 | 3) {
     if (typeof value === "number") {
       return String(value);
     }
-    if (typeof currentPeriodNumber === "number" && period > currentPeriodNumber) {
+    if (
+      typeof currentPeriodNumber === "number" &&
+      period > currentPeriodNumber
+    ) {
       return "--";
     }
     return "0";
@@ -56,17 +63,26 @@ export function MiniScoreboard({
   return (
     <section className="game-view-scoreboard-card" aria-label="Mini Scoreboard">
       <div className="game-view-mini-statusbar">
-        <span className="game-view-mini-status-dot" aria-hidden="true">•</span>
-        {periodText ? <span className="game-view-mini-period-token">{periodText}</span> : null}
+        <span className="game-view-mini-status-dot" aria-hidden="true">
+          •
+        </span>
+        {periodText ? (
+          <span className="game-view-mini-period-token">{periodText}</span>
+        ) : null}
         {statusText ? (
-          <span className={`game-view-mini-status-pill ${isInProgress ? "is-live" : ""}`}>
+          <span
+            className={`game-view-mini-status-pill ${isInProgress ? "is-live" : ""}`}
+          >
             {statusText}
           </span>
         ) : null}
       </div>
 
       {statusDetailText ? (
-        <div className="game-view-mini-status-detail" aria-label="Current game situation">
+        <div
+          className="game-view-mini-status-detail"
+          aria-label="Current game situation"
+        >
           {statusDetailText}
         </div>
       ) : null}
@@ -95,7 +111,10 @@ export function MiniScoreboard({
 
       <div className="game-view-mini-row-divider" aria-hidden="true" />
 
-      <div className="game-view-mini-shots-grid" aria-label="Shots on goal by period">
+      <div
+        className="game-view-mini-shots-grid"
+        aria-label="Shots on goal by period"
+      >
         <div className="game-view-mini-shots-grid-header">
           <span className="game-view-mini-shots-h-sog">SOG</span>
           <span>P1</span>

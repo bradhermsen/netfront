@@ -131,6 +131,641 @@ body,
   width: auto;
 }
 
+.game-manager-promo-link {
+  align-items: center;
+  color: #f2f6ff;
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 2px;
+  text-decoration: none;
+}
+
+.game-manager-promo-kicker {
+  color: #9cb6da;
+  font-size: 0.72rem;
+}
+
+.game-manager-promo-action {
+  border-bottom: 1px solid #f26f21;
+  color: #f26f21;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding-bottom: 2px;
+}
+
+.game-manager-promo-link:focus-visible,
+.game-manager-marketing-back:focus-visible,
+.game-manager-marketing-nav-cta:focus-visible,
+.game-manager-marketing-primary:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 4px;
+}
+
+.game-manager-marketing-root {
+  background: #081323;
+  color: #f2f6ff;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.game-manager-marketing-nav {
+  align-items: center;
+  background: rgba(8, 19, 35, 0.96);
+  border-bottom: 1px solid rgba(242, 111, 33, 0.48);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  min-height: 64px;
+  padding: 0 28px;
+  position: relative;
+  z-index: 3;
+}
+
+.game-manager-marketing-mark {
+  height: 38px;
+  width: 38px;
+}
+
+.game-manager-marketing-back,
+.game-manager-marketing-nav-cta {
+  background: none;
+  border: 0;
+  color: #dce8fa;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 10px 0;
+  text-decoration: none;
+}
+
+.game-manager-marketing-back {
+  justify-self: start;
+}
+
+.game-manager-marketing-nav-cta {
+  color: #f26f21;
+  justify-self: end;
+}
+
+.game-manager-marketing-hero {
+  align-items: flex-end;
+  display: flex;
+  height: min(760px, calc(100vh - 120px));
+  min-height: 620px;
+  overflow: hidden;
+  position: relative;
+}
+
+.game-manager-marketing-hero > img {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  object-position: center 16%;
+  position: absolute;
+  width: 100%;
+}
+
+.game-manager-marketing-hero-shade {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(4, 12, 24, 0.98) 0%,
+      rgba(4, 12, 24, 0.88) 34%,
+      rgba(4, 12, 24, 0.24) 72%
+    ),
+    linear-gradient(0deg, rgba(4, 12, 24, 0.86) 0%, transparent 48%);
+  inset: 0;
+  position: absolute;
+}
+
+.game-manager-marketing-hero-content {
+  max-width: 610px;
+  padding: 0 clamp(24px, 7vw, 110px) clamp(58px, 9vh, 100px);
+  position: relative;
+  z-index: 1;
+}
+
+.game-manager-marketing-eyebrow,
+.game-manager-marketing-step-copy > span {
+  color: #f26f21;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.game-manager-pilot-badge {
+  background: rgba(242, 111, 33, 0.14);
+  border-left: 3px solid #f26f21;
+  color: #ffd7bd;
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 900;
+  margin: 0 0 18px;
+  padding: 8px 11px;
+  text-transform: uppercase;
+}
+
+.game-manager-marketing-hero h1 {
+  font-size: clamp(2.8rem, 7vw, 6.6rem);
+  line-height: 0.94;
+  margin: 0;
+  max-width: 760px;
+}
+
+.game-manager-marketing-hook {
+  color: #ffffff;
+  font-size: clamp(1.3rem, 2.5vw, 2rem);
+  font-weight: 800;
+  margin: 22px 0 0;
+}
+
+.game-manager-marketing-lede {
+  color: #c8d7eb;
+  font-size: 1rem;
+  line-height: 1.65;
+  margin: 16px 0 28px;
+  max-width: 560px;
+}
+
+.game-manager-marketing-primary {
+  background: #f26f21;
+  border: 1px solid #f26f21;
+  border-radius: 6px;
+  color: #081323;
+  cursor: pointer;
+  display: inline-block;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  padding: 13px 18px;
+  text-decoration: none;
+}
+
+.game-manager-marketing-intro,
+.game-manager-marketing-final-cta {
+  margin: 0 auto;
+  max-width: 820px;
+  padding: 92px 24px;
+  text-align: center;
+}
+
+.game-manager-marketing-intro h2,
+.game-manager-marketing-step h2,
+.game-manager-marketing-closeout h2,
+.game-manager-marketing-admin h2,
+.game-manager-marketing-final-cta h2 {
+  font-size: clamp(1.8rem, 4vw, 3.6rem);
+  line-height: 1.08;
+  margin: 0;
+}
+
+.game-manager-marketing-intro > p:last-child,
+.game-manager-marketing-step-copy > p,
+.game-manager-marketing-admin-copy > p:last-child,
+.game-manager-gateway-copy > p:last-child,
+.game-manager-pilot-form-intro > p:last-child {
+  color: #aebfd8;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.game-manager-pilot-band {
+  align-items: center;
+  background: #f26f21;
+  color: #081323;
+  display: grid;
+  gap: 30px;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(320px, 1.1fr) auto;
+  padding: 42px max(28px, calc((100vw - 1240px) / 2));
+}
+
+.game-manager-pilot-band .game-manager-marketing-eyebrow {
+  color: #5a2709;
+}
+
+.game-manager-pilot-band h2 {
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  line-height: 1.08;
+  margin: 0;
+}
+
+.game-manager-pilot-band > p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.game-manager-pilot-band .game-manager-marketing-primary {
+  background: #081323;
+  border-color: #081323;
+  color: #ffffff;
+  text-align: center;
+}
+
+.game-manager-marketing-step {
+  align-items: center;
+  border-top: 1px solid rgba(82, 113, 154, 0.34);
+  display: grid;
+  gap: clamp(38px, 7vw, 100px);
+  grid-template-columns: minmax(280px, 0.8fr) minmax(500px, 1.2fr);
+  margin: 0 auto;
+  max-width: 1280px;
+  padding: 90px 32px;
+}
+
+.game-manager-marketing-step-reverse .game-manager-marketing-step-copy {
+  order: 2;
+}
+
+.game-manager-marketing-step-copy ul {
+  color: #dce8fa;
+  display: grid;
+  gap: 10px;
+  line-height: 1.5;
+  margin: 26px 0 0;
+  padding-left: 20px;
+}
+
+.game-manager-marketing-device-pair {
+  align-items: flex-start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-manager-marketing-device-pair figure {
+  margin: 0;
+  min-width: 0;
+}
+
+.game-manager-marketing-device-pair img {
+  border: 1px solid rgba(242, 111, 33, 0.42);
+  border-radius: 8px;
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.game-manager-marketing-device-pair figure:nth-child(2) {
+  margin-top: 54px;
+}
+
+.game-manager-marketing-device-pair figcaption {
+  color: #7f97b9;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+.game-manager-feature-focus {
+  align-items: center;
+  background: #0d1b30;
+  border-top: 1px solid rgba(82, 113, 154, 0.34);
+  display: grid;
+  gap: clamp(42px, 8vw, 120px);
+  grid-template-columns: minmax(420px, 1.15fr) minmax(280px, 0.85fr);
+  padding: 96px max(28px, calc((100vw - 1240px) / 2));
+}
+
+.game-manager-feature-focus-reverse {
+  background: #081323;
+  grid-template-columns: minmax(280px, 0.75fr) minmax(520px, 1.25fr);
+}
+
+.game-manager-feature-focus-reverse .game-manager-feature-focus-image {
+  order: 2;
+}
+
+.game-manager-feature-focus-image {
+  justify-self: center;
+  max-width: 620px;
+  width: 100%;
+}
+
+.game-manager-feature-focus-image-wide {
+  max-width: 720px;
+}
+
+.game-manager-feature-focus-image img {
+  border: 1px solid rgba(242, 111, 33, 0.42);
+  border-radius: 8px;
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.game-manager-marketing-closeout,
+.game-manager-marketing-admin {
+  align-items: center;
+  background: #0d1b30;
+  display: grid;
+  gap: clamp(40px, 8vw, 120px);
+  grid-template-columns: minmax(400px, 1.1fr) minmax(280px, 0.9fr);
+  padding: 96px max(28px, calc((100vw - 1240px) / 2));
+}
+
+.game-manager-marketing-closeout-image img {
+  border: 1px solid rgba(242, 111, 33, 0.42);
+  border-radius: 8px;
+  display: block;
+  width: 100%;
+}
+
+.game-manager-marketing-admin {
+  background: #081323;
+  grid-template-columns: minmax(300px, 1fr) minmax(240px, 0.5fr);
+}
+
+.game-manager-marketing-admin img {
+  border: 1px solid #274a7a;
+  border-radius: 8px;
+  justify-self: center;
+  max-height: 680px;
+  max-width: 100%;
+}
+
+.game-manager-gateway-section {
+  align-items: center;
+  background: #0d1b30;
+  border-top: 1px solid rgba(82, 113, 154, 0.34);
+  display: grid;
+  gap: clamp(42px, 8vw, 120px);
+  grid-template-columns: minmax(300px, 0.85fr) minmax(480px, 1.15fr);
+  padding: 96px max(28px, calc((100vw - 1240px) / 2));
+}
+
+.game-manager-gateway-copy h2 {
+  font-size: clamp(1.8rem, 4vw, 3.6rem);
+  line-height: 1.08;
+  margin: 0;
+}
+
+.game-manager-gateway-paths {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.game-manager-gateway-path {
+  border: 1px solid #3a557a;
+  border-radius: 8px;
+  min-height: 190px;
+  padding: 24px;
+}
+
+.game-manager-gateway-path-accent {
+  border-color: #f26f21;
+}
+
+.game-manager-gateway-path > span {
+  color: #8eabd0;
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 900;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.game-manager-gateway-path > strong {
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.game-manager-gateway-path > p {
+  color: #aebfd8;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  margin: 14px 0 0;
+}
+
+.game-manager-gateway-connector {
+  align-self: center;
+  color: #f26f21;
+  font-size: 0.74rem;
+  font-weight: 900;
+  padding: 0 12px;
+  text-transform: uppercase;
+}
+
+.game-manager-marketing-final-cta {
+  border-top: 1px solid rgba(82, 113, 154, 0.34);
+  display: grid;
+  gap: 44px;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(420px, 1.2fr);
+  max-width: 1180px;
+  text-align: left;
+}
+
+.game-manager-marketing-final-cta h2 {
+  margin-bottom: 22px;
+}
+
+.game-manager-pilot-form {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-manager-pilot-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.game-manager-pilot-field-wide,
+.game-manager-pilot-submit-row {
+  grid-column: 1 / -1;
+}
+
+.game-manager-pilot-field label {
+  color: #dce8fa;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.game-manager-pilot-field input,
+.game-manager-pilot-field select,
+.game-manager-pilot-field textarea {
+  background: #0d1b30;
+  border: 1px solid #3a557a;
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: #f2f6ff;
+  font: inherit;
+  min-height: 44px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.game-manager-pilot-field textarea {
+  min-height: 94px;
+  resize: vertical;
+}
+
+.game-manager-pilot-field input:focus,
+.game-manager-pilot-field select:focus,
+.game-manager-pilot-field textarea:focus {
+  border-color: #f26f21;
+  outline: 2px solid rgba(242, 111, 33, 0.22);
+}
+
+.game-manager-pilot-honeypot {
+  height: 0;
+  left: -9999px;
+  overflow: hidden;
+  position: absolute;
+  width: 0;
+}
+
+.game-manager-pilot-submit-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.game-manager-pilot-submit-row button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.game-manager-pilot-status {
+  color: #aebfd8;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.game-manager-pilot-status.success {
+  color: #7ee2a8;
+}
+
+.game-manager-pilot-status.error {
+  color: #ff9b9b;
+}
+
+.game-manager-pilot-privacy {
+  color: #7f97b9;
+  font-size: 0.7rem;
+  grid-column: 1 / -1;
+  line-height: 1.5;
+  margin: -4px 0 0;
+}
+
+@media (max-width: 820px) {
+  .game-manager-marketing-nav {
+    padding: 0 16px;
+  }
+
+  .game-manager-marketing-nav-cta {
+    display: none;
+  }
+
+  .game-manager-marketing-nav {
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .game-manager-marketing-hero {
+    height: calc(100vh - 130px);
+    min-height: 570px;
+  }
+
+  .game-manager-marketing-hero > img {
+    object-position: 58% top;
+  }
+
+  .game-manager-marketing-hero-shade {
+    background: linear-gradient(
+      0deg,
+      rgba(4, 12, 24, 0.99) 0%,
+      rgba(4, 12, 24, 0.9) 48%,
+      rgba(4, 12, 24, 0.18) 100%
+    );
+  }
+
+  .game-manager-marketing-hero-content {
+    padding: 0 22px 44px;
+  }
+
+  .game-manager-marketing-step,
+  .game-manager-feature-focus,
+  .game-manager-marketing-closeout,
+  .game-manager-marketing-admin,
+  .game-manager-gateway-section,
+  .game-manager-marketing-final-cta,
+  .game-manager-pilot-band {
+    grid-template-columns: 1fr;
+    padding: 68px 20px;
+  }
+
+  .game-manager-pilot-band {
+    gap: 20px;
+    padding-bottom: 42px;
+    padding-top: 42px;
+  }
+
+  .game-manager-pilot-band .game-manager-marketing-primary {
+    justify-self: start;
+  }
+
+  .game-manager-marketing-step-reverse .game-manager-marketing-step-copy {
+    order: 0;
+  }
+
+  .game-manager-feature-focus-reverse .game-manager-feature-focus-image {
+    order: 0;
+  }
+
+  .game-manager-marketing-device-pair {
+    gap: 10px;
+  }
+
+  .game-manager-marketing-device-pair figure:nth-child(2) {
+    margin-top: 24px;
+  }
+
+  .game-manager-marketing-closeout-image {
+    order: 2;
+  }
+
+  .game-manager-gateway-paths {
+    grid-template-columns: 1fr;
+  }
+
+  .game-manager-gateway-connector {
+    justify-self: center;
+    padding: 10px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-manager-marketing-back {
+    font-size: 0.7rem;
+  }
+
+  .game-manager-marketing-device-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .game-manager-marketing-device-pair figure:nth-child(2) {
+    margin-top: 0;
+  }
+
+  .game-manager-pilot-form {
+    grid-template-columns: 1fr;
+  }
+
+  .game-manager-pilot-field-wide,
+  .game-manager-pilot-submit-row,
+  .game-manager-pilot-privacy {
+    grid-column: auto;
+  }
+}
+
 .game-view-drawer-overlay {
   backdrop-filter: blur(3px);
   background: rgba(2, 8, 18, 0.7);
@@ -213,7 +848,9 @@ body,
     calc(100% - 17px) 50%,
     calc(100% - 12px) 50%;
   background-repeat: no-repeat;
-  background-size: 5px 5px, 5px 5px;
+  background-size:
+    5px 5px,
+    5px 5px;
   border: 1px solid #315988;
   border-radius: 6px;
   color: #f2f6ff;
@@ -915,7 +1552,6 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 
 .game-view-roster-grid-header span:nth-child(1),
 .game-view-roster-grid-header span:nth-child(2),

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { EventFeed } from "../components/EventFeed";
 import { GameViewBrand } from "../components/GameViewBrand";
 import { GameViewFooter } from "../components/GameViewFooter";
+import { GameManagerPromoLink } from "../components/GameManagerPromoLink";
 import { MiniScoreboard } from "../components/MiniScoreboard";
 import { RosterTabs, type RosterPlayerRow } from "../components/RosterTabs";
 import type { GameEventRow } from "../components/EventFeed";
@@ -13,7 +14,11 @@ import {
   getGameSummaryMobile,
   getTeams,
 } from "../api/gameViewApi";
-import type { ApiGameSummary, ApiGameSummaryReport, ApiTeamCoach } from "../types/gameView";
+import type {
+  ApiGameSummary,
+  ApiGameSummaryReport,
+  ApiTeamCoach,
+} from "../types/gameView";
 import "../styles/game-view.css";
 
 const FINAL_STATUS_KEYS = new Set(["final", "completed", "closed"]);
@@ -50,7 +55,9 @@ function parseClockToSeconds(timeInPeriod?: string): number {
 }
 
 function normalizeTeamType(raw?: string | null): string {
-  const value = String(raw || "").trim().toLowerCase();
+  const value = String(raw || "")
+    .trim()
+    .toLowerCase();
   if (value.startsWith("girl")) return "Girls";
   if (value.startsWith("boy")) return "Boys";
   return "";
@@ -107,7 +114,9 @@ function buildScoreFromSummary(
   let awayScore = 0;
 
   for (const goal of summary?.goals || []) {
-    const teamKey = String(goal.teamName || "").trim().toLowerCase();
+    const teamKey = String(goal.teamName || "")
+      .trim()
+      .toLowerCase();
     if (teamKey === homeKey) homeScore += 1;
     if (teamKey === awayKey) awayScore += 1;
   }
@@ -122,7 +131,10 @@ function isFinalStatus(status?: string): boolean {
   return FINAL_STATUS_KEYS.has(key);
 }
 
-function formatNumberAndName(numberValue: number | null | undefined, name: string): string {
+function formatNumberAndName(
+  numberValue: number | null | undefined,
+  name: string,
+): string {
   const player = String(name || "").trim() || "Unknown";
   if (typeof numberValue === "number" && Number.isFinite(numberValue)) {
     return `#${numberValue} ${player}`;
@@ -158,15 +170,20 @@ export function GameDetailScreen() {
   const [awayShotsP1, setAwayShotsP1] = useState<number | undefined>(undefined);
   const [awayShotsP2, setAwayShotsP2] = useState<number | undefined>(undefined);
   const [awayShotsP3, setAwayShotsP3] = useState<number | undefined>(undefined);
-  const [currentPeriodNumber, setCurrentPeriodNumber] = useState<number | undefined>(undefined);
-  const [activeRosterTab, setActiveRosterTab] = useState<"home" | "away">("home");
+  const [currentPeriodNumber, setCurrentPeriodNumber] = useState<
+    number | undefined
+  >(undefined);
+  const [activeRosterTab, setActiveRosterTab] = useState<"home" | "away">(
+    "home",
+  );
   const [homeRoster, setHomeRoster] = useState<RosterPlayerRow[]>([]);
   const [awayRoster, setAwayRoster] = useState<RosterPlayerRow[]>([]);
   const [homeCoaches, setHomeCoaches] = useState<ApiTeamCoach[]>([]);
   const [awayCoaches, setAwayCoaches] = useState<ApiTeamCoach[]>([]);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [events, setEvents] = useState<GameEventRow[]>([]);
-  const [summaryReport, setSummaryReport] = useState<ApiGameSummaryReport | null>(null);
+  const [summaryReport, setSummaryReport] =
+    useState<ApiGameSummaryReport | null>(null);
   const [goalieStatsNotice, setGoalieStatsNotice] = useState("");
   const rosterTabInitializedRef = useRef(false);
 
@@ -200,21 +217,19 @@ export function GameDetailScreen() {
 
       try {
         const game = await getGameById(gameId);
-        const [
-          summary,
-          teams,
-          rosterBundle,
-          coachesBundle,
-          reportResult,
-        ] = await Promise.all([
-          getGameSummaryMobile(gameId),
-          getTeams(),
-          getPublicGameRosters(gameId),
-          getPublicGameCoaches(gameId).catch(() => ({ homeCoaches: [], awayCoaches: [] })),
-          getGameSummaryReport(gameId)
-            .then((report) => ({ ok: true as const, report }))
-            .catch(() => ({ ok: false as const, report: null })),
-        ]);
+        const [summary, teams, rosterBundle, coachesBundle, reportResult] =
+          await Promise.all([
+            getGameSummaryMobile(gameId),
+            getTeams(),
+            getPublicGameRosters(gameId),
+            getPublicGameCoaches(gameId).catch(() => ({
+              homeCoaches: [],
+              awayCoaches: [],
+            })),
+            getGameSummaryReport(gameId)
+              .then((report) => ({ ok: true as const, report }))
+              .catch(() => ({ ok: false as const, report: null })),
+          ]);
 
         if (cancelled) return;
 
@@ -223,15 +238,32 @@ export function GameDetailScreen() {
         setHomeTeamName(nextHomeName);
         setAwayTeamName(nextAwayName);
 
-        const homeTeamMeta = teams.find((team) => String(team.teamId) === String(game.homeTeamId));
-        const awayTeamMeta = teams.find((team) => String(team.teamId) === String(game.awayTeamId));
-        const nextHomeDisplay = withMascot(nextHomeName, homeTeamMeta?.teamMascot || null);
-        const nextAwayDisplay = withMascot(nextAwayName, awayTeamMeta?.teamMascot || null);
+        const homeTeamMeta = teams.find(
+          (team) => String(team.teamId) === String(game.homeTeamId),
+        );
+        const awayTeamMeta = teams.find(
+          (team) => String(team.teamId) === String(game.awayTeamId),
+        );
+        const nextHomeDisplay = withMascot(
+          nextHomeName,
+          homeTeamMeta?.teamMascot || null,
+        );
+        const nextAwayDisplay = withMascot(
+          nextAwayName,
+          awayTeamMeta?.teamMascot || null,
+        );
         setHomeTeamDisplayName(nextHomeDisplay);
         setAwayTeamDisplayName(nextAwayDisplay);
-        const typeLabel = normalizeTeamType(homeTeamMeta?.teamType) || normalizeTeamType(awayTeamMeta?.teamType);
-        const levelLabel = String(homeTeamMeta?.levelName || awayTeamMeta?.levelName || "").trim();
-        const detailSuffix = [typeLabel, levelLabel].filter(Boolean).join(" ").trim();
+        const typeLabel =
+          normalizeTeamType(homeTeamMeta?.teamType) ||
+          normalizeTeamType(awayTeamMeta?.teamType);
+        const levelLabel = String(
+          homeTeamMeta?.levelName || awayTeamMeta?.levelName || "",
+        ).trim();
+        const detailSuffix = [typeLabel, levelLabel]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
 
         setGameTitle(
           detailSuffix
@@ -241,9 +273,12 @@ export function GameDetailScreen() {
 
         const periodCandidates = [
           ...(summary?.goals?.map((goal) => Number(goal.period)) || []),
-          ...(summary?.penalties?.map((penalty) => Number(penalty.period)) || []),
+          ...(summary?.penalties?.map((penalty) => Number(penalty.period)) ||
+            []),
         ].filter((period) => Number.isFinite(period) && period > 0);
-        const maxPeriodFromEvents = periodCandidates.length ? Math.max(...periodCandidates) : undefined;
+        const maxPeriodFromEvents = periodCandidates.length
+          ? Math.max(...periodCandidates)
+          : undefined;
         const maxPeriodFromShots = [
           summary?.homeShotsP1,
           summary?.awayShotsP1,
@@ -253,9 +288,18 @@ export function GameDetailScreen() {
           summary?.awayShotsP3,
         ].some((value) => typeof value === "number")
           ? [
-              typeof summary?.homeShotsP3 === "number" || typeof summary?.awayShotsP3 === "number" ? 3 : 0,
-              typeof summary?.homeShotsP2 === "number" || typeof summary?.awayShotsP2 === "number" ? 2 : 0,
-              typeof summary?.homeShotsP1 === "number" || typeof summary?.awayShotsP1 === "number" ? 1 : 0,
+              typeof summary?.homeShotsP3 === "number" ||
+              typeof summary?.awayShotsP3 === "number"
+                ? 3
+                : 0,
+              typeof summary?.homeShotsP2 === "number" ||
+              typeof summary?.awayShotsP2 === "number"
+                ? 2
+                : 0,
+              typeof summary?.homeShotsP1 === "number" ||
+              typeof summary?.awayShotsP1 === "number"
+                ? 1
+                : 0,
             ].find((period) => period > 0)
           : undefined;
 
@@ -269,7 +313,11 @@ export function GameDetailScreen() {
           statusKey.includes("ongoing");
         setIsInProgress(isInProgress);
         setStatusLabel(
-          isIntermission ? "Intermission" : isInProgress ? "In Progress" : statusRaw,
+          isIntermission
+            ? "Intermission"
+            : isInProgress
+              ? "In Progress"
+              : statusRaw,
         );
 
         const currentFromStatus = inferCurrentPeriodFromStatus(statusRaw);
@@ -282,7 +330,11 @@ export function GameDetailScreen() {
         setCurrentPeriodNumber(resolvedCurrentPeriod);
         setPeriodLabel(toPeriodToken(resolvedCurrentPeriod));
 
-        const score = buildScoreFromSummary(summary, nextHomeName, nextAwayName);
+        const score = buildScoreFromSummary(
+          summary,
+          nextHomeName,
+          nextAwayName,
+        );
         setHomeScore(score.homeScore);
         setAwayScore(score.awayScore);
 
@@ -305,8 +357,12 @@ export function GameDetailScreen() {
 
         if (!rosterTabInitializedRef.current) {
           const selected = selectedTeamId.trim().toLowerCase();
-          const homeId = String(game.homeTeamId || "").trim().toLowerCase();
-          const awayId = String(game.awayTeamId || "").trim().toLowerCase();
+          const homeId = String(game.homeTeamId || "")
+            .trim()
+            .toLowerCase();
+          const awayId = String(game.awayTeamId || "")
+            .trim()
+            .toLowerCase();
           if (selected === awayId) {
             setActiveRosterTab("away");
           } else if (selected === homeId) {
@@ -368,7 +424,13 @@ export function GameDetailScreen() {
             if (periodDiff !== 0) return periodDiff;
             return b.sortTimeSeconds - a.sortTimeSeconds;
           })
-          .map(({ sortPeriod: _sortPeriod, sortTimeSeconds: _sortTimeSeconds, ...event }) => event);
+          .map(
+            ({
+              sortPeriod: _sortPeriod,
+              sortTimeSeconds: _sortTimeSeconds,
+              ...event
+            }) => event,
+          );
 
         setEvents(mappedEvents);
       } catch (error) {
@@ -419,8 +481,11 @@ export function GameDetailScreen() {
         </button>
 
         <GameViewBrand />
+        <GameManagerPromoLink />
 
-        <p className="game-view-subtitle">{gameTitle || "Loading matchup..."}</p>
+        <p className="game-view-subtitle">
+          {gameTitle || "Loading matchup..."}
+        </p>
       </header>
 
       <div className="game-view-header-separator" aria-hidden="true" />
@@ -459,18 +524,43 @@ export function GameDetailScreen() {
           {summaryReport && isFinalStatus(summaryReport.status) ? (
             <section className="game-view-section">
               <article className="game-view-summary-report-card">
-                <h2 className="game-view-section-title">Official Game Summary</h2>
+                <h2 className="game-view-section-title">
+                  Official Game Summary
+                </h2>
 
                 <div className="game-view-summary-meta-grid">
                   <p>
-                    <strong>Final Score:</strong> {summaryReport.awayTeamName} {summaryReport.awayGoals} - {summaryReport.homeGoals} {summaryReport.homeTeamName}
+                    <strong>Final Score:</strong> {summaryReport.awayTeamName}{" "}
+                    {summaryReport.awayGoals} - {summaryReport.homeGoals}{" "}
+                    {summaryReport.homeTeamName}
                   </p>
-                  <p><strong>Date:</strong> {new Date(summaryReport.gameDateTime).toLocaleString()}</p>
-                  <p><strong>League:</strong> {summaryReport.leagueName || "N/A"}</p>
-                  <p><strong>Team Type:</strong> {summaryReport.teamType || "N/A"}</p>
-                  <p><strong>Level:</strong> {summaryReport.homeLevelName || summaryReport.awayLevelName || "N/A"}</p>
-                  <p><strong>Venue:</strong> {formatVenue(summaryReport.arenaName, summaryReport.rinkName)}</p>
-                  <p><strong>Season:</strong> {summaryReport.seasonName || "N/A"}</p>
+                  <p>
+                    <strong>Date:</strong>{" "}
+                    {new Date(summaryReport.gameDateTime).toLocaleString()}
+                  </p>
+                  <p>
+                    <strong>League:</strong> {summaryReport.leagueName || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Team Type:</strong>{" "}
+                    {summaryReport.teamType || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Level:</strong>{" "}
+                    {summaryReport.homeLevelName ||
+                      summaryReport.awayLevelName ||
+                      "N/A"}
+                  </p>
+                  <p>
+                    <strong>Venue:</strong>{" "}
+                    {formatVenue(
+                      summaryReport.arenaName,
+                      summaryReport.rinkName,
+                    )}
+                  </p>
+                  <p>
+                    <strong>Season:</strong> {summaryReport.seasonName || "N/A"}
+                  </p>
                 </div>
 
                 <div className="game-view-summary-subsection">
@@ -480,8 +570,11 @@ export function GameDetailScreen() {
                   ) : (
                     <ul className="game-view-summary-list">
                       {summaryReport.goals.map((goal, idx) => (
-                        <li key={`${goal.period}-${goal.timeInPeriod}-${goal.teamName}-${idx}`}>
-                          P{goal.period} {goal.timeInPeriod} - {goal.teamName}: {formatNumberAndName(goal.scorerNumber, goal.scorer)}
+                        <li
+                          key={`${goal.period}-${goal.timeInPeriod}-${goal.teamName}-${idx}`}
+                        >
+                          P{goal.period} {goal.timeInPeriod} - {goal.teamName}:{" "}
+                          {formatNumberAndName(goal.scorerNumber, goal.scorer)}
                           {goal.assist1
                             ? ` (A: ${formatNumberAndName(goal.assist1Number, goal.assist1)}${goal.assist2 ? `, ${formatNumberAndName(goal.assist2Number, goal.assist2)}` : ""})`
                             : ""}
@@ -495,12 +588,21 @@ export function GameDetailScreen() {
                 <div className="game-view-summary-subsection">
                   <h3 className="game-view-summary-subtitle">Penalties</h3>
                   {summaryReport.penalties.length === 0 ? (
-                    <p className="game-view-empty-text">No penalties recorded.</p>
+                    <p className="game-view-empty-text">
+                      No penalties recorded.
+                    </p>
                   ) : (
                     <ul className="game-view-summary-list">
                       {summaryReport.penalties.map((penalty, idx) => (
-                        <li key={`${penalty.period}-${penalty.timeInPeriod}-${penalty.playerName}-${idx}`}>
-                          P{penalty.period} {penalty.timeInPeriod} - {penalty.teamName}: {formatNumberAndName(penalty.playerNumber, penalty.playerName)}
+                        <li
+                          key={`${penalty.period}-${penalty.timeInPeriod}-${penalty.playerName}-${idx}`}
+                        >
+                          P{penalty.period} {penalty.timeInPeriod} -{" "}
+                          {penalty.teamName}:{" "}
+                          {formatNumberAndName(
+                            penalty.playerNumber,
+                            penalty.playerName,
+                          )}
                           {` (${penalty.infraction}, ${penalty.durationMinutes} min${penalty.penaltyType ? `, ${penalty.penaltyType}` : ""})`}
                           {penalty.notes ? ` - Notes: ${penalty.notes}` : ""}
                         </li>
@@ -510,14 +612,22 @@ export function GameDetailScreen() {
                 </div>
 
                 <div className="game-view-summary-subsection">
-                  <h3 className="game-view-summary-subtitle">Goalie Shots By Period</h3>
+                  <h3 className="game-view-summary-subtitle">
+                    Goalie Shots By Period
+                  </h3>
                   {summaryReport.goalies.length === 0 ? (
-                    <p className="game-view-empty-text">No goalie shot breakdown recorded.</p>
+                    <p className="game-view-empty-text">
+                      No goalie shot breakdown recorded.
+                    </p>
                   ) : (
                     <ul className="game-view-summary-list">
                       {summaryReport.goalies.map((goalie, idx) => (
-                        <li key={`${goalie.teamName}-${goalie.goalieName}-${idx}`}>
-                          {goalie.teamName}: {goalie.goalieName} (P1 {goalie.p1}, P2 {goalie.p2}, P3 {goalie.p3}, OT {goalie.ot}, Total {goalie.total})
+                        <li
+                          key={`${goalie.teamName}-${goalie.goalieName}-${idx}`}
+                        >
+                          {goalie.teamName}: {goalie.goalieName} (P1 {goalie.p1}
+                          , P2 {goalie.p2}, P3 {goalie.p3}, OT {goalie.ot},
+                          Total {goalie.total})
                         </li>
                       ))}
                     </ul>
@@ -527,12 +637,17 @@ export function GameDetailScreen() {
                 <div className="game-view-summary-subsection">
                   <h3 className="game-view-summary-subtitle">Officials</h3>
                   {summaryReport.officials.length === 0 ? (
-                    <p className="game-view-empty-text">No officials recorded.</p>
+                    <p className="game-view-empty-text">
+                      No officials recorded.
+                    </p>
                   ) : (
                     <ul className="game-view-summary-list">
                       {summaryReport.officials.map((official, idx) => (
-                        <li key={`${official.role}-${official.officialName}-${idx}`}>
-                          {official.role}: {official.officialName || "Unassigned"}
+                        <li
+                          key={`${official.role}-${official.officialName}-${idx}`}
+                        >
+                          {official.role}:{" "}
+                          {official.officialName || "Unassigned"}
                         </li>
                       ))}
                     </ul>
@@ -540,17 +655,31 @@ export function GameDetailScreen() {
                 </div>
 
                 <div className="game-view-summary-subsection">
-                  <h3 className="game-view-summary-subtitle">Suspension Reviews</h3>
+                  <h3 className="game-view-summary-subtitle">
+                    Suspension Reviews
+                  </h3>
                   {summaryReport.suspensionReviews.length === 0 ? (
-                    <p className="game-view-empty-text">No suspension review items.</p>
+                    <p className="game-view-empty-text">
+                      No suspension review items.
+                    </p>
                   ) : (
                     <ul className="game-view-summary-list">
                       {summaryReport.suspensionReviews.map((item, idx) => (
-                        <li key={`${item.period}-${item.timeInPeriod}-${item.playerName}-${idx}`}>
-                          P{item.period} {item.timeInPeriod} - {item.teamName}: {formatNumberAndName(item.playerNumber, item.playerName)}
-                          {item.suspensionBehavior ? ` (${item.suspensionBehavior})` : ""}
+                        <li
+                          key={`${item.period}-${item.timeInPeriod}-${item.playerName}-${idx}`}
+                        >
+                          P{item.period} {item.timeInPeriod} - {item.teamName}:{" "}
+                          {formatNumberAndName(
+                            item.playerNumber,
+                            item.playerName,
+                          )}
+                          {item.suspensionBehavior
+                            ? ` (${item.suspensionBehavior})`
+                            : ""}
                           {item.reviewRequired ? " - Review Required" : ""}
-                          {item.requiresRefereeNotes ? " - Ref Notes Required" : ""}
+                          {item.requiresRefereeNotes
+                            ? " - Ref Notes Required"
+                            : ""}
                           {item.notes ? ` - Notes: ${item.notes}` : ""}
                         </li>
                       ))}

@@ -32,9 +32,12 @@ export function LastFinalGamesCard({ games, onClick }: Props) {
                 onClick={() => onClick(game.gameId)}
               >
                 <p className="game-view-schedule-matchup">
-                  {game.matchupLabel || `${game.awayTeamName} at ${game.homeTeamName}`}
+                  {game.matchupLabel ||
+                    `${game.awayTeamName} at ${game.homeTeamName}`}
                 </p>
-                <p className="game-view-schedule-meta">{dateText} • {game.status}</p>
+                <p className="game-view-schedule-meta">
+                  {dateText} • {game.status}
+                </p>
                 <p className="game-view-schedule-meta">{game.scoreText}</p>
               </button>
             );

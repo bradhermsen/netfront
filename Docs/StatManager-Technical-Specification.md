@@ -42,27 +42,27 @@ This specification clarifies two existing security rules for native mobile:
 
 The following decisions are part of the approved target design.
 
-| Topic | Decision |
-|---|---|
-| Application packaging | Game Manager and StatManager ship in one Expo application binary. |
-| Login | Both roles use the current access-code login experience. |
-| Role routing | A server-issued session routes `GM-XXXXXX` to Game Manager and `SM-XXXXXX` to StatManager. |
-| Code scope | Access codes are unique to one game, one team, and one role. |
-| Tracked team | An SM session tracks only the team bound to its access code. |
-| Home/away | StatManager is supported for either the home or away team. |
-| Official game control | StatManager cannot start, complete, or otherwise control the official game. |
-| Official score | StatManager displays official score but cannot modify it. |
-| StatManager goal | A tracked observation, not an authoritative `GameGoals` record. |
-| Game clock | Not used by StatManager events and not required for StatManager operation. |
-| Event context | Persist period, location, capture sequence, and server audit timestamps; do not persist game-clock time. |
-| Roster | Read-only in StatManager MVP. No master player or roster mutation. |
-| Rink coordinates | Persist normalized coordinates from `0.0` through `1.0`. |
-| Zone timer | Operator-controlled live-play stopwatch; stop at whistles; at most one zone interval is active per team. |
-| Concurrent devices | Two SM writer slots are available per game/team; additional sessions are observers until they take over a slot. |
-| Responsibility split | Each capture domain is assigned exclusively to one writer slot and enforced by the API. |
-| Final game | StatManager becomes read-only when the game is final. |
-| Offline operation | Event capture is supported with idempotent queued synchronization. |
-| Reports | Generated from server-persisted data and sent only after explicit confirmation. |
+| Topic                 | Decision                                                                                                        |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Application packaging | Game Manager and StatManager ship in one Expo application binary.                                               |
+| Login                 | Both roles use the current access-code login experience.                                                        |
+| Role routing          | A server-issued session routes `GM-XXXXXX` to Game Manager and `SM-XXXXXX` to StatManager.                      |
+| Code scope            | Access codes are unique to one game, one team, and one role.                                                    |
+| Tracked team          | An SM session tracks only the team bound to its access code.                                                    |
+| Home/away             | StatManager is supported for either the home or away team.                                                      |
+| Official game control | StatManager cannot start, complete, or otherwise control the official game.                                     |
+| Official score        | StatManager displays official score but cannot modify it.                                                       |
+| StatManager goal      | A tracked observation, not an authoritative `GameGoals` record.                                                 |
+| Game clock            | Not used by StatManager events and not required for StatManager operation.                                      |
+| Event context         | Persist period, location, capture sequence, and server audit timestamps; do not persist game-clock time.        |
+| Roster                | Read-only in StatManager MVP. No master player or roster mutation.                                              |
+| Rink coordinates      | Persist normalized coordinates from `0.0` through `1.0`.                                                        |
+| Zone timer            | Operator-controlled live-play stopwatch; stop at whistles; at most one zone interval is active per team.        |
+| Concurrent devices    | Two SM writer slots are available per game/team; additional sessions are observers until they take over a slot. |
+| Responsibility split  | Each capture domain is assigned exclusively to one writer slot and enforced by the API.                         |
+| Final game            | StatManager becomes read-only when the game is final.                                                           |
+| Offline operation     | Event capture is supported with idempotent queued synchronization.                                              |
+| Reports               | Generated from server-persisted data and sent only after explicit confirmation.                                 |
 
 ## 4. Goals
 
@@ -129,17 +129,17 @@ Authorized Team Managers, OrgAdmins, and SuperAdmins MAY generate or revoke per-
 
 ### 6.4 Permission Matrix
 
-| Capability | GM session | SM session | Team Manager | OrgAdmin/SuperAdmin |
-|---|---:|---:|---:|---:|
-| Read assigned game | Yes | Yes | Yes, scoped | Yes, scoped |
-| Control game lifecycle | Yes | No | No | Administrative override only |
-| Write official goals/penalties | Yes | No | No | Administrative correction only |
-| Write StatManager observations | No by default | Yes, own team and assigned domains | No | Administrative correction only |
-| Read tracking-team roster | Yes | Yes | Yes, assigned team | Yes, scoped |
-| Modify master roster | No | No | Yes, assigned team | Yes, scoped |
-| Generate game access code | No | No | Yes, assigned team | Yes, scoped |
-| Send StatManager report | No by default | Yes, own team | Yes, assigned team | Yes, scoped |
-| Finalize official game | Yes | No | No | Administrative override only |
+| Capability                     |    GM session |                         SM session |       Team Manager |            OrgAdmin/SuperAdmin |
+| ------------------------------ | ------------: | ---------------------------------: | -----------------: | -----------------------------: |
+| Read assigned game             |           Yes |                                Yes |        Yes, scoped |                    Yes, scoped |
+| Control game lifecycle         |           Yes |                                 No |                 No |   Administrative override only |
+| Write official goals/penalties |           Yes |                                 No |                 No | Administrative correction only |
+| Write StatManager observations | No by default | Yes, own team and assigned domains |                 No | Administrative correction only |
+| Read tracking-team roster      |           Yes |                                Yes | Yes, assigned team |                    Yes, scoped |
+| Modify master roster           |            No |                                 No | Yes, assigned team |                    Yes, scoped |
+| Generate game access code      |            No |                                 No | Yes, assigned team |                    Yes, scoped |
+| Send StatManager report        | No by default |                      Yes, own team | Yes, assigned team |                    Yes, scoped |
+| Finalize official game         |           Yes |                                 No |                 No |   Administrative override only |
 
 ## 7. Mobile Application Architecture
 
@@ -182,12 +182,12 @@ The implementation MAY use React Navigation and a scoped state library if approv
 
 The four bottom tabs are always visible as defined by the component PDF:
 
-| Index | Label | Screen | Technical behavior |
-|---:|---|---|---|
-| 0 | Game | `GameScreen` | Main tracking view, period, rink, stat summary, live-play zone timing, and event log |
-| 1 | Setup | `SetupScreen` | Server game identity plus editable tracking preferences |
-| 2 | Roster | `RosterScreen` | Read-only game-day roster, search/filter, and player stat lookup |
-| 3 | Settings | `SettingsScreen` | App preferences and approved report/export configuration |
+| Index | Label    | Screen           | Technical behavior                                                                   |
+| ----: | -------- | ---------------- | ------------------------------------------------------------------------------------ |
+|     0 | Game     | `GameScreen`     | Main tracking view, period, rink, stat summary, live-play zone timing, and event log |
+|     1 | Setup    | `SetupScreen`    | Server game identity plus editable tracking preferences                              |
+|     2 | Roster   | `RosterScreen`   | Read-only game-day roster, search/filter, and player stat lookup                     |
+|     3 | Settings | `SettingsScreen` | App preferences and approved report/export configuration                             |
 
 The tabs, modals, rink interactions, event controls, summary views, and settings in the component PDF remain the UI target. Product constraints in this document modify the PDF as follows:
 
@@ -226,19 +226,19 @@ The UI MUST represent these states without ambiguous controls:
 
 ### 8.1 Authority Matrix
 
-| Domain | Authority | StatManager behavior |
-|---|---|---|
-| Game ID and scheduled teams | NetFront API/database | Read-only |
-| Game status | NetFront API/database | Read-only |
-| Current period | StatManager operator, initialized from server game context | Required event grouping context |
-| Game clock | Game Manager/official scoreboard | Not consumed or stored by StatManager |
-| Official score summary | NetFront API/database when available | Optional read-only display |
-| Official goals and penalties | Game Manager/API official tables | Display only if needed |
-| SM observations | `GameStatEvents` | SM may write within scope |
-| Zone intervals | `GameZoneIntervals` | SM may write within scope |
-| Player identity | `Players` | Read-only |
-| Team-specific roster identity | `RosterEntries` | Read-only |
-| Writer ownership | Server-issued lease | Server enforced |
+| Domain                        | Authority                                                  | StatManager behavior                  |
+| ----------------------------- | ---------------------------------------------------------- | ------------------------------------- |
+| Game ID and scheduled teams   | NetFront API/database                                      | Read-only                             |
+| Game status                   | NetFront API/database                                      | Read-only                             |
+| Current period                | StatManager operator, initialized from server game context | Required event grouping context       |
+| Game clock                    | Game Manager/official scoreboard                           | Not consumed or stored by StatManager |
+| Official score summary        | NetFront API/database when available                       | Optional read-only display            |
+| Official goals and penalties  | Game Manager/API official tables                           | Display only if needed                |
+| SM observations               | `GameStatEvents`                                           | SM may write within scope             |
+| Zone intervals                | `GameZoneIntervals`                                        | SM may write within scope             |
+| Player identity               | `Players`                                                  | Read-only                             |
+| Team-specific roster identity | `RosterEntries`                                            | Read-only                             |
+| Writer ownership              | Server-issued lease                                        | Server enforced                       |
 
 ### 8.2 Game Selection
 
@@ -391,23 +391,23 @@ Both writer tablets MUST receive the same merged, server-synchronized event log 
 
 Write responsibility is divided into these stable capture domains:
 
-| Capture domain | Permitted records |
-|---|---|
-| `zone_time` | Start, stop, and correct zone intervals |
-| `shot` | Shot observations |
-| `shotattempt` | Shot Attempt observations |
-| `goal` | Goal observations |
-| `hit` | Hit observations |
-| `giveaway` | Give Away observations |
-| `takeaway` | Take Away observations |
-| `blockedshot` | Blocked Shot observations |
+| Capture domain | Permitted records                       |
+| -------------- | --------------------------------------- |
+| `zone_time`    | Start, stop, and correct zone intervals |
+| `shot`         | Shot observations                       |
+| `shotattempt`  | Shot Attempt observations               |
+| `goal`         | Goal observations                       |
+| `hit`          | Hit observations                        |
+| `giveaway`     | Give Away observations                  |
+| `takeaway`     | Take Away observations                  |
+| `blockedshot`  | Blocked Shot observations               |
 
 Each enabled capture domain MUST be assigned to exactly one writer slot for a game/team. The recommended assignment for the described two-tablet workflow is:
 
-| Writer slot | Assignment |
-|---|---|
-| `SM1` | `zone_time`, `hit` |
-| `SM2` | `giveaway`, `takeaway`, `blockedshot` |
+| Writer slot | Assignment                            |
+| ----------- | ------------------------------------- |
+| `SM1`       | `zone_time`, `hit`                    |
+| `SM2`       | `giveaway`, `takeaway`, `blockedshot` |
 
 `shot`, `shotattempt`, and `goal` remain configurable. They MAY be assigned to either slot or disabled when Game Manager is the chosen source and no separate SM observation is required. An enabled domain MUST NOT be assigned to both slots.
 
@@ -462,21 +462,21 @@ All schema changes require reviewed, versioned SQL migrations. Runtime `CREATE T
 
 ### 11.1 `GameAccessCodes`
 
-| Column | Type | Rules |
-|---|---|---|
-| `Id` | `uniqueidentifier` | Primary key |
-| `GameId` | `uniqueidentifier` | FK to `Games`, required |
-| `TeamId` | `uniqueidentifier` | FK to `Teams`, required |
-| `Role` | `nvarchar(10)` | `GM` or `SM` |
-| `CodeHash` | `varbinary`/encoded string | Required; never return |
-| `CodeSalt` | `varbinary`/encoded string | Required; never return |
-| `CodeHint` | `nvarchar(16)` | Optional non-secret display hint |
-| `ValidFromUtc` | `datetime2` | Required |
-| `ExpiresAtUtc` | `datetime2` | Required |
-| `RevokedAtUtc` | `datetime2` | Nullable |
-| `RevokedByUserId` | `uniqueidentifier` | Nullable FK where supported |
-| `CreatedAtUtc` | `datetime2` | Required |
-| `CreatedByUserId` | `uniqueidentifier` | Required |
+| Column            | Type                       | Rules                            |
+| ----------------- | -------------------------- | -------------------------------- |
+| `Id`              | `uniqueidentifier`         | Primary key                      |
+| `GameId`          | `uniqueidentifier`         | FK to `Games`, required          |
+| `TeamId`          | `uniqueidentifier`         | FK to `Teams`, required          |
+| `Role`            | `nvarchar(10)`             | `GM` or `SM`                     |
+| `CodeHash`        | `varbinary`/encoded string | Required; never return           |
+| `CodeSalt`        | `varbinary`/encoded string | Required; never return           |
+| `CodeHint`        | `nvarchar(16)`             | Optional non-secret display hint |
+| `ValidFromUtc`    | `datetime2`                | Required                         |
+| `ExpiresAtUtc`    | `datetime2`                | Required                         |
+| `RevokedAtUtc`    | `datetime2`                | Nullable                         |
+| `RevokedByUserId` | `uniqueidentifier`         | Nullable FK where supported      |
+| `CreatedAtUtc`    | `datetime2`                | Required                         |
+| `CreatedByUserId` | `uniqueidentifier`         | Required                         |
 
 Required constraints/indexes:
 
@@ -487,39 +487,39 @@ Required constraints/indexes:
 
 ### 11.2 `MobileGameSessions`
 
-| Column | Type | Rules |
-|---|---|---|
-| `Id` | `uniqueidentifier` | Primary key/session ID |
-| `GameAccessCodeId` | `uniqueidentifier` | FK to `GameAccessCodes` |
-| `GameId` | `uniqueidentifier` | Required, indexed |
-| `TeamId` | `uniqueidentifier` | Required, indexed |
-| `Role` | `nvarchar(10)` | Required |
-| `WriterSlot` | `tinyint` | Nullable until claim; `1` or `2` for SM writers |
-| `DeviceId` | `nvarchar(128)` | Installation-scoped identifier |
-| `DeviceName` | `nvarchar(128)` | Operator-visible label |
-| `RefreshTokenHash` | protected value | Required while refresh is active |
-| `TokenFamilyId` | `uniqueidentifier` | Refresh reuse detection |
-| `IssuedAtUtc` | `datetime2` | Required |
-| `LastActivityAtUtc` | `datetime2` | Required |
-| `ExpiresAtUtc` | `datetime2` | Hard session expiration |
-| `RevokedAtUtc` | `datetime2` | Nullable |
-| `RevocationReason` | `nvarchar(100)` | Nullable |
-| `AppVersion` | `nvarchar(32)` | Required |
+| Column              | Type               | Rules                                           |
+| ------------------- | ------------------ | ----------------------------------------------- |
+| `Id`                | `uniqueidentifier` | Primary key/session ID                          |
+| `GameAccessCodeId`  | `uniqueidentifier` | FK to `GameAccessCodes`                         |
+| `GameId`            | `uniqueidentifier` | Required, indexed                               |
+| `TeamId`            | `uniqueidentifier` | Required, indexed                               |
+| `Role`              | `nvarchar(10)`     | Required                                        |
+| `WriterSlot`        | `tinyint`          | Nullable until claim; `1` or `2` for SM writers |
+| `DeviceId`          | `nvarchar(128)`    | Installation-scoped identifier                  |
+| `DeviceName`        | `nvarchar(128)`    | Operator-visible label                          |
+| `RefreshTokenHash`  | protected value    | Required while refresh is active                |
+| `TokenFamilyId`     | `uniqueidentifier` | Refresh reuse detection                         |
+| `IssuedAtUtc`       | `datetime2`        | Required                                        |
+| `LastActivityAtUtc` | `datetime2`        | Required                                        |
+| `ExpiresAtUtc`      | `datetime2`        | Hard session expiration                         |
+| `RevokedAtUtc`      | `datetime2`        | Nullable                                        |
+| `RevocationReason`  | `nvarchar(100)`    | Nullable                                        |
+| `AppVersion`        | `nvarchar(32)`     | Required                                        |
 
 ### 11.3 `GameWriterLeases`
 
-| Column | Type | Rules |
-|---|---|---|
-| `Id` | `uniqueidentifier` | Primary key |
-| `GameId` | `uniqueidentifier` | Required |
-| `TeamId` | `uniqueidentifier` | Required |
-| `Role` | `nvarchar(10)` | Required |
-| `WriterSlot` | `tinyint` | `1` or `2` for SM |
-| `SessionId` | `uniqueidentifier` | Current owner |
-| `FencingToken` | `bigint` | Monotonically increasing |
-| `AcquiredAtUtc` | `datetime2` | Required |
-| `HeartbeatAtUtc` | `datetime2` | Required |
-| `ExpiresAtUtc` | `datetime2` | Required |
+| Column           | Type               | Rules                    |
+| ---------------- | ------------------ | ------------------------ |
+| `Id`             | `uniqueidentifier` | Primary key              |
+| `GameId`         | `uniqueidentifier` | Required                 |
+| `TeamId`         | `uniqueidentifier` | Required                 |
+| `Role`           | `nvarchar(10)`     | Required                 |
+| `WriterSlot`     | `tinyint`          | `1` or `2` for SM        |
+| `SessionId`      | `uniqueidentifier` | Current owner            |
+| `FencingToken`   | `bigint`           | Monotonically increasing |
+| `AcquiredAtUtc`  | `datetime2`        | Required                 |
+| `HeartbeatAtUtc` | `datetime2`        | Required                 |
+| `ExpiresAtUtc`   | `datetime2`        | Required                 |
 
 Required constraints:
 
@@ -531,16 +531,16 @@ Required constraints:
 
 This table provides normalized, server-enforced responsibility ownership.
 
-| Column | Type | Rules |
-|---|---|---|
-| `Id` | `uniqueidentifier` | Primary key |
-| `GameId` | `uniqueidentifier` | FK to `Games`, required |
-| `TrackingTeamId` | `uniqueidentifier` | FK to `Teams`, required |
-| `CaptureDomain` | `nvarchar(30)` | Stable code from section 10.2 |
-| `WriterSlot` | `tinyint` | `1` or `2` |
-| `AssignmentVersion` | `bigint` | Incremented atomically on any assignment change |
-| `AssignedAtUtc` | `datetime2` | Server timestamp |
-| `AssignedBySessionId` | `uniqueidentifier` | Audited assigning session |
+| Column                | Type               | Rules                                           |
+| --------------------- | ------------------ | ----------------------------------------------- |
+| `Id`                  | `uniqueidentifier` | Primary key                                     |
+| `GameId`              | `uniqueidentifier` | FK to `Games`, required                         |
+| `TrackingTeamId`      | `uniqueidentifier` | FK to `Teams`, required                         |
+| `CaptureDomain`       | `nvarchar(30)`     | Stable code from section 10.2                   |
+| `WriterSlot`          | `tinyint`          | `1` or `2`                                      |
+| `AssignmentVersion`   | `bigint`           | Incremented atomically on any assignment change |
+| `AssignedAtUtc`       | `datetime2`        | Server timestamp                                |
+| `AssignedBySessionId` | `uniqueidentifier` | Audited assigning session                       |
 
 Required constraints/indexes:
 
@@ -555,15 +555,15 @@ This table stores analytical StatManager observations and is separate from offic
 
 The approved event contract contains the six component-PDF events plus the NetFront Shot Attempt extension:
 
-| Stable code | Display label | Rink point | Player | Strength state | Official scoring effect |
-|---|---|---:|---:|---:|---|
-| `shot` | Shot | Required | Optional | Required | None |
-| `shotattempt` | Shot Attempt | Required | Optional | Optional | None |
-| `goal` | Goal | Required | Optional | Required | None; observation only |
-| `hit` | Hit | Required | Optional | Optional | None |
-| `giveaway` | Give Away | Required | Optional | Optional | None |
-| `takeaway` | Take Away | Required | Optional | Optional | None |
-| `blockedshot` | Blocked Shot | Required | Optional | Required | None |
+| Stable code   | Display label | Rink point |   Player | Strength state | Official scoring effect |
+| ------------- | ------------- | ---------: | -------: | -------------: | ----------------------- |
+| `shot`        | Shot          |   Required | Optional |       Required | None                    |
+| `shotattempt` | Shot Attempt  |   Required | Optional |       Optional | None                    |
+| `goal`        | Goal          |   Required | Optional |       Required | None; observation only  |
+| `hit`         | Hit           |   Required | Optional |       Optional | None                    |
+| `giveaway`    | Give Away     |   Required | Optional |       Optional | None                    |
+| `takeaway`    | Take Away     |   Required | Optional |       Optional | None                    |
+| `blockedshot` | Blocked Shot  |   Required | Optional |       Required | None                    |
 
 Display labels MAY be localized later. Stable codes MUST NOT change without a versioned API and data migration. An omitted player is stored as an unattributed team event, not rejected or assigned to a placeholder player.
 
@@ -576,34 +576,34 @@ Shot classifications are mutually exclusive for one physical attempt:
 
 The operator records one classification per physical attempt. Reports MAY calculate total attempts as `shot + blockedshot + shotattempt + goal`, but MUST label that derived metric clearly and MUST NOT treat it as an official Game Manager shot total.
 
-| Column | Type | Rules |
-|---|---|---|
-| `Id` | `uniqueidentifier` | Primary key, server assigned |
-| `ClientEventId` | `uniqueidentifier` | Client idempotency key |
-| `GameId` | `uniqueidentifier` | FK to `Games`, required |
-| `TrackingTeamId` | `uniqueidentifier` | FK to `Teams`, required |
-| `PlayerId` | `uniqueidentifier` | Nullable FK to `Players` |
-| `EventType` | `nvarchar(30)` | One of the seven approved StatManager event types |
-| `Period` | `int` | Required, positive |
-| `CaptureSequence` | `bigint` | Required; monotonically increasing within creating session |
-| `ClientCapturedAtUtc` | `datetime2` | Audit/synchronization metadata; not official game time |
-| `NormalizedX` | `decimal(6,5)` | Required, `0.0` through `1.0` |
-| `NormalizedY` | `decimal(6,5)` | Required, `0.0` through `1.0` |
-| `Zone` | `nvarchar(10)` | `OZONE`, `NZONE`, or `DZONE` |
-| `AttackingDirection` | `nvarchar(10)` | `LEFT` or `RIGHT` |
-| `StrengthState` | `nvarchar(20)` | Nullable approved value |
-| `Outcome` | `nvarchar(30)` | Nullable event-specific approved value |
-| `Notes` | `nvarchar(500)` | Nullable, sanitized |
-| `SourceRole` | `nvarchar(10)` | `SM` |
-| `SessionId` | `uniqueidentifier` | Creating session |
-| `CreatedByWriterSlot` | `tinyint` | Immutable authorship slot |
-| `CaptureDomain` | `nvarchar(30)` | Derived from event type |
-| `AssignmentVersion` | `bigint` | Assignment used at creation |
-| `Revision` | `int` | Starts at 1; optimistic concurrency |
-| `CreatedAtUtc` | `datetime2` | Server timestamp |
-| `UpdatedAtUtc` | `datetime2` | Server timestamp |
-| `DeletedAtUtc` | `datetime2` | Nullable soft delete |
-| `DeletedBySessionId` | `uniqueidentifier` | Nullable |
+| Column                | Type               | Rules                                                      |
+| --------------------- | ------------------ | ---------------------------------------------------------- |
+| `Id`                  | `uniqueidentifier` | Primary key, server assigned                               |
+| `ClientEventId`       | `uniqueidentifier` | Client idempotency key                                     |
+| `GameId`              | `uniqueidentifier` | FK to `Games`, required                                    |
+| `TrackingTeamId`      | `uniqueidentifier` | FK to `Teams`, required                                    |
+| `PlayerId`            | `uniqueidentifier` | Nullable FK to `Players`                                   |
+| `EventType`           | `nvarchar(30)`     | One of the seven approved StatManager event types          |
+| `Period`              | `int`              | Required, positive                                         |
+| `CaptureSequence`     | `bigint`           | Required; monotonically increasing within creating session |
+| `ClientCapturedAtUtc` | `datetime2`        | Audit/synchronization metadata; not official game time     |
+| `NormalizedX`         | `decimal(6,5)`     | Required, `0.0` through `1.0`                              |
+| `NormalizedY`         | `decimal(6,5)`     | Required, `0.0` through `1.0`                              |
+| `Zone`                | `nvarchar(10)`     | `OZONE`, `NZONE`, or `DZONE`                               |
+| `AttackingDirection`  | `nvarchar(10)`     | `LEFT` or `RIGHT`                                          |
+| `StrengthState`       | `nvarchar(20)`     | Nullable approved value                                    |
+| `Outcome`             | `nvarchar(30)`     | Nullable event-specific approved value                     |
+| `Notes`               | `nvarchar(500)`    | Nullable, sanitized                                        |
+| `SourceRole`          | `nvarchar(10)`     | `SM`                                                       |
+| `SessionId`           | `uniqueidentifier` | Creating session                                           |
+| `CreatedByWriterSlot` | `tinyint`          | Immutable authorship slot                                  |
+| `CaptureDomain`       | `nvarchar(30)`     | Derived from event type                                    |
+| `AssignmentVersion`   | `bigint`           | Assignment used at creation                                |
+| `Revision`            | `int`              | Starts at 1; optimistic concurrency                        |
+| `CreatedAtUtc`        | `datetime2`        | Server timestamp                                           |
+| `UpdatedAtUtc`        | `datetime2`        | Server timestamp                                           |
+| `DeletedAtUtc`        | `datetime2`        | Nullable soft delete                                       |
+| `DeletedBySessionId`  | `uniqueidentifier` | Nullable                                                   |
 
 Required constraints/indexes:
 
@@ -619,25 +619,25 @@ Server and client MUST share these stable event codes. Database values MUST use 
 
 ### 11.6 `GameZoneIntervals`
 
-| Column | Type | Rules |
-|---|---|---|
-| `Id` | `uniqueidentifier` | Primary key |
-| `ClientIntervalId` | `uniqueidentifier` | Idempotency key |
-| `GameId` | `uniqueidentifier` | FK to `Games` |
-| `TrackingTeamId` | `uniqueidentifier` | FK to `Teams` |
-| `Period` | `int` | Required |
-| `Zone` | `nvarchar(10)` | `OZONE`, `NZONE`, or `DZONE` |
-| `Status` | `nvarchar(20)` | `active`, `closed`, or `incomplete` |
-| `DurationMilliseconds` | `bigint` | Nullable while active; canonical live-play duration when closed |
-| `ClientStartedAtUtc` | `datetime2` | Audit/recovery metadata, not game-clock time |
-| `ClientEndedAtUtc` | `datetime2` | Nullable audit/recovery metadata |
-| `SessionId` | `uniqueidentifier` | Creating session |
-| `CreatedByWriterSlot` | `tinyint` | Immutable authorship slot |
-| `AssignmentVersion` | `bigint` | Assignment used at creation |
-| `Revision` | `int` | Optimistic concurrency |
-| `CreatedAtUtc` | `datetime2` | Server timestamp |
-| `UpdatedAtUtc` | `datetime2` | Server timestamp |
-| `DeletedAtUtc` | `datetime2` | Nullable soft delete |
+| Column                 | Type               | Rules                                                           |
+| ---------------------- | ------------------ | --------------------------------------------------------------- |
+| `Id`                   | `uniqueidentifier` | Primary key                                                     |
+| `ClientIntervalId`     | `uniqueidentifier` | Idempotency key                                                 |
+| `GameId`               | `uniqueidentifier` | FK to `Games`                                                   |
+| `TrackingTeamId`       | `uniqueidentifier` | FK to `Teams`                                                   |
+| `Period`               | `int`              | Required                                                        |
+| `Zone`                 | `nvarchar(10)`     | `OZONE`, `NZONE`, or `DZONE`                                    |
+| `Status`               | `nvarchar(20)`     | `active`, `closed`, or `incomplete`                             |
+| `DurationMilliseconds` | `bigint`           | Nullable while active; canonical live-play duration when closed |
+| `ClientStartedAtUtc`   | `datetime2`        | Audit/recovery metadata, not game-clock time                    |
+| `ClientEndedAtUtc`     | `datetime2`        | Nullable audit/recovery metadata                                |
+| `SessionId`            | `uniqueidentifier` | Creating session                                                |
+| `CreatedByWriterSlot`  | `tinyint`          | Immutable authorship slot                                       |
+| `AssignmentVersion`    | `bigint`           | Assignment used at creation                                     |
+| `Revision`             | `int`              | Optimistic concurrency                                          |
+| `CreatedAtUtc`         | `datetime2`        | Server timestamp                                                |
+| `UpdatedAtUtc`         | `datetime2`        | Server timestamp                                                |
+| `DeletedAtUtc`         | `datetime2`        | Nullable soft delete                                            |
 
 Required constraints/indexes:
 
@@ -661,31 +661,31 @@ All responses use camelCase. Protected endpoints require `Authorization: Bearer 
 
 ### 12.1 Session Endpoints
 
-| Method and route | Purpose |
-|---|---|
+| Method and route                     | Purpose                                     |
+| ------------------------------------ | ------------------------------------------- |
 | `POST /api/mobile/sessions/exchange` | Exchange raw code for scoped mobile session |
-| `POST /api/mobile/sessions/refresh` | Rotate refresh token and issue access token |
-| `POST /api/mobile/sessions/logout` | Revoke current session and refresh family |
-| `GET /api/mobile/sessions/current` | Restore session and game scope |
+| `POST /api/mobile/sessions/refresh`  | Rotate refresh token and issue access token |
+| `POST /api/mobile/sessions/logout`   | Revoke current session and refresh family   |
+| `GET /api/mobile/sessions/current`   | Restore session and game scope              |
 
 ### 12.2 Lease Endpoints
 
-| Method and route | Purpose |
-|---|---|
-| `POST /api/mobile/games/{gameId}/writer-slots/{slot}/claim` | Claim available `SM1` or `SM2` |
-| `POST /api/mobile/games/{gameId}/writer-slots/{slot}/heartbeat` | Extend the owned slot lease |
-| `POST /api/mobile/games/{gameId}/writer-slots/{slot}/takeover` | Explicitly fence the selected slot's previous writer |
-| `DELETE /api/mobile/games/{gameId}/writer-slots/{slot}` | Release the owned slot |
-| `GET /api/mobile/games/{gameId}/capture-assignments` | Read both slots and assignment version |
-| `PUT /api/mobile/games/{gameId}/capture-assignments` | Atomically update domain ownership |
+| Method and route                                                | Purpose                                              |
+| --------------------------------------------------------------- | ---------------------------------------------------- |
+| `POST /api/mobile/games/{gameId}/writer-slots/{slot}/claim`     | Claim available `SM1` or `SM2`                       |
+| `POST /api/mobile/games/{gameId}/writer-slots/{slot}/heartbeat` | Extend the owned slot lease                          |
+| `POST /api/mobile/games/{gameId}/writer-slots/{slot}/takeover`  | Explicitly fence the selected slot's previous writer |
+| `DELETE /api/mobile/games/{gameId}/writer-slots/{slot}`         | Release the owned slot                               |
+| `GET /api/mobile/games/{gameId}/capture-assignments`            | Read both slots and assignment version               |
+| `PUT /api/mobile/games/{gameId}/capture-assignments`            | Atomically update domain ownership                   |
 
 ### 12.3 Bootstrap Endpoints
 
-| Method and route | Purpose |
-|---|---|
-| `GET /api/mobile/games/{gameId}/stat-manager/bootstrap` | Game, role, team, roster, settings, official display state, and sync cursor |
-| `GET /api/mobile/games/{gameId}/stat-events?cursor=...` | Incremental event synchronization |
-| `GET /api/mobile/games/{gameId}/zone-intervals?cursor=...` | Incremental interval synchronization |
+| Method and route                                           | Purpose                                                                     |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `GET /api/mobile/games/{gameId}/stat-manager/bootstrap`    | Game, role, team, roster, settings, official display state, and sync cursor |
+| `GET /api/mobile/games/{gameId}/stat-events?cursor=...`    | Incremental event synchronization                                           |
+| `GET /api/mobile/games/{gameId}/zone-intervals?cursor=...` | Incremental interval synchronization                                        |
 
 The bootstrap response MUST derive `gameId` and tracking team authorization from the session. It returns both team display identities but only the tracking team's roster and private SM observations.
 
@@ -693,10 +693,10 @@ The bootstrap response MUST also return both SM slot states, device-safe owner l
 
 ### 12.4 Event Endpoints
 
-| Method and route | Purpose |
-|---|---|
-| `POST /api/mobile/games/{gameId}/stat-events` | Idempotently create an observation |
-| `PUT /api/mobile/games/{gameId}/stat-events/{eventId}` | Update with expected revision |
+| Method and route                                          | Purpose                            |
+| --------------------------------------------------------- | ---------------------------------- |
+| `POST /api/mobile/games/{gameId}/stat-events`             | Idempotently create an observation |
+| `PUT /api/mobile/games/{gameId}/stat-events/{eventId}`    | Update with expected revision      |
 | `DELETE /api/mobile/games/{gameId}/stat-events/{eventId}` | Soft-delete with expected revision |
 
 Create request shape:
@@ -710,7 +710,7 @@ Create request shape:
   "captureSequence": 431,
   "clientCapturedAtUtc": "2026-08-25T19:34:12.125Z",
   "normalizedX": 0.74215,
-  "normalizedY": 0.38120,
+  "normalizedY": 0.3812,
   "zone": "OZONE",
   "attackingDirection": "RIGHT",
   "strengthState": "EVEN",
@@ -725,22 +725,22 @@ Updates and deletes MUST include `expectedRevision`. Revision mismatch returns `
 
 ### 12.5 Zone Endpoints
 
-| Method and route | Purpose |
-|---|---|
-| `POST /api/mobile/games/{gameId}/zone-intervals/start` | Atomically close prior zone and start selected zone |
-| `POST /api/mobile/games/{gameId}/zone-intervals/{intervalId}/stop` | Close the current interval |
-| `PUT /api/mobile/games/{gameId}/zone-intervals/{intervalId}` | Correct interval with expected revision |
-| `DELETE /api/mobile/games/{gameId}/zone-intervals/{intervalId}` | Soft-delete correction |
+| Method and route                                                   | Purpose                                             |
+| ------------------------------------------------------------------ | --------------------------------------------------- |
+| `POST /api/mobile/games/{gameId}/zone-intervals/start`             | Atomically close prior zone and start selected zone |
+| `POST /api/mobile/games/{gameId}/zone-intervals/{intervalId}/stop` | Close the current interval                          |
+| `PUT /api/mobile/games/{gameId}/zone-intervals/{intervalId}`       | Correct interval with expected revision             |
+| `DELETE /api/mobile/games/{gameId}/zone-intervals/{intervalId}`    | Soft-delete correction                              |
 
 Starting or switching zones MUST include `clientIntervalId`, `period`, selected `zone`, `captureSequence`, and the final monotonic `durationMilliseconds` for any interval being closed. Stopping MUST include the final `durationMilliseconds` and expected revision. The server validates ordering and stores duration but does not calculate live-play duration from request arrival time.
 
 ### 12.6 Summary and Report Endpoints
 
-| Method and route | Purpose |
-|---|---|
-| `GET /api/mobile/games/{gameId}/stat-manager/summary` | Server-calculated summary |
-| `POST /api/mobile/games/{gameId}/stat-manager/reports` | Generate report from persisted revision |
-| `POST /api/mobile/games/{gameId}/stat-manager/reports/{reportId}/send` | Explicitly send to approved recipients |
+| Method and route                                                       | Purpose                                 |
+| ---------------------------------------------------------------------- | --------------------------------------- |
+| `GET /api/mobile/games/{gameId}/stat-manager/summary`                  | Server-calculated summary               |
+| `POST /api/mobile/games/{gameId}/stat-manager/reports`                 | Generate report from persisted revision |
+| `POST /api/mobile/games/{gameId}/stat-manager/reports/{reportId}/send` | Explicitly send to approved recipients  |
 
 Report generation MUST identify the included server revision/cursor. Sending MUST reject arbitrary unapproved recipients unless the authenticated administrative policy allows them.
 
@@ -796,16 +796,16 @@ Each queued operation MUST include:
 
 ### 13.3 Conflict Rules
 
-| Conflict | Required result |
-|---|---|
-| Duplicate create retry | Return existing event; no duplicate row |
-| Edit of newer server revision | Show conflict and current server event |
-| Delete of newer server revision | Show conflict; do not silently delete |
-| Stale fencing token | Reject; device becomes observer |
-| Event type belongs to other writer | Reject with `capture_domain_forbidden`; retain locally for operator review |
-| Assignment changed after offline capture | Reject with `assignment_changed`; do not silently move authorship |
-| Game finalized while offline | Reject queued mutations; preserve an exportable local recovery record for authorized review |
-| Zone start overlaps server interval | Server atomically closes or rejects according to current lease/order; return canonical intervals |
+| Conflict                                 | Required result                                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Duplicate create retry                   | Return existing event; no duplicate row                                                          |
+| Edit of newer server revision            | Show conflict and current server event                                                           |
+| Delete of newer server revision          | Show conflict; do not silently delete                                                            |
+| Stale fencing token                      | Reject; device becomes observer                                                                  |
+| Event type belongs to other writer       | Reject with `capture_domain_forbidden`; retain locally for operator review                       |
+| Assignment changed after offline capture | Reject with `assignment_changed`; do not silently move authorship                                |
+| Game finalized while offline             | Reject queued mutations; preserve an exportable local recovery record for authorized review      |
+| Zone start overlaps server interval      | Server atomically closes or rejects according to current lease/order; return canonical intervals |
 
 Automatic last-write-wins is prohibited for event edits, deletes, and interval corrections.
 
@@ -985,25 +985,25 @@ Every API response SHOULD include a correlation ID. Mobile diagnostics SHOULD al
 
 The following values must be explicitly approved before implementation. Recommended defaults are included.
 
-| Item | Recommended default |
-|---|---|
-| Code activation | Four hours before scheduled start |
-| Scheduled-game expiry when not started | Six hours after scheduled start |
-| Post-final grace period | Two hours |
-| Access token lifetime | 30 minutes |
-| Idle timeout | 45 minutes, with approved active-game refresh behavior |
-| Writer lease heartbeat/duration | 20 seconds / 60 seconds |
-| SM writer capacity | Two active writer slots per game/team |
-| Default responsibility split | `SM1`: zone time and hits; `SM2`: giveaways, takeaways, and blocked shots |
-| Shot, shot-attempt, and goal assignment | Configurable to either slot or disabled |
-| Stat goal authority | Observation only |
-| Master roster editing | Excluded |
-| Tracking scope | Code-bound team only; home or away |
-| Zone timer model | Mutually exclusive live-play stopwatch intervals; operator stops at whistles |
-| Final-game edits | Administrative correction workflow only |
-| Report recipients | Preconfigured team contacts plus confirmed approved recipients |
-| Code migration | New per-game hashed codes; retire team plaintext codes after transition |
-| Mobile display name | NetFront Game Operations |
+| Item                                    | Recommended default                                                          |
+| --------------------------------------- | ---------------------------------------------------------------------------- |
+| Code activation                         | Four hours before scheduled start                                            |
+| Scheduled-game expiry when not started  | Six hours after scheduled start                                              |
+| Post-final grace period                 | Two hours                                                                    |
+| Access token lifetime                   | 30 minutes                                                                   |
+| Idle timeout                            | 45 minutes, with approved active-game refresh behavior                       |
+| Writer lease heartbeat/duration         | 20 seconds / 60 seconds                                                      |
+| SM writer capacity                      | Two active writer slots per game/team                                        |
+| Default responsibility split            | `SM1`: zone time and hits; `SM2`: giveaways, takeaways, and blocked shots    |
+| Shot, shot-attempt, and goal assignment | Configurable to either slot or disabled                                      |
+| Stat goal authority                     | Observation only                                                             |
+| Master roster editing                   | Excluded                                                                     |
+| Tracking scope                          | Code-bound team only; home or away                                           |
+| Zone timer model                        | Mutually exclusive live-play stopwatch intervals; operator stops at whistles |
+| Final-game edits                        | Administrative correction workflow only                                      |
+| Report recipients                       | Preconfigured team contacts plus confirmed approved recipients               |
+| Code migration                          | New per-game hashed codes; retire team plaintext codes after transition      |
+| Mobile display name                     | NetFront Game Operations                                                     |
 
 ## 22. Acceptance Criteria
 

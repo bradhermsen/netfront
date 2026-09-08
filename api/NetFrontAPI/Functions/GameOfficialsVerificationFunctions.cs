@@ -55,7 +55,7 @@ namespace NetFrontAPI.Functions
             const string sql = @"
                 SELECT
                     go.OfficialId,
-                    go.Role,
+                    REPLACE(go.Role, ' ', '') AS Role,
                     LTRIM(RTRIM(
                         COALESCE(
                             NULLIF(CONCAT(o.FirstName, ' ', o.LastName), ' '),
@@ -70,17 +70,17 @@ namespace NetFrontAPI.Functions
                 LEFT JOIN Officials o ON o.OfficialId = go.OfficialId
                 LEFT JOIN GameOfficialVerifications gov
                     ON gov.GameId = go.GameId
-                   AND gov.Role = go.Role
+                   AND REPLACE(gov.Role, ' ', '') = REPLACE(go.Role, ' ', '')
                 WHERE go.GameId = @GameId
                 ORDER BY
-                    CASE go.Role
+                    CASE REPLACE(go.Role, ' ', '')
                         WHEN 'Referee1' THEN 1
                         WHEN 'Referee2' THEN 2
                         WHEN 'Linesman1' THEN 3
                         WHEN 'Linesman2' THEN 4
                         ELSE 99
                     END,
-                    go.Role;
+                    REPLACE(go.Role, ' ', '');
             ";
 
             var officials = (await conn.QueryAsync<GameOfficialVerificationDto>(sql, new { GameId = gameId })).ToList();
@@ -125,7 +125,7 @@ namespace NetFrontAPI.Functions
             const string assignedSql = @"
                 SELECT
                     go.OfficialId,
-                    go.Role,
+                    REPLACE(go.Role, ' ', '') AS Role,
                     LTRIM(RTRIM(
                         COALESCE(
                             NULLIF(CONCAT(o.FirstName, ' ', o.LastName), ' '),
@@ -166,7 +166,7 @@ namespace NetFrontAPI.Functions
                 MERGE GameOfficialVerifications AS target
                 USING (SELECT @GameId AS GameId, @Role AS Role) AS source
                    ON target.GameId = source.GameId
-                  AND target.Role = source.Role
+                                    AND REPLACE(target.Role, ' ', '') = source.Role
                 WHEN MATCHED THEN
                     UPDATE SET
                         OfficialId = @OfficialId,
@@ -303,9 +303,9 @@ namespace NetFrontAPI.Functions
             using var transaction = conn.BeginTransaction();
             await conn.ExecuteAsync(@"
                 DELETE FROM dbo.GameOfficialVerifications
-                WHERE GameId = @GameId AND Role = @Role;
+                WHERE GameId = @GameId AND REPLACE(Role, ' ', '') = @Role;
                 DELETE FROM dbo.GameOfficials
-                WHERE GameId = @GameId AND Role = @Role;",
+                WHERE GameId = @GameId AND REPLACE(Role, ' ', '') = @Role;",
                 new { GameId = gameId, Role = role }, transaction);
             transaction.Commit();
             return req.CreateResponse(HttpStatusCode.NoContent);
@@ -371,8 +371,8 @@ namespace NetFrontAPI.Functions
             await conn.ExecuteAsync(@"
                 MERGE dbo.GameOfficials AS target
                 USING (SELECT @GameId AS GameId, @Role AS Role) AS source
-                ON target.GameId = source.GameId AND target.Role = source.Role
-                WHEN MATCHED THEN UPDATE SET OfficialId = @OfficialId, FirstName = @FirstName, LastName = @LastName
+                ON target.GameId = source.GameId AND REPLACE(target.Role, ' ', '') = source.Role
+                WHEN MATCHED THEN UPDATE SET OfficialId = @OfficialId, FirstName = @FirstName, LastName = @LastName, Role = @Role
                 WHEN NOT MATCHED THEN INSERT (Id, GameId, OfficialId, FirstName, LastName, Role)
                     VALUES (NEWID(), @GameId, @OfficialId, @FirstName, @LastName, @Role);",
                 new { GameId = gameId, Role = role.Trim(), official.OfficialId, official.FirstName, official.LastName }, transaction);
@@ -388,7 +388,7 @@ namespace NetFrontAPI.Functions
         {
             var sourceId = await conn.QueryFirstOrDefaultAsync<Guid?>(@"
                 SELECT TOP 1 Id FROM dbo.GameOfficials
-                WHERE GameId = @GameId AND Role = @PreviousRole AND OfficialId = @OfficialId;",
+                WHERE GameId = @GameId AND REPLACE(Role, ' ', '') = @PreviousRole AND OfficialId = @OfficialId;",
                 new { GameId = gameId, PreviousRole = previousRole, official.OfficialId }, transaction);
             if (!sourceId.HasValue)
             {
@@ -398,7 +398,7 @@ namespace NetFrontAPI.Functions
 
             var target = await conn.QueryFirstOrDefaultAsync<GameOfficialAssignmentRow>(@"
                 SELECT TOP 1 Id, OfficialId, FirstName, LastName FROM dbo.GameOfficials
-                WHERE GameId = @GameId AND Role = @NewRole;",
+                WHERE GameId = @GameId AND REPLACE(Role, ' ', '') = @NewRole;",
                 new { GameId = gameId, NewRole = newRole }, transaction);
 
             if (target == null)
@@ -419,7 +419,7 @@ namespace NetFrontAPI.Functions
 
             await conn.ExecuteAsync(@"
                 DELETE FROM dbo.GameOfficialVerifications
-                WHERE GameId = @GameId AND Role IN @Roles;",
+                WHERE GameId = @GameId AND REPLACE(Role, ' ', '') IN @Roles;",
                 new { GameId = gameId, Roles = new[] { previousRole, newRole } }, transaction);
         }
 

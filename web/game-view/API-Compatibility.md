@@ -18,12 +18,14 @@ This module is wired to currently available NetFront API routes.
 ## Requested Prompt Routes vs Current Backend
 
 Requested in prompt:
+
 - `GET /games/{id}/roster`
 - `GET /games/{id}/events`
 - `GET /games/{id}/scoreboard`
 - `GET /schedule/upcoming?limit=3`
 
 Current backend:
+
 - `GET /games/{id}/roster` is not present. Current available route is team-based roster: `GET /teams/{teamId}/roster` and mobile route `GET /teams/{teamId}/roster-mobile`.
 - `GET /games/{id}/events` is not present as a single endpoint. Current available game summary/events route is `GET /games/{gameId}/summary-mobile` (goals and penalties).
 - `GET /games/{id}/scoreboard` is not present.
@@ -39,6 +41,7 @@ Current backend:
 ## Recommendation
 
 For full feature parity, add these backend routes:
+
 1. `GET /schedule/upcoming?limit=3&seasonId=&organizationId=&teamId=&teamType=`
 2. `GET /games/{id}/events` with normalized event schema (goals, penalties, shots, goalie events).
 3. `GET /games/{id}/scoreboard` with period, clock, and score snapshot.

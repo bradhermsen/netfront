@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { GameViewBrand } from "../components/GameViewBrand";
 import { GameViewFooter } from "../components/GameViewFooter";
+import { GameManagerPromoLink } from "../components/GameManagerPromoLink";
 import { LastFinalGamesCard } from "../components/LastFinalGamesCard";
 import { NextGameCard } from "../components/NextGameCard";
 import { UpcomingScheduleCard } from "../components/UpcomingScheduleCard";
@@ -23,12 +24,19 @@ const PAGE_SIZE = 5;
 
 function readFiltersFromLocation(): GameViewFilters {
   if (typeof window === "undefined") {
-    return { seasonId: "", organizationId: "", leagueId: "", teamLevel: "", teamType: "" };
+    return {
+      seasonId: "",
+      organizationId: "",
+      leagueId: "",
+      teamLevel: "",
+      teamType: "",
+    };
   }
 
   const params = new URLSearchParams(window.location.search);
   const teamTypeRaw = params.get("teamType") || "";
-  const teamType = teamTypeRaw === "Girls" || teamTypeRaw === "Boys" ? teamTypeRaw : "";
+  const teamType =
+    teamTypeRaw === "Girls" || teamTypeRaw === "Boys" ? teamTypeRaw : "";
 
   return {
     seasonId: params.get("seasonId") || "",
@@ -46,7 +54,8 @@ function syncFiltersToLocation(filters: GameViewFilters) {
   if (filters.seasonId) params.set("seasonId", filters.seasonId);
   else params.delete("seasonId");
 
-  if (filters.organizationId) params.set("organizationId", filters.organizationId);
+  if (filters.organizationId)
+    params.set("organizationId", filters.organizationId);
   else params.delete("organizationId");
 
   params.delete("teamId");
@@ -71,7 +80,9 @@ function mapUiErrorMessage(error: unknown): string {
 }
 
 export function GameViewMainScreen() {
-  const [filters, setFilters] = useState<GameViewFilters>(() => readFiltersFromLocation());
+  const [filters, setFilters] = useState<GameViewFilters>(() =>
+    readFiltersFromLocation(),
+  );
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterData, setFilterData] = useState<GameViewFilterData>({
@@ -82,8 +93,12 @@ export function GameViewMainScreen() {
     teamLevels: [],
   });
   const [nextGames, setNextGames] = useState<NextGameCardModel[]>([]);
-  const [upcomingGames, setUpcomingGames] = useState<UpcomingScheduleItemModel[]>([]);
-  const [lastFinalGames, setLastFinalGames] = useState<LastFinalGameItemModel[]>([]);
+  const [upcomingGames, setUpcomingGames] = useState<
+    UpcomingScheduleItemModel[]
+  >([]);
+  const [lastFinalGames, setLastFinalGames] = useState<
+    LastFinalGameItemModel[]
+  >([]);
   const [nextGamesPage, setNextGamesPage] = useState(1);
   const [upcomingPage, setUpcomingPage] = useState(1);
   const [finalsPage, setFinalsPage] = useState(1);
@@ -166,11 +181,7 @@ export function GameViewMainScreen() {
     if (!query) return nextGames;
 
     return nextGames.filter((game) => {
-      const haystack = [
-        game.teamName,
-        game.opponentName,
-        game.status,
-      ]
+      const haystack = [game.teamName, game.opponentName, game.status]
         .join(" ")
         .toLowerCase();
       return haystack.includes(query);
@@ -182,11 +193,7 @@ export function GameViewMainScreen() {
     if (!query) return upcomingGames;
 
     return upcomingGames.filter((game) => {
-      const haystack = [
-        game.homeTeamName,
-        game.awayTeamName,
-        game.status,
-      ]
+      const haystack = [game.homeTeamName, game.awayTeamName, game.status]
         .join(" ")
         .toLowerCase();
       return haystack.includes(query);
@@ -230,7 +237,8 @@ export function GameViewMainScreen() {
   );
 
   const pagedNextGames = useMemo(() => {
-    const start = (Math.min(nextGamesPage, nextGamesTotalPages) - 1) * PAGE_SIZE;
+    const start =
+      (Math.min(nextGamesPage, nextGamesTotalPages) - 1) * PAGE_SIZE;
     return visibleNextGames.slice(start, start + PAGE_SIZE);
   }, [visibleNextGames, nextGamesPage, nextGamesTotalPages]);
 
@@ -265,12 +273,16 @@ export function GameViewMainScreen() {
         </button>
 
         <GameViewBrand />
+        <GameManagerPromoLink />
       </header>
 
       <div className="game-view-header-separator" aria-hidden="true" />
 
       {isFilterMenuOpen ? (
-        <div className="game-view-drawer-overlay" onClick={() => setIsFilterMenuOpen(false)}>
+        <div
+          className="game-view-drawer-overlay"
+          onClick={() => setIsFilterMenuOpen(false)}
+        >
           <aside
             className="game-view-filter-drawer"
             aria-label="Game filters"
@@ -338,7 +350,8 @@ export function GameViewMainScreen() {
                     setFilters((prev) => ({
                       ...prev,
                       teamType:
-                        event.target.value === "Girls" || event.target.value === "Boys"
+                        event.target.value === "Girls" ||
+                        event.target.value === "Boys"
                           ? event.target.value
                           : "",
                       teamLevel: "",
@@ -356,7 +369,10 @@ export function GameViewMainScreen() {
                 <select
                   value={filters.teamLevel}
                   onChange={(event) =>
-                    setFilters((prev) => ({ ...prev, teamLevel: event.target.value }))
+                    setFilters((prev) => ({
+                      ...prev,
+                      teamLevel: event.target.value,
+                    }))
                   }
                 >
                   <option value="">All Levels</option>
@@ -401,7 +417,9 @@ export function GameViewMainScreen() {
         <>
           <section className="game-view-section">
             <label className="game-view-search-pill" aria-label="Search games">
-              <span className="game-view-search-icon" aria-hidden="true">⌕</span>
+              <span className="game-view-search-icon" aria-hidden="true">
+                ⌕
+              </span>
               <input
                 type="text"
                 value={searchQuery}
@@ -415,7 +433,9 @@ export function GameViewMainScreen() {
           <section className="game-view-section">
             <h2 className="game-view-section-title">Games In Progress</h2>
             {pagedNextGames.length === 0 ? (
-              <p className="game-view-empty-text">No games in progress found for current filters.</p>
+              <p className="game-view-empty-text">
+                No games in progress found for current filters.
+              </p>
             ) : (
               <div className="game-view-card-grid">
                 {pagedNextGames.map((game) => (
@@ -432,13 +452,16 @@ export function GameViewMainScreen() {
               <button
                 type="button"
                 className="game-view-tab"
-                onClick={() => setNextGamesPage((prev) => Math.max(1, prev - 1))}
+                onClick={() =>
+                  setNextGamesPage((prev) => Math.max(1, prev - 1))
+                }
                 disabled={nextGamesPage <= 1}
               >
                 Prev
               </button>
               <span className="game-view-pagination-text">
-                Page {Math.min(nextGamesPage, nextGamesTotalPages)} of {nextGamesTotalPages}
+                Page {Math.min(nextGamesPage, nextGamesTotalPages)} of{" "}
+                {nextGamesTotalPages}
               </span>
               <button
                 type="button"
@@ -468,7 +491,8 @@ export function GameViewMainScreen() {
                 Prev
               </button>
               <span className="game-view-pagination-text">
-                Page {Math.min(upcomingPage, upcomingTotalPages)} of {upcomingTotalPages}
+                Page {Math.min(upcomingPage, upcomingTotalPages)} of{" "}
+                {upcomingTotalPages}
               </span>
               <button
                 type="button"
@@ -486,7 +510,10 @@ export function GameViewMainScreen() {
           </section>
 
           <section className="game-view-section">
-            <LastFinalGamesCard games={pagedFinalGames} onClick={handleGameCardClick} />
+            <LastFinalGamesCard
+              games={pagedFinalGames}
+              onClick={handleGameCardClick}
+            />
 
             <div className="game-view-pagination">
               <button
@@ -498,15 +525,14 @@ export function GameViewMainScreen() {
                 Prev
               </button>
               <span className="game-view-pagination-text">
-                Page {Math.min(finalsPage, finalsTotalPages)} of {finalsTotalPages}
+                Page {Math.min(finalsPage, finalsTotalPages)} of{" "}
+                {finalsTotalPages}
               </span>
               <button
                 type="button"
                 className="game-view-tab"
                 onClick={() =>
-                  setFinalsPage((prev) =>
-                    Math.min(finalsTotalPages, prev + 1),
-                  )
+                  setFinalsPage((prev) => Math.min(finalsTotalPages, prev + 1))
                 }
                 disabled={finalsPage >= finalsTotalPages}
               >

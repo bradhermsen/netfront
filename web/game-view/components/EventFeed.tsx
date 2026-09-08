@@ -22,7 +22,9 @@ export function EventFeed({ events, collapsible = false }: Props) {
   const [isExpanded, setIsExpanded] = useState(true);
   const contentId = useId();
   const showContent = !collapsible || isExpanded;
-  const visibleEvents = events.filter((event) => enabledEventTypes[event.eventType]);
+  const visibleEvents = events.filter(
+    (event) => enabledEventTypes[event.eventType],
+  );
 
   return (
     <section className="game-view-events-card">
@@ -42,10 +44,17 @@ export function EventFeed({ events, collapsible = false }: Props) {
             </button>
           ) : null}
         </div>
-        <div className="game-view-event-filters" aria-label="Event feed filters" hidden={!showContent}>
+        <div
+          className="game-view-event-filters"
+          aria-label="Event feed filters"
+          hidden={!showContent}
+        >
           {(["shot", "goal", "penalty"] as const).map((eventType) => {
             const isEnabled = enabledEventTypes[eventType];
-            const label = eventType === "penalty" ? "Penalties" : `${eventType[0].toUpperCase()}${eventType.slice(1)}s`;
+            const label =
+              eventType === "penalty"
+                ? "Penalties"
+                : `${eventType[0].toUpperCase()}${eventType.slice(1)}s`;
 
             return (
               <button
@@ -71,9 +80,15 @@ export function EventFeed({ events, collapsible = false }: Props) {
         {events.length === 0 ? (
           <p className="game-view-empty-text">No game events found.</p>
         ) : visibleEvents.length === 0 ? (
-          <p className="game-view-empty-text">No events match the selected filters.</p>
+          <p className="game-view-empty-text">
+            No events match the selected filters.
+          </p>
         ) : (
-          <ul className="game-view-events-list" aria-label="Game events" tabIndex={0}>
+          <ul
+            className="game-view-events-list"
+            aria-label="Game events"
+            tabIndex={0}
+          >
             {visibleEvents.map((event) => (
               <li key={event.eventId} className="game-view-event-row">
                 <div>
@@ -88,7 +103,6 @@ export function EventFeed({ events, collapsible = false }: Props) {
           </ul>
         )}
       </div>
-
     </section>
   );
 }

@@ -215,6 +215,11 @@ namespace NetFrontAPI.Functions
             var context = await AuthorizeArenaManagerAsync(req, arenaId);
             if (context.Error != null) return context.Error;
             using var connection = _connectionFactory.CreateConnection();
+            var associationCount = await connection.ExecuteScalarAsync<int>(@"
+                SELECT COUNT(1) FROM dbo.ArenaOrganizations WHERE ArenaId = @ArenaId;",
+                new { ArenaId = arenaId });
+            if (!context.IsSuperAdmin && associationCount > 1)
+                return await AuthorizationHelper.ForbiddenResponse(req, "Only SuperAdmin can delete an Arena shared by multiple organizations.");
             await connection.ExecuteAsync("UPDATE dbo.Arenas SET IsActive = 0, UpdatedAt = SYSUTCDATETIME() WHERE ArenaId = @ArenaId;", new { ArenaId = arenaId });
             return req.CreateResponse(HttpStatusCode.NoContent);
         }

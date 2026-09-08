@@ -12,7 +12,8 @@ function formatTeamLabel(teamName, teamType, levelName) {
     ["women", "Women"],
   ]);
 
-  const normalizedType = allowedTypes.get((teamType || "").toString().trim().toLowerCase()) || "";
+  const normalizedType =
+    allowedTypes.get((teamType || "").toString().trim().toLowerCase()) || "";
 
   return [teamName, normalizedType, levelName]
     .map((value) => (value || "").toString().trim())

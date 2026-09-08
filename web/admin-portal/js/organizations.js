@@ -4,7 +4,14 @@
 
 const ORG_GROUP_PAGE_SIZE = 10;
 const orgGroupPaginationState = {};
-const orgFacilityEscape = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
+const orgFacilityEscape = (value) =>
+  String(value ?? "").replace(
+    /[&<>'"]/g,
+    (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[
+        char
+      ],
+  );
 
 async function loadOrganizationFacilities(organizationId) {
   const section = document.getElementById("org-facilities-section");
@@ -12,13 +19,20 @@ async function loadOrganizationFacilities(organizationId) {
   const list = document.getElementById("org-facilities-list");
   section.classList.remove("hidden");
   divider.classList.remove("hidden");
-  document.getElementById("org-manage-facilities").href = `facilities.html?organizationId=${encodeURIComponent(organizationId)}`;
-  document.getElementById("org-add-arena").href = `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addArena`;
+  document.getElementById("org-manage-facilities").href =
+    `facilities.html?organizationId=${encodeURIComponent(organizationId)}`;
+  document.getElementById("org-add-arena").href =
+    `facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addArena`;
   list.innerHTML = '<div class="org-facility-rinks">Loading arenas...</div>';
   try {
     const arenas = await FacilityApi.getForOrganization(organizationId);
     list.innerHTML = arenas.length
-      ? arenas.map((arena) => `<div class="org-facility-row"><div><strong>${orgFacilityEscape(arena.name)} · ${orgFacilityEscape(arena.accessLevel)}</strong><div class="org-facility-rinks">${arena.rinks?.length ? arena.rinks.map((rink) => orgFacilityEscape(rink.name)).join(" · ") : "No rinks configured"}</div></div>${arena.accessLevel === "Manage" ? `<a class="nf-btn nf-btn-secondary" href="facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addRink&arenaId=${encodeURIComponent(arena.arenaId)}">Add Rink</a>` : ""}</div>`).join("")
+      ? arenas
+          .map(
+            (arena) =>
+              `<div class="org-facility-row"><div><strong>${orgFacilityEscape(arena.name)} · ${orgFacilityEscape(arena.accessLevel)}</strong><div class="org-facility-rinks">${arena.rinks?.length ? arena.rinks.map((rink) => orgFacilityEscape(rink.name)).join(" · ") : "No rinks configured"}</div></div>${arena.accessLevel === "Manage" ? `<a class="nf-btn nf-btn-secondary" href="facilities.html?organizationId=${encodeURIComponent(organizationId)}&action=addRink&arenaId=${encodeURIComponent(arena.arenaId)}">Add Rink</a>` : ""}</div>`,
+          )
+          .join("")
       : '<div class="org-facility-rinks">No Arenas are associated with this organization.</div>';
   } catch (error) {
     list.innerHTML = `<div class="org-facility-rinks">${orgFacilityEscape(error.message)}</div>`;
@@ -26,14 +40,19 @@ async function loadOrganizationFacilities(organizationId) {
 }
 
 function resetOrgGroupPagination() {
-  Object.keys(orgGroupPaginationState).forEach((k) => delete orgGroupPaginationState[k]);
+  Object.keys(orgGroupPaginationState).forEach(
+    (k) => delete orgGroupPaginationState[k],
+  );
 }
 
 function getFilteredOrganizations() {
   const source = Array.isArray(AdminPage?.allItems) ? AdminPage.allItems : [];
-  const searchTerm = (document.getElementById("org-search-bar")?.value || "").toLowerCase();
+  const searchTerm = (
+    document.getElementById("org-search-bar")?.value || ""
+  ).toLowerCase();
   const leagueFilter = document.getElementById("filter-league")?.value || "";
-  const typeFilter = document.getElementById("filter-organization-type")?.value || "";
+  const typeFilter =
+    document.getElementById("filter-organization-type")?.value || "";
   const statusFilter = document.getElementById("filter-status")?.value || "";
 
   return source.filter((org) => {
@@ -68,18 +87,31 @@ function renderOrganizationsGrouped(orgs) {
     inactive: orgs.filter((org) => !org.isActive),
   };
 
-  const statusOrder = ["active", "inactive"].filter((key) => statusGroups[key].length > 0);
+  const statusOrder = ["active", "inactive"].filter(
+    (key) => statusGroups[key].length > 0,
+  );
 
   container.innerHTML = statusOrder
     .map((statusKey, statusIndex) => {
       const statusLabel = statusKey === "active" ? "Active" : "Inactive";
-      const statusItems = [...statusGroups[statusKey]].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      const statusItems = [...statusGroups[statusKey]].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || ""),
+      );
 
-      const totalPages = Math.max(1, Math.ceil(statusItems.length / ORG_GROUP_PAGE_SIZE));
-      const currentPage = Math.min(orgGroupPaginationState[statusKey] || 1, totalPages);
+      const totalPages = Math.max(
+        1,
+        Math.ceil(statusItems.length / ORG_GROUP_PAGE_SIZE),
+      );
+      const currentPage = Math.min(
+        orgGroupPaginationState[statusKey] || 1,
+        totalPages,
+      );
       orgGroupPaginationState[statusKey] = currentPage;
 
-      const paged = statusItems.slice((currentPage - 1) * ORG_GROUP_PAGE_SIZE, currentPage * ORG_GROUP_PAGE_SIZE);
+      const paged = statusItems.slice(
+        (currentPage - 1) * ORG_GROUP_PAGE_SIZE,
+        currentPage * ORG_GROUP_PAGE_SIZE,
+      );
 
       const byLeague = new Map();
       paged.forEach((org) => {
@@ -91,7 +123,8 @@ function renderOrganizationsGrouped(orgs) {
       const leagueMarkup = [...byLeague.entries()]
         .map(([leagueLabel, leagueItems], leagueIndex) => {
           const cards = leagueItems
-            .map((org) => `
+            .map(
+              (org) => `
               <article class="nf-item-card org-item-card">
                 <div class="nf-item-card-top">
                   <h4>${org.name || "Unnamed Organization"}</h4>
@@ -109,7 +142,8 @@ function renderOrganizationsGrouped(orgs) {
                   <button class="nf-btn-icon delete org-delete-btn" data-id="${org.organizationId}" title="Delete"><i class="fa-solid fa-trash"></i></button>
                 </div>
               </article>
-            `)
+            `,
+            )
             .join("");
 
           return `
@@ -132,13 +166,17 @@ function renderOrganizationsGrouped(orgs) {
           </summary>
           <div class="nf-group-content">
             ${leagueMarkup}
-            ${statusItems.length > ORG_GROUP_PAGE_SIZE ? `
+            ${
+              statusItems.length > ORG_GROUP_PAGE_SIZE
+                ? `
               <div class="nf-pagination">
                 <button class="nf-btn nf-btn-secondary org-page-btn" data-status="${statusKey}" data-direction="prev" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
                 <span>Page ${currentPage} of ${totalPages}</span>
                 <button class="nf-btn nf-btn-secondary org-page-btn" data-status="${statusKey}" data-direction="next" ${currentPage === totalPages ? "disabled" : ""}>Next</button>
               </div>
-            ` : ""}
+            `
+                : ""
+            }
           </div>
         </details>
       `;
@@ -173,9 +211,8 @@ function wireOrganizationPagination() {
       const direction = btn.dataset.direction;
       const current = orgGroupPaginationState[status] || 1;
 
-      orgGroupPaginationState[status] = direction === "prev"
-        ? Math.max(1, current - 1)
-        : current + 1;
+      orgGroupPaginationState[status] =
+        direction === "prev" ? Math.max(1, current - 1) : current + 1;
 
       applyOrgFiltersAndSearch();
     };
@@ -210,9 +247,10 @@ AdminPage.init({
     const payload = AdminPage.config.collectFormData();
     const previousType = window.editingOrganizationType || "Managed";
     if (AdminPage.editingId && previousType !== payload.organizationType) {
-      const message = payload.organizationType === "External"
-        ? "Convert this organization to External? Team access codes will be removed and organization users will no longer be able to sign in. Historical data will be preserved."
-        : "Convert this organization to Managed? Historical data will be preserved. Portal users and new team access codes can then be configured.";
+      const message =
+        payload.organizationType === "External"
+          ? "Convert this organization to External? Team access codes will be removed and organization users will no longer be able to sign in. Historical data will be preserved."
+          : "Convert this organization to Managed? Historical data will be preserved. Portal users and new team access codes can then be configured.";
       if (!window.confirm(message)) return;
     }
 
@@ -293,8 +331,10 @@ AdminPage.init({
     document.getElementById("org-country").value = org.country ?? "";
     document.getElementById("org-mascot").value = org.mascot ?? "";
     document.getElementById("org-league").value = org.leagueId ?? "";
-    document.getElementById("org-type-managed").checked = org.organizationType !== "External";
-    document.getElementById("org-type-external").checked = org.organizationType === "External";
+    document.getElementById("org-type-managed").checked =
+      org.organizationType !== "External";
+    document.getElementById("org-type-external").checked =
+      org.organizationType === "External";
 
     document.getElementById("org-contact-first").value =
       org.primaryContactFirstName ?? "";
@@ -315,7 +355,7 @@ AdminPage.init({
 
     document.getElementById("org-active").checked = org.isActive;
   },
-  
+
   // -------------------------------------------------------
   // COLLECT FORM DATA
   // -------------------------------------------------------
@@ -330,7 +370,9 @@ AdminPage.init({
     country: document.getElementById("org-country").value,
     mascot: document.getElementById("org-mascot").value,
     leagueId: document.getElementById("org-league").value,
-    organizationType: document.querySelector('input[name="organization-type"]:checked')?.value || "Managed",
+    organizationType:
+      document.querySelector('input[name="organization-type"]:checked')
+        ?.value || "Managed",
 
     primaryContactFirstName: document.getElementById("org-contact-first").value,
     primaryContactLastName: document.getElementById("org-contact-last").value,

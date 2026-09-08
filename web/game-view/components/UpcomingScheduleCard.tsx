@@ -32,7 +32,8 @@ export function UpcomingScheduleCard({ games }: Props) {
             return (
               <li key={game.gameId} className="game-view-schedule-row">
                 <p className="game-view-schedule-matchup">
-                  {game.matchupLabel || `${game.awayTeamName} at ${game.homeTeamName}`}
+                  {game.matchupLabel ||
+                    `${game.awayTeamName} at ${game.homeTeamName}`}
                 </p>
                 <p className="game-view-schedule-meta">
                   {dateText}

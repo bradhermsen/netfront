@@ -44,7 +44,10 @@ function pickBoolean(obj: JsonObject, ...keys: string[]): boolean {
   return false;
 }
 
-function pickOptionalBoolean(obj: JsonObject, ...keys: string[]): boolean | undefined {
+function pickOptionalBoolean(
+  obj: JsonObject,
+  ...keys: string[]
+): boolean | undefined {
   for (const key of keys) {
     const value = obj[key];
     if (typeof value === "boolean") {
@@ -54,7 +57,10 @@ function pickOptionalBoolean(obj: JsonObject, ...keys: string[]): boolean | unde
   return undefined;
 }
 
-function pickOptionalNumber(obj: JsonObject, ...keys: string[]): number | undefined {
+function pickOptionalNumber(
+  obj: JsonObject,
+  ...keys: string[]
+): number | undefined {
   for (const key of keys) {
     const value = obj[key];
     if (typeof value === "number" && Number.isFinite(value)) {
@@ -108,7 +114,8 @@ function normalizeOrganization(row: unknown): ApiOrganization {
     name: pickString(obj, "name", "Name") || null,
     abbreviation: pickString(obj, "abbreviation", "Abbreviation") || null,
     mascot: pickString(obj, "mascot", "Mascot") || null,
-    organizationType: pickString(obj, "organizationType", "OrganizationType") || null,
+    organizationType:
+      pickString(obj, "organizationType", "OrganizationType") || null,
     isActive: pickBoolean(obj, "isActive", "IsActive"),
   };
 }
@@ -117,10 +124,10 @@ function normalizeTeam(row: unknown): ApiTeam {
   const obj = asObject(row) || {};
   return {
     teamId: pickString(obj, "teamId", "TeamId", "id", "Id"),
-    organizationId:
-      pickString(obj, "organizationId", "OrganizationId") || null,
+    organizationId: pickString(obj, "organizationId", "OrganizationId") || null,
     leagueId: pickString(obj, "leagueId", "LeagueId") || null,
-    organizationType: pickString(obj, "organizationType", "OrganizationType") || null,
+    organizationType:
+      pickString(obj, "organizationType", "OrganizationType") || null,
     seasonId: pickString(obj, "seasonId", "SeasonId") || null,
     name: pickString(obj, "name", "Name") || null,
     teamType: pickString(obj, "teamType", "TeamType") || null,
@@ -169,7 +176,11 @@ function normalizeGameDetail(payload: unknown): ApiGameDetail {
     awayTeamName: pickString(obj, "awayTeamName", "AwayTeamName"),
     gameDateTime: pickString(obj, "gameDateTime", "GameDateTime"),
     status: pickString(obj, "status", "Status") || "SCHEDULED",
-    periodLengthMinutes: pickNumber(obj, "periodLengthMinutes", "PeriodLengthMinutes"),
+    periodLengthMinutes: pickNumber(
+      obj,
+      "periodLengthMinutes",
+      "PeriodLengthMinutes",
+    ),
   };
 }
 
@@ -206,7 +217,8 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
       return {
         eventId: pickString(goal, "eventId", "EventId"),
         period: pickNumber(goal, "period", "Period") || undefined,
-        timeInPeriod: pickString(goal, "timeInPeriod", "TimeInPeriod") || undefined,
+        timeInPeriod:
+          pickString(goal, "timeInPeriod", "TimeInPeriod") || undefined,
         teamName: pickString(goal, "teamName", "TeamName"),
         scorerName: pickString(goal, "scorerName", "ScorerName") || undefined,
         assist1Name: pickString(goal, "assist1Name", "Assist1Name") || null,
@@ -266,13 +278,25 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
       "isAwayOnPowerPlay",
       "IsAwayOnPowerPlay",
     ),
-    homeSkatersOnIce: pickOptionalNumber(obj, "homeSkatersOnIce", "HomeSkatersOnIce"),
-    awaySkatersOnIce: pickOptionalNumber(obj, "awaySkatersOnIce", "AwaySkatersOnIce"),
+    homeSkatersOnIce: pickOptionalNumber(
+      obj,
+      "homeSkatersOnIce",
+      "HomeSkatersOnIce",
+    ),
+    awaySkatersOnIce: pickOptionalNumber(
+      obj,
+      "awaySkatersOnIce",
+      "AwaySkatersOnIce",
+    ),
     homeStarterIds: Array.isArray(obj.homeStarterIds ?? obj.HomeStarterIds)
-      ? ([] as unknown[]).concat(obj.homeStarterIds ?? obj.HomeStarterIds).map((id) => String(id))
+      ? ([] as unknown[])
+          .concat(obj.homeStarterIds ?? obj.HomeStarterIds)
+          .map((id) => String(id))
       : undefined,
     awayStarterIds: Array.isArray(obj.awayStarterIds ?? obj.AwayStarterIds)
-      ? ([] as unknown[]).concat(obj.awayStarterIds ?? obj.AwayStarterIds).map((id) => String(id))
+      ? ([] as unknown[])
+          .concat(obj.awayStarterIds ?? obj.AwayStarterIds)
+          .map((id) => String(id))
       : undefined,
   };
 }
@@ -280,9 +304,18 @@ function normalizeGameSummary(payload: unknown): ApiGameSummary {
 function normalizeGameSummaryReport(payload: unknown): ApiGameSummaryReport {
   const obj = asObject(payload) || {};
   const goalsRaw = extractListPayload(obj.goals ?? obj.Goals ?? [], "goals");
-  const penaltiesRaw = extractListPayload(obj.penalties ?? obj.Penalties ?? [], "penalties");
-  const goaliesRaw = extractListPayload(obj.goalies ?? obj.Goalies ?? [], "goalies");
-  const officialsRaw = extractListPayload(obj.officials ?? obj.Officials ?? [], "officials");
+  const penaltiesRaw = extractListPayload(
+    obj.penalties ?? obj.Penalties ?? [],
+    "penalties",
+  );
+  const goaliesRaw = extractListPayload(
+    obj.goalies ?? obj.Goalies ?? [],
+    "goalies",
+  );
+  const officialsRaw = extractListPayload(
+    obj.officials ?? obj.Officials ?? [],
+    "officials",
+  );
   const suspensionRaw = extractListPayload(
     obj.suspensionReviews ?? obj.SuspensionReviews ?? [],
     "suspension reviews",
@@ -306,16 +339,56 @@ function normalizeGameSummaryReport(payload: unknown): ApiGameSummaryReport {
     awayTeamMascot: pickString(obj, "awayTeamMascot", "AwayTeamMascot"),
     arenaName: pickString(obj, "arenaName", "ArenaName"),
     rinkName: pickString(obj, "rinkName", "RinkName"),
-    homeHeadCoachName: pickString(obj, "homeHeadCoachName", "HomeHeadCoachName"),
-    homeAssistantCoach1Name: pickString(obj, "homeAssistantCoach1Name", "HomeAssistantCoach1Name"),
-    homeAssistantCoach2Name: pickString(obj, "homeAssistantCoach2Name", "HomeAssistantCoach2Name"),
-    homeAssistantCoach3Name: pickString(obj, "homeAssistantCoach3Name", "HomeAssistantCoach3Name"),
-    homeAssistantCoach4Name: pickString(obj, "homeAssistantCoach4Name", "HomeAssistantCoach4Name"),
-    awayHeadCoachName: pickString(obj, "awayHeadCoachName", "AwayHeadCoachName"),
-    awayAssistantCoach1Name: pickString(obj, "awayAssistantCoach1Name", "AwayAssistantCoach1Name"),
-    awayAssistantCoach2Name: pickString(obj, "awayAssistantCoach2Name", "AwayAssistantCoach2Name"),
-    awayAssistantCoach3Name: pickString(obj, "awayAssistantCoach3Name", "AwayAssistantCoach3Name"),
-    awayAssistantCoach4Name: pickString(obj, "awayAssistantCoach4Name", "AwayAssistantCoach4Name"),
+    homeHeadCoachName: pickString(
+      obj,
+      "homeHeadCoachName",
+      "HomeHeadCoachName",
+    ),
+    homeAssistantCoach1Name: pickString(
+      obj,
+      "homeAssistantCoach1Name",
+      "HomeAssistantCoach1Name",
+    ),
+    homeAssistantCoach2Name: pickString(
+      obj,
+      "homeAssistantCoach2Name",
+      "HomeAssistantCoach2Name",
+    ),
+    homeAssistantCoach3Name: pickString(
+      obj,
+      "homeAssistantCoach3Name",
+      "HomeAssistantCoach3Name",
+    ),
+    homeAssistantCoach4Name: pickString(
+      obj,
+      "homeAssistantCoach4Name",
+      "HomeAssistantCoach4Name",
+    ),
+    awayHeadCoachName: pickString(
+      obj,
+      "awayHeadCoachName",
+      "AwayHeadCoachName",
+    ),
+    awayAssistantCoach1Name: pickString(
+      obj,
+      "awayAssistantCoach1Name",
+      "AwayAssistantCoach1Name",
+    ),
+    awayAssistantCoach2Name: pickString(
+      obj,
+      "awayAssistantCoach2Name",
+      "AwayAssistantCoach2Name",
+    ),
+    awayAssistantCoach3Name: pickString(
+      obj,
+      "awayAssistantCoach3Name",
+      "AwayAssistantCoach3Name",
+    ),
+    awayAssistantCoach4Name: pickString(
+      obj,
+      "awayAssistantCoach4Name",
+      "AwayAssistantCoach4Name",
+    ),
     homeGoals: pickNumber(obj, "homeGoals", "HomeGoals"),
     awayGoals: pickNumber(obj, "awayGoals", "AwayGoals"),
     homeShots: {
@@ -338,11 +411,14 @@ function normalizeGameSummaryReport(payload: unknown): ApiGameSummaryReport {
         period: pickNumber(goal, "period", "Period"),
         timeInPeriod: pickString(goal, "timeInPeriod", "TimeInPeriod"),
         teamName: pickString(goal, "teamName", "TeamName"),
-        scorerNumber: pickOptionalNumber(goal, "scorerNumber", "ScorerNumber") ?? null,
+        scorerNumber:
+          pickOptionalNumber(goal, "scorerNumber", "ScorerNumber") ?? null,
         scorer: pickString(goal, "scorer", "Scorer"),
-        assist1Number: pickOptionalNumber(goal, "assist1Number", "Assist1Number") ?? null,
+        assist1Number:
+          pickOptionalNumber(goal, "assist1Number", "Assist1Number") ?? null,
         assist1: pickString(goal, "assist1", "Assist1") || null,
-        assist2Number: pickOptionalNumber(goal, "assist2Number", "Assist2Number") ?? null,
+        assist2Number:
+          pickOptionalNumber(goal, "assist2Number", "Assist2Number") ?? null,
         assist2: pickString(goal, "assist2", "Assist2") || null,
         strength: pickString(goal, "strength", "Strength"),
       };
@@ -353,10 +429,15 @@ function normalizeGameSummaryReport(payload: unknown): ApiGameSummaryReport {
         period: pickNumber(penalty, "period", "Period"),
         timeInPeriod: pickString(penalty, "timeInPeriod", "TimeInPeriod"),
         teamName: pickString(penalty, "teamName", "TeamName"),
-        playerNumber: pickOptionalNumber(penalty, "playerNumber", "PlayerNumber") ?? null,
+        playerNumber:
+          pickOptionalNumber(penalty, "playerNumber", "PlayerNumber") ?? null,
         playerName: pickString(penalty, "playerName", "PlayerName"),
         infraction: pickString(penalty, "infraction", "Infraction"),
-        durationMinutes: pickNumber(penalty, "durationMinutes", "DurationMinutes"),
+        durationMinutes: pickNumber(
+          penalty,
+          "durationMinutes",
+          "DurationMinutes",
+        ),
         penaltyType: pickString(penalty, "penaltyType", "PenaltyType") || null,
         notes: pickString(penalty, "notes", "Notes") || null,
       };
@@ -371,10 +452,22 @@ function normalizeGameSummaryReport(payload: unknown): ApiGameSummaryReport {
         p3: pickNumber(goalie, "p3", "P3"),
         ot: pickNumber(goalie, "ot", "OT"),
         total: pickNumber(goalie, "total", "Total"),
-        timeInNetSeconds: pickNumber(goalie, "timeInNetSeconds", "TimeInNetSeconds"),
-        goalsAgainstEstimate: pickNumber(goalie, "goalsAgainstEstimate", "GoalsAgainstEstimate"),
+        timeInNetSeconds: pickNumber(
+          goalie,
+          "timeInNetSeconds",
+          "TimeInNetSeconds",
+        ),
+        goalsAgainstEstimate: pickNumber(
+          goalie,
+          "goalsAgainstEstimate",
+          "GoalsAgainstEstimate",
+        ),
         savesEstimate: pickNumber(goalie, "savesEstimate", "SavesEstimate"),
-        savePctEstimate: pickNumber(goalie, "savePctEstimate", "SavePctEstimate"),
+        savePctEstimate: pickNumber(
+          goalie,
+          "savePctEstimate",
+          "SavePctEstimate",
+        ),
       };
     }),
     officials: officialsRaw.map((row) => {
@@ -390,10 +483,16 @@ function normalizeGameSummaryReport(payload: unknown): ApiGameSummaryReport {
         period: pickNumber(item, "period", "Period"),
         timeInPeriod: pickString(item, "timeInPeriod", "TimeInPeriod"),
         teamName: pickString(item, "teamName", "TeamName"),
-        playerNumber: pickOptionalNumber(item, "playerNumber", "PlayerNumber") ?? null,
+        playerNumber:
+          pickOptionalNumber(item, "playerNumber", "PlayerNumber") ?? null,
         playerName: pickString(item, "playerName", "PlayerName"),
-        suspensionBehavior: pickString(item, "suspensionBehavior", "SuspensionBehavior") || null,
-        requiresRefereeNotes: pickBoolean(item, "requiresRefereeNotes", "RequiresRefereeNotes"),
+        suspensionBehavior:
+          pickString(item, "suspensionBehavior", "SuspensionBehavior") || null,
+        requiresRefereeNotes: pickBoolean(
+          item,
+          "requiresRefereeNotes",
+          "RequiresRefereeNotes",
+        ),
         reviewRequired: pickBoolean(item, "reviewRequired", "ReviewRequired"),
         notes: pickString(item, "notes", "Notes") || null,
       };
@@ -411,10 +510,7 @@ function normalizeRosterPlayers(payload: unknown): ApiRosterPlayer[] {
       fullName: pickString(obj, "fullName", "FullName"),
       jerseyNumber: pickNumber(obj, "jerseyNumber", "JerseyNumber") || null,
       position: pickString(obj, "position", "Position") || null,
-      grade:
-        typeof gradeNumber === "number"
-          ? gradeNumber
-          : gradeText || null,
+      grade: typeof gradeNumber === "number" ? gradeNumber : gradeText || null,
       isGoalie: pickBoolean(obj, "isGoalie", "IsGoalie"),
       isActive: pickBoolean(obj, "isActive", "IsActive"),
     };
@@ -447,7 +543,11 @@ function normalizePublicRosterRow(row: unknown) {
     penaltyMinutes: pickNumber(obj, "penaltyMinutes", "PenaltyMinutes"),
     shotsAgainst: pickNumber(obj, "shotsAgainst", "ShotsAgainst"),
     goalsAgainst: pickNumber(obj, "goalsAgainst", "GoalsAgainst"),
-    goalsAgainstAverage: pickNumber(obj, "goalsAgainstAverage", "GoalsAgainstAverage"),
+    goalsAgainstAverage: pickNumber(
+      obj,
+      "goalsAgainstAverage",
+      "GoalsAgainstAverage",
+    ),
     savePercentage: pickNumber(obj, "savePercentage", "SavePercentage"),
     minutesPlayed: pickNumber(obj, "minutesPlayed", "MinutesPlayed"),
   };
@@ -456,8 +556,14 @@ function normalizePublicRosterRow(row: unknown) {
 function normalizePublicRosterBundle(payload: unknown): ApiPublicRosterBundle {
   const obj = asObject(payload) || {};
   return {
-    homeRoster: extractListPayload(obj.homeRoster ?? obj.HomeRoster ?? [], "home roster").map(normalizePublicRosterRow),
-    awayRoster: extractListPayload(obj.awayRoster ?? obj.AwayRoster ?? [], "away roster").map(normalizePublicRosterRow),
+    homeRoster: extractListPayload(
+      obj.homeRoster ?? obj.HomeRoster ?? [],
+      "home roster",
+    ).map(normalizePublicRosterRow),
+    awayRoster: extractListPayload(
+      obj.awayRoster ?? obj.AwayRoster ?? [],
+      "away roster",
+    ).map(normalizePublicRosterRow),
     goalieStatsNotice:
       pickString(obj, "goalieStatsNotice", "GoalieStatsNotice") || null,
   };
@@ -527,9 +633,38 @@ async function getJson<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface GameManagerPilotInterest {
+  organizationName: string;
+  contactName: string;
+  email: string;
+  contactRole: string;
+  teamCount: number | null;
+  gatewayInterest: "interested" | "unsure" | "not-now";
+  notes: string;
+  website: string;
+}
+
+export async function submitGameManagerPilotInterest(
+  payload: GameManagerPilotInterest,
+): Promise<string> {
+  const res = await authFetch("/public/game-manager/pilot-interest", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  const response = (await res.json().catch(() => ({}))) as {
+    message?: string;
+    error?: string;
+  };
+  if (!res.ok)
+    throw new Error(response.error || "Unable to submit pilot interest.");
+  return response.message || "Thanks. We received your pilot interest.";
+}
+
 export async function getOrganizations(): Promise<ApiOrganization[]> {
   const payload = await getJson<unknown>("/public/gameview/organizations");
-  return extractListPayload(payload, "organizations").map(normalizeOrganization);
+  return extractListPayload(payload, "organizations").map(
+    normalizeOrganization,
+  );
 }
 
 export async function getTeams(): Promise<ApiTeam[]> {
@@ -540,7 +675,9 @@ export async function getTeams(): Promise<ApiTeam[]> {
 export async function getTeamsByOrganization(
   organizationId: string,
 ): Promise<ApiTeam[]> {
-  const payload = await getJson<unknown>(`/public/gameview/teams?organizationId=${encodeURIComponent(organizationId)}`);
+  const payload = await getJson<unknown>(
+    `/public/gameview/teams?organizationId=${encodeURIComponent(organizationId)}`,
+  );
   return extractListPayload(payload, "teams").map(normalizeTeam);
 }
 
@@ -550,9 +687,7 @@ export async function getSeasons(): Promise<ApiSeason[]> {
 }
 
 export async function getGames(seasonId?: string): Promise<ApiGameListItem[]> {
-  const query = seasonId
-    ? `?seasonId=${encodeURIComponent(seasonId)}`
-    : "";
+  const query = seasonId ? `?seasonId=${encodeURIComponent(seasonId)}` : "";
   const payload = await getJson<unknown>(`/public/gameview/games${query}`);
   return extractListPayload(payload, "games").map(normalizeGameListItem);
 }
@@ -562,7 +697,9 @@ export async function getGameById(gameId: string): Promise<ApiGameDetail> {
   return normalizeGameDetail(payload);
 }
 
-export async function getTeamNextGame(teamId: string): Promise<ApiNextGame | null> {
+export async function getTeamNextGame(
+  teamId: string,
+): Promise<ApiNextGame | null> {
   const res = await authFetch(`/teams/${teamId}/nextgame`);
 
   if (res.status === 404 || res.status === 410) {
@@ -570,7 +707,9 @@ export async function getTeamNextGame(teamId: string): Promise<ApiNextGame | nul
   }
 
   if (!res.ok) {
-    throw new Error(`Request failed (${res.status}) for /teams/${teamId}/nextgame`);
+    throw new Error(
+      `Request failed (${res.status}) for /teams/${teamId}/nextgame`,
+    );
   }
 
   return normalizeNextGame(await res.json());
@@ -584,7 +723,9 @@ export async function getGameSummaryMobile(
     return null;
   }
   if (!res.ok) {
-    throw new Error(`Request failed (${res.status}) for /public/gameview/games/${gameId}/summary`);
+    throw new Error(
+      `Request failed (${res.status}) for /public/gameview/games/${gameId}/summary`,
+    );
   }
   return normalizeGameSummary(await res.json());
 }
@@ -592,12 +733,16 @@ export async function getGameSummaryMobile(
 export async function getGameSummaryReport(
   gameId: string,
 ): Promise<ApiGameSummaryReport | null> {
-  const res = await authFetch(`/public/gameview/games/${gameId}/summary-report`);
+  const res = await authFetch(
+    `/public/gameview/games/${gameId}/summary-report`,
+  );
   if (res.status === 404) {
     return null;
   }
   if (!res.ok) {
-    throw new Error(`Request failed (${res.status}) for /public/gameview/games/${gameId}/summary-report`);
+    throw new Error(
+      `Request failed (${res.status}) for /public/gameview/games/${gameId}/summary-report`,
+    );
   }
   return normalizeGameSummaryReport(await res.json());
 }
@@ -605,21 +750,27 @@ export async function getGameSummaryReport(
 export async function getPublicGameRosters(
   gameId: string,
 ): Promise<ApiPublicRosterBundle> {
-  const payload = await getJson<unknown>(`/public/gameview/games/${gameId}/rosters`);
+  const payload = await getJson<unknown>(
+    `/public/gameview/games/${gameId}/rosters`,
+  );
   return normalizePublicRosterBundle(payload);
 }
 
 export async function getPublicGameCoaches(
   gameId: string,
 ): Promise<ApiPublicCoachBundle> {
-  const payload = await getJson<unknown>(`/public/gameview/games/${gameId}/coaches`);
+  const payload = await getJson<unknown>(
+    `/public/gameview/games/${gameId}/coaches`,
+  );
   return normalizePublicCoachBundle(payload);
 }
 
 export async function getGameShotTotalsFromStats(
   gameId: string,
 ): Promise<{ homeShots: number; awayShots: number } | null> {
-  const payload = await getJson<unknown>(`/stats/game?gameId=${encodeURIComponent(gameId)}`);
+  const payload = await getJson<unknown>(
+    `/stats/game?gameId=${encodeURIComponent(gameId)}`,
+  );
   const rows = extractListPayload(payload, "game stats");
   const first = asObject(rows[0]);
   if (!first) return null;
@@ -638,7 +789,9 @@ export async function getTeamRosterMobile(
     return [];
   }
   if (!res.ok) {
-    throw new Error(`Request failed (${res.status}) for /teams/${teamId}/roster-mobile`);
+    throw new Error(
+      `Request failed (${res.status}) for /teams/${teamId}/roster-mobile`,
+    );
   }
   return normalizeRosterPlayers(await res.json());
 }
@@ -651,7 +804,9 @@ export async function getTeamCoachesMobile(
     return [];
   }
   if (!res.ok) {
-    throw new Error(`Request failed (${res.status}) for /teams/${teamId}/coaches-mobile`);
+    throw new Error(
+      `Request failed (${res.status}) for /teams/${teamId}/coaches-mobile`,
+    );
   }
   return normalizeTeamCoaches(await res.json());
 }

@@ -12,5 +12,14 @@
     "allowJs": false,
     "types": ["vite/client"]
   },
-  "include": ["src", "api", "components", "hooks", "screens", "services", "state", "types"]
+  "include": [
+    "src",
+    "api",
+    "components",
+    "hooks",
+    "screens",
+    "services",
+    "state",
+    "types"
+  ]
 }

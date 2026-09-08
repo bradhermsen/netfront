@@ -24,7 +24,8 @@ export function NextGameCard({ game, onClick }: Props) {
   const showScore =
     typeof game.homeScore === "number" && typeof game.awayScore === "number";
 
-  const matchupLabel = game.matchupLabel || `${game.opponentName} at ${game.teamName}`;
+  const matchupLabel =
+    game.matchupLabel || `${game.opponentName} at ${game.teamName}`;
 
   return (
     <button

@@ -23,16 +23,16 @@ The replacement tablet should load the same active game, reconnect to the ESP32,
 
 ## Sources of Truth
 
-| Information | Authority during recovery |
-|---|---|
-| Hardware clock and running state | Physical scoreboard through the ESP32 |
-| Period from hardware feed | Physical scoreboard through the ESP32 |
-| Scores and shots from hardware feed | Physical scoreboard through the ESP32 |
-| Hardware penalty slots | Physical scoreboard through the ESP32 |
-| Game identity and scheduled teams | NetFront API/database |
-| Rosters and player information | NetFront API/database |
-| Submitted game events | NetFront API/database |
-| Unsaved form entries and UI selections | Failed tablet only; not recoverable |
+| Information                            | Authority during recovery             |
+| -------------------------------------- | ------------------------------------- |
+| Hardware clock and running state       | Physical scoreboard through the ESP32 |
+| Period from hardware feed              | Physical scoreboard through the ESP32 |
+| Scores and shots from hardware feed    | Physical scoreboard through the ESP32 |
+| Hardware penalty slots                 | Physical scoreboard through the ESP32 |
+| Game identity and scheduled teams      | NetFront API/database                 |
+| Rosters and player information         | NetFront API/database                 |
+| Submitted game events                  | NetFront API/database                 |
+| Unsaved form entries and UI selections | Failed tablet only; not recoverable   |
 
 The replacement tablet must treat the ESP32 as authoritative for hardware-fed values. It must not push an older locally cached or database clock value back over the current feed.
 
@@ -153,18 +153,18 @@ Recommended sequence:
 
 ## Current and Recommended Capability Matrix
 
-| Capability | Current architectural support | Additional work recommended |
-|---|---|---|
-| Physical scoreboard continues after tablet failure | Yes | None |
-| ESP32 continues parsing hardware state | Yes | None |
-| Replacement tablet can reconnect to ESP32 | Yes, using the configured gateway connection | Add a guided recovery screen |
-| Replacement tablet can reload scheduled game data | API architecture supports loading games | Verify explicit active-game resume behavior end to end |
-| Previously submitted events survive | Yes, when successfully persisted by the API | Confirm every event is written immediately |
-| Unsaved tablet-only input survives | No | Optional local draft synchronization |
-| Exact manual-clock recovery | Not guaranteed from tablet-local state | Add periodic server checkpoints and timestamps |
-| Single controlling tablet enforcement | Not guaranteed by ESP32 broadcasting | Add server-issued control lease and heartbeat |
-| Authorized forced takeover | Not guaranteed | Add **Take Over Game** API and UI flow |
-| Reconnected old tablet becomes read-only | Not guaranteed | Enforce the lease token on all write endpoints |
+| Capability                                         | Current architectural support                | Additional work recommended                            |
+| -------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------ |
+| Physical scoreboard continues after tablet failure | Yes                                          | None                                                   |
+| ESP32 continues parsing hardware state             | Yes                                          | None                                                   |
+| Replacement tablet can reconnect to ESP32          | Yes, using the configured gateway connection | Add a guided recovery screen                           |
+| Replacement tablet can reload scheduled game data  | API architecture supports loading games      | Verify explicit active-game resume behavior end to end |
+| Previously submitted events survive                | Yes, when successfully persisted by the API  | Confirm every event is written immediately             |
+| Unsaved tablet-only input survives                 | No                                           | Optional local draft synchronization                   |
+| Exact manual-clock recovery                        | Not guaranteed from tablet-local state       | Add periodic server checkpoints and timestamps         |
+| Single controlling tablet enforcement              | Not guaranteed by ESP32 broadcasting         | Add server-issued control lease and heartbeat          |
+| Authorized forced takeover                         | Not guaranteed                               | Add **Take Over Game** API and UI flow                 |
+| Reconnected old tablet becomes read-only           | Not guaranteed                               | Enforce the lease token on all write endpoints         |
 
 ## Operational Guidance
 

@@ -195,7 +195,7 @@ window.Auth = {
 };
 // GLOBAL logout function
 window.logout = function () {
-localStorage.removeItem("nf_token");
+  localStorage.removeItem("nf_token");
   localStorage.removeItem("nf_role");
 
   // Show toast if available

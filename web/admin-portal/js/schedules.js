@@ -6,7 +6,10 @@
 // Enforce Team Manager/OrgAdmin/SuperAdmin-only access
 (function checkPermission() {
   if (!Auth.canManageSchedules()) {
-    showMessage("Access Denied: Schedule management requires Team Manager or Admin role", "error");
+    showMessage(
+      "Access Denied: Schedule management requires Team Manager or Admin role",
+      "error",
+    );
     setTimeout(() => {
       window.location.href = "./dashboard.html";
     }, 2000);
@@ -96,7 +99,8 @@ function normalizeTeamTypeValue(value) {
 function teamLabel(t) {
   if (!t) return "";
 
-  const teamType = normalizeTeamTypeValue(t.teamType) || normalizeTeamTypeValue(t.gender);
+  const teamType =
+    normalizeTeamTypeValue(t.teamType) || normalizeTeamTypeValue(t.gender);
 
   return [t.name, teamType, t.levelName]
     .map((value) => (value || "").toString().trim())
@@ -113,12 +117,18 @@ function getOrganizations() {
 
   allTeams.forEach((team) => {
     if (team.organizationId) {
-      organizations.set(team.organizationId, team.organizationName || "Unassigned");
+      organizations.set(
+        team.organizationId,
+        team.organizationName || "Unassigned",
+      );
     }
   });
 
   return [...organizations.entries()]
-    .map(([organizationId, organizationName]) => ({ organizationId, organizationName }))
+    .map(([organizationId, organizationName]) => ({
+      organizationId,
+      organizationName,
+    }))
     .sort((a, b) => a.organizationName.localeCompare(b.organizationName));
 }
 
@@ -132,19 +142,31 @@ function getTeamsForOrganization(organizationId) {
 
 function getVenueOrganizationId() {
   const homeTeamId = document.getElementById("game-home-team")?.value || "";
-  return allTeams.find((team) => team.teamId === homeTeamId)?.organizationId || "";
+  return (
+    allTeams.find((team) => team.teamId === homeTeamId)?.organizationId || ""
+  );
 }
 
 function setVenueMode(mode) {
   venueMode = mode === "managed" ? "managed" : "external";
-  document.getElementById("game-managed-venue-fields").classList.toggle("hidden", venueMode !== "managed");
-  document.getElementById("game-external-venue-fields").classList.toggle("hidden", venueMode !== "external");
-  document.getElementById("game-venue-managed").classList.toggle("active", venueMode === "managed");
-  document.getElementById("game-venue-external").classList.toggle("active", venueMode === "external");
+  document
+    .getElementById("game-managed-venue-fields")
+    .classList.toggle("hidden", venueMode !== "managed");
+  document
+    .getElementById("game-external-venue-fields")
+    .classList.toggle("hidden", venueMode !== "external");
+  document
+    .getElementById("game-venue-managed")
+    .classList.toggle("active", venueMode === "managed");
+  document
+    .getElementById("game-venue-external")
+    .classList.toggle("active", venueMode === "external");
 }
 
 function managedArenaAddress(arena) {
-  return [arena?.streetAddress, arena?.city, arena?.state, arena?.postalCode].filter(Boolean).join(", ");
+  return [arena?.streetAddress, arena?.city, arena?.state, arena?.postalCode]
+    .filter(Boolean)
+    .join(", ");
 }
 
 function updateVenueManagerActions() {
@@ -154,7 +176,9 @@ function updateVenueManagerActions() {
 }
 
 function closeScheduleFacilityModal(type) {
-  document.getElementById(`schedule${type}ModalOverlay`).classList.remove("active");
+  document
+    .getElementById(`schedule${type}ModalOverlay`)
+    .classList.remove("active");
 }
 
 function openScheduleArenaModal() {
@@ -163,7 +187,8 @@ function openScheduleArenaModal() {
   document.getElementById("schedule-arena-city").value = "";
   document.getElementById("schedule-arena-state").value = "";
   document.getElementById("schedule-arena-postal").value = "";
-  document.getElementById("schedule-arena-primary").checked = managedArenas.length === 0;
+  document.getElementById("schedule-arena-primary").checked =
+    managedArenas.length === 0;
   document.getElementById("scheduleArenaModalOverlay").classList.add("active");
   document.getElementById("schedule-arena-name").focus();
 }
@@ -172,7 +197,10 @@ async function saveScheduleArena() {
   const organizationId = getVenueOrganizationId();
   const name = document.getElementById("schedule-arena-name").value.trim();
   if (!organizationId || !name) {
-    showMessage("Select an organization-managed Home Team and enter an Arena name", "error");
+    showMessage(
+      "Select an organization-managed Home Team and enter an Arena name",
+      "error",
+    );
     return;
   }
 
@@ -181,10 +209,13 @@ async function saveScheduleArena() {
   try {
     const result = await FacilityApi.createArena(organizationId, {
       name,
-      streetAddress: document.getElementById("schedule-arena-street").value.trim() || null,
+      streetAddress:
+        document.getElementById("schedule-arena-street").value.trim() || null,
       city: document.getElementById("schedule-arena-city").value.trim() || null,
-      state: document.getElementById("schedule-arena-state").value.trim() || null,
-      postalCode: document.getElementById("schedule-arena-postal").value.trim() || null,
+      state:
+        document.getElementById("schedule-arena-state").value.trim() || null,
+      postalCode:
+        document.getElementById("schedule-arena-postal").value.trim() || null,
       isPrimary: document.getElementById("schedule-arena-primary").checked,
       isActive: true,
     });
@@ -200,10 +231,13 @@ async function saveScheduleArena() {
 }
 
 function openScheduleRinkModal() {
-  const arena = managedArenas.find((item) => item.arenaId === document.getElementById("game-arena-id").value);
+  const arena = managedArenas.find(
+    (item) => item.arenaId === document.getElementById("game-arena-id").value,
+  );
   if (!arena) return;
   document.getElementById("schedule-rink-name").value = "";
-  document.getElementById("schedule-rink-order").value = arena.rinks?.length ?? 0;
+  document.getElementById("schedule-rink-order").value =
+    arena.rinks?.length ?? 0;
   document.getElementById("scheduleRinkModalOverlay").classList.add("active");
   document.getElementById("schedule-rink-name").focus();
 }
@@ -221,7 +255,8 @@ async function saveScheduleRink() {
   try {
     const result = await FacilityApi.createRink(arenaId, {
       name,
-      displayOrder: Number(document.getElementById("schedule-rink-order").value) || 0,
+      displayOrder:
+        Number(document.getElementById("schedule-rink-order").value) || 0,
       isActive: true,
     });
     closeScheduleFacilityModal("Rink");
@@ -237,69 +272,124 @@ async function saveScheduleRink() {
 
 async function loadManagedVenues(selectedArenaId = "", selectedRinkId = "") {
   const organizationId = getVenueOrganizationId();
-  const homeTeamId = document.getElementById("game-home-team")?.value || "";
-  const homeTeam = allTeams.find((team) => team.teamId === homeTeamId);
-  const catalog = (await FacilityApi.getCatalog().catch(() => [])).map((arena) => ({
-    ...arena,
-    organizations: Array.isArray(arena.organizations) ? arena.organizations : [],
-    rinks: Array.isArray(arena.rinks) ? arena.rinks : [],
-  }));
-  allManagedArenas = catalog.filter((arena) => arena.isActive).sort((a, b) => a.name.localeCompare(b.name));
+  const catalog = (await FacilityApi.getCatalog().catch(() => [])).map(
+    (arena) => ({
+      ...arena,
+      organizations: Array.isArray(arena.organizations)
+        ? arena.organizations
+        : [],
+      rinks: Array.isArray(arena.rinks) ? arena.rinks : [],
+    }),
+  );
+  allManagedArenas = catalog
+    .filter((arena) => arena.isActive)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  const organizationFilter = document.getElementById("game-arena-organization-filter");
+  const organizationFilter = document.getElementById(
+    "game-arena-organization-filter",
+  );
   const organizations = new Map();
-  allManagedArenas.forEach((arena) => arena.organizations.forEach((org) => organizations.set(org.organizationId, org.name)));
-  organizationFilter.innerHTML = `<option value="">All Arenas</option>${[...organizations.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([id, name]) => `<option value="${id}">${name}</option>`).join("")}<option value="external">External Team Venues</option>`;
-  const selectedArena = allManagedArenas.find((arena) => arena.arenaId === selectedArenaId);
-  const preferredFilter = homeTeam?.isExternal || !organizationId ? "" : organizationId;
-  organizationFilter.value = selectedArena && preferredFilter && !selectedArena.organizations.some((org) => org.organizationId === preferredFilter)
-    ? ""
-    : preferredFilter;
+  allManagedArenas.forEach((arena) =>
+    arena.organizations.forEach((org) =>
+      organizations.set(org.organizationId, org.name),
+    ),
+  );
+  organizationFilter.innerHTML = `<option value="">All Arenas</option>${[
+    ...organizations.entries(),
+  ]
+    .sort((a, b) => a[1].localeCompare(b[1]))
+    .map(([id, name]) => `<option value="${id}">${name}</option>`)
+    .join("")}`;
+  const selectedArena = allManagedArenas.find(
+    (arena) => arena.arenaId === selectedArenaId,
+  );
+  const preferredFilter = organizationId;
+  organizationFilter.value =
+    selectedArena &&
+    preferredFilter &&
+    !selectedArena.organizations.some(
+      (org) => org.organizationId === preferredFilter,
+    )
+      ? ""
+      : preferredFilter;
 
   document.getElementById("game-arena-search").value = "";
   applyManagedArenaFilters();
   renderManagedArenaOptions(selectedArenaId);
   if (!selectedArenaId) {
-    document.getElementById("game-arena-id").value = managedArenas.find((arena) => (arena.organizations || []).some((org) => org.organizationId === organizationId && org.isPrimary))?.arenaId || "";
+    document.getElementById("game-arena-id").value =
+      managedArenas.find((arena) =>
+        (arena.organizations || []).some(
+          (org) => org.organizationId === organizationId && org.isPrimary,
+        ),
+      )?.arenaId || "";
   }
   populateManagedRinks(selectedRinkId);
 }
 
 function applyManagedArenaFilters() {
-  const organizationFilter = document.getElementById("game-arena-organization-filter")?.value || "";
-  managedArenas = allManagedArenas.filter((arena) => !organizationFilter
-    || (organizationFilter === "external"
-      ? arena.organizations.length === 0
-      : arena.organizations.some((org) => org.organizationId === organizationFilter)));
+  const organizationFilter =
+    document.getElementById("game-arena-organization-filter")?.value || "";
+  managedArenas = allManagedArenas.filter(
+    (arena) =>
+      !organizationFilter ||
+      arena.organizations.some(
+        (org) => org.organizationId === organizationFilter,
+      ),
+  );
 }
 
-function renderManagedArenaOptions(selectedArenaId = document.getElementById("game-arena-id")?.value || "") {
-  const searchTerm = (document.getElementById("game-arena-search")?.value || "").trim().toLowerCase();
+function renderManagedArenaOptions(
+  selectedArenaId = document.getElementById("game-arena-id")?.value || "",
+) {
+  const searchTerm = (document.getElementById("game-arena-search")?.value || "")
+    .trim()
+    .toLowerCase();
   const visibleArenas = managedArenas.filter((arena) => {
-    const searchText = [arena.name, arena.city, arena.state, ...(arena.organizations || []).map((org) => org.name)].filter(Boolean).join(" ").toLowerCase();
+    const searchText = [
+      arena.name,
+      arena.city,
+      arena.state,
+      ...(arena.organizations || []).map((org) => org.name),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
     return !searchTerm || searchText.includes(searchTerm);
   });
   const arenaSelect = document.getElementById("game-arena-id");
   arenaSelect.innerHTML = `<option value="">${visibleArenas.length ? "Select Arena" : "No matching Arenas"}</option>${visibleArenas.map((arena) => `<option value="${arena.arenaId}">${arena.name}${arena.city ? ` · ${arena.city}` : ""}</option>`).join("")}`;
-  if (visibleArenas.some((arena) => arena.arenaId === selectedArenaId)) arenaSelect.value = selectedArenaId;
+  if (visibleArenas.some((arena) => arena.arenaId === selectedArenaId))
+    arenaSelect.value = selectedArenaId;
 }
 
 function populateManagedRinks(selectedRinkId = "") {
-  const arena = managedArenas.find((item) => item.arenaId === document.getElementById("game-arena-id").value);
+  const arena = managedArenas.find(
+    (item) => item.arenaId === document.getElementById("game-arena-id").value,
+  );
   const rinks = (arena?.rinks || []).filter((rink) => rink.isActive);
   const rinkSelect = document.getElementById("game-rink-id");
   rinkSelect.innerHTML = `<option value="">Select Rink</option>${rinks.map((rink) => `<option value="${rink.rinkId}">${rink.name}</option>`).join("")}`;
-  if (selectedRinkId && rinks.some((rink) => rink.rinkId === selectedRinkId)) rinkSelect.value = selectedRinkId;
-  if (!selectedRinkId && arena && rinks.length) rinkSelect.value = rinks[0].rinkId;
-  document.getElementById("game-managed-arena-address").value = managedArenaAddress(arena);
+  if (selectedRinkId && rinks.some((rink) => rink.rinkId === selectedRinkId))
+    rinkSelect.value = selectedRinkId;
+  if (!selectedRinkId && arena && rinks.length)
+    rinkSelect.value = rinks[0].rinkId;
+  document.getElementById("game-managed-arena-address").value =
+    managedArenaAddress(arena);
   updateVenueManagerActions();
   updateManagedGatewayStatus();
 }
 
 function updateManagedGatewayStatus() {
-  const arena = managedArenas.find((item) => item.arenaId === document.getElementById("game-arena-id").value);
-  const rink = arena?.rinks.find((item) => item.rinkId === document.getElementById("game-rink-id").value);
-  const gateway = rink?.gateways?.find((item) => item.isPrimary && item.isActive);
+  const arena = managedArenas.find(
+    (item) => item.arenaId === document.getElementById("game-arena-id").value,
+  );
+  const rink = arena?.rinks.find(
+    (item) => item.rinkId === document.getElementById("game-rink-id").value,
+  );
+  const gateway = rink?.gateways?.find(
+    (item) => item.isPrimary && item.isActive,
+  );
   document.getElementById("game-gateway-status").textContent = !rink
     ? "Select a rink to view scoreboard mode."
     : gateway || rink.gatewayAvailable
@@ -308,9 +398,12 @@ function updateManagedGatewayStatus() {
 }
 
 function wireVenueControls() {
-  document.getElementById("game-venue-managed").onclick = () => setVenueMode("managed");
-  document.getElementById("game-venue-external").onclick = () => setVenueMode("external");
-  document.getElementById("game-arena-id").onchange = () => populateManagedRinks();
+  document.getElementById("game-venue-managed").onclick = () =>
+    setVenueMode("managed");
+  document.getElementById("game-venue-external").onclick = () =>
+    setVenueMode("external");
+  document.getElementById("game-arena-id").onchange = () =>
+    populateManagedRinks();
   document.getElementById("game-arena-organization-filter").onchange = () => {
     applyManagedArenaFilters();
     renderManagedArenaOptions("");
@@ -333,50 +426,101 @@ function wireVenueControls() {
 
 function populateGameOrganizationDropdown(selectedTeamId = "") {
   const organizations = getOrganizations();
-  const selectedOrganizationId = allTeams.find((team) => team.teamId === selectedTeamId)?.organizationId || organizations[0]?.organizationId || "";
+  const selectedOrganizationId =
+    allTeams.find((team) => team.teamId === selectedTeamId)?.organizationId ||
+    organizations[0]?.organizationId ||
+    "";
   const select = document.getElementById("game-organization");
-  select.innerHTML = organizations.map((org) => `<option value="${org.organizationId}">${org.organizationName}</option>`).join("");
+  select.innerHTML = organizations
+    .map(
+      (org) =>
+        `<option value="${org.organizationId}">${org.organizationName}</option>`,
+    )
+    .join("");
   select.value = selectedOrganizationId;
 }
 
 function populateOpponentOrganizationDropdown(selectedOpponentId = "") {
   const select = document.getElementById("game-opponent-organization");
-  const selectedOpponent = allTeams.find((team) => team.teamId === selectedOpponentId);
+  const selectedOpponent = allTeams.find(
+    (team) => team.teamId === selectedOpponentId,
+  );
   select.innerHTML = `<option value="">All Organizations</option>${getOrganizations()
-    .map((org) => `<option value="${org.organizationId}">${org.organizationName}</option>`)
-    .join("")}<option value="external">External Teams</option>`;
-  select.value = selectedOpponent?.organizationType === "External" || !selectedOpponent?.organizationId
-    ? "external"
-    : selectedOpponent?.organizationId || "";
+    .map(
+      (org) =>
+        `<option value="${org.organizationId}">${org.organizationName}</option>`,
+    )
+    .join("")}`;
+  select.value = selectedOpponent?.organizationId || "";
 }
 
-function populateGameTeamDropdowns({ selectedHomeTeamId = "", selectedAwayTeamId = "" } = {}) {
-  const organizationId = document.getElementById("game-organization")?.value || "";
-  const organizationTeamSide = document.getElementById("game-organization-team-side")?.value === "away" ? "away" : "home";
-  const organizationSelect = document.getElementById(`game-${organizationTeamSide}-team`);
-  const opponentSelect = document.getElementById(`game-${organizationTeamSide === "home" ? "away" : "home"}-team`);
-  const selectedOrganizationTeamId = organizationTeamSide === "home" ? selectedHomeTeamId : selectedAwayTeamId;
-  const selectedOpponentId = organizationTeamSide === "home" ? selectedAwayTeamId : selectedHomeTeamId;
-  const organizationTeams = getTeamsForOrganization(organizationId).sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
+function populateGameTeamDropdowns({
+  selectedHomeTeamId = "",
+  selectedAwayTeamId = "",
+} = {}) {
+  const organizationId =
+    document.getElementById("game-organization")?.value || "";
+  const organizationTeamSide =
+    document.getElementById("game-organization-team-side")?.value === "away"
+      ? "away"
+      : "home";
+  const organizationSelect = document.getElementById(
+    `game-${organizationTeamSide}-team`,
+  );
+  const opponentSelect = document.getElementById(
+    `game-${organizationTeamSide === "home" ? "away" : "home"}-team`,
+  );
+  const selectedOrganizationTeamId =
+    organizationTeamSide === "home" ? selectedHomeTeamId : selectedAwayTeamId;
+  const selectedOpponentId =
+    organizationTeamSide === "home" ? selectedAwayTeamId : selectedHomeTeamId;
+  const organizationTeams = getTeamsForOrganization(organizationId).sort(
+    (a, b) => teamLabel(a).localeCompare(teamLabel(b)),
+  );
 
-  organizationSelect.innerHTML = organizationTeams.map((team) => `<option value="${team.teamId}">${teamLabel(team)}</option>`).join("");
-  if (selectedOrganizationTeamId && organizationTeams.some((team) => team.teamId === selectedOrganizationTeamId)) {
+  organizationSelect.innerHTML = organizationTeams
+    .map((team) => `<option value="${team.teamId}">${teamLabel(team)}</option>`)
+    .join("");
+  if (
+    selectedOrganizationTeamId &&
+    organizationTeams.some((team) => team.teamId === selectedOrganizationTeamId)
+  ) {
     organizationSelect.value = selectedOrganizationTeamId;
   }
 
-  const organizationTeam = allTeams.find((team) => team.teamId === organizationSelect.value);
-  const organizationTeamType = normalizeTeamTypeValue(organizationTeam?.teamType) || normalizeTeamTypeValue(organizationTeam?.gender);
-  const opponentOrganization = document.getElementById("game-opponent-organization")?.value || "";
+  const organizationTeam = allTeams.find(
+    (team) => team.teamId === organizationSelect.value,
+  );
+  const organizationTeamType =
+    normalizeTeamTypeValue(organizationTeam?.teamType) ||
+    normalizeTeamTypeValue(organizationTeam?.gender);
+  const opponentOrganization =
+    document.getElementById("game-opponent-organization")?.value || "";
   const opponents = allTeams
     .filter((team) => team.teamId !== organizationTeam?.teamId)
-    .filter((team) => (normalizeTeamTypeValue(team.teamType) || normalizeTeamTypeValue(team.gender)) === organizationTeamType)
-    .filter((team) => organizationTeam?.levelId ? team.levelId === organizationTeam.levelId : team.levelName === organizationTeam?.levelName)
-    .filter((team) => opponentOrganization === "external"
-      ? team.organizationType === "External"
-      : !opponentOrganization || team.organizationId === opponentOrganization)
+    .filter(
+      (team) =>
+        (normalizeTeamTypeValue(team.teamType) ||
+          normalizeTeamTypeValue(team.gender)) === organizationTeamType,
+    )
+    .filter((team) =>
+      organizationTeam?.levelId
+        ? team.levelId === organizationTeam.levelId
+        : team.levelName === organizationTeam?.levelName,
+    )
+    .filter(
+      (team) =>
+        !opponentOrganization || team.organizationId === opponentOrganization,
+    )
     .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
-  opponentSelect.innerHTML = opponents.map((team) => `<option value="${team.teamId}">${teamLabel(team)}</option>`).join("");
-  if (selectedOpponentId && opponents.some((team) => team.teamId === selectedOpponentId)) opponentSelect.value = selectedOpponentId;
+  opponentSelect.innerHTML = opponents
+    .map((team) => `<option value="${team.teamId}">${teamLabel(team)}</option>`)
+    .join("");
+  if (
+    selectedOpponentId &&
+    opponents.some((team) => team.teamId === selectedOpponentId)
+  )
+    opponentSelect.value = selectedOpponentId;
 }
 
 function wireGameOrganizationFilter() {
@@ -386,18 +530,28 @@ function wireGameOrganizationFilter() {
     await loadManagedVenues();
     setVenueMode(allManagedArenas.length ? "managed" : "external");
   };
-  document.getElementById("game-organization-team-side").onchange = async () => {
-    populateGameTeamDropdowns();
-    wireOrganizationTeamChange();
-    autoDefaultPeriodLengthFromHomeTeam();
-    await loadManagedVenues();
-    setVenueMode(allManagedArenas.length ? "managed" : "external");
-  };
+  document.getElementById("game-organization-team-side").onchange =
+    async () => {
+      populateGameTeamDropdowns();
+      wireOrganizationTeamChange();
+      autoDefaultPeriodLengthFromHomeTeam();
+      await loadManagedVenues();
+      setVenueMode(allManagedArenas.length ? "managed" : "external");
+    };
   document.getElementById("game-opponent-organization").onchange = async () => {
-    const organizationTeamSide = document.getElementById("game-organization-team-side")?.value === "away" ? "away" : "home";
+    const organizationTeamSide =
+      document.getElementById("game-organization-team-side")?.value === "away"
+        ? "away"
+        : "home";
     populateGameTeamDropdowns({
-      selectedHomeTeamId: organizationTeamSide === "home" ? document.getElementById("game-home-team").value : "",
-      selectedAwayTeamId: organizationTeamSide === "away" ? document.getElementById("game-away-team").value : "",
+      selectedHomeTeamId:
+        organizationTeamSide === "home"
+          ? document.getElementById("game-home-team").value
+          : "",
+      selectedAwayTeamId:
+        organizationTeamSide === "away"
+          ? document.getElementById("game-away-team").value
+          : "",
     });
     wireOrganizationTeamChange();
     autoDefaultPeriodLengthFromHomeTeam();
@@ -407,21 +561,29 @@ function wireGameOrganizationFilter() {
 }
 
 function wireOrganizationTeamChange() {
-  const organizationTeamSide = document.getElementById("game-organization-team-side")?.value === "away" ? "away" : "home";
+  const organizationTeamSide =
+    document.getElementById("game-organization-team-side")?.value === "away"
+      ? "away"
+      : "home";
   document.getElementById("game-home-team").onchange = null;
   document.getElementById("game-away-team").onchange = null;
-  document.getElementById(`game-${organizationTeamSide}-team`).onchange = async (event) => {
-    populateGameTeamDropdowns({
-      selectedHomeTeamId: organizationTeamSide === "home" ? event.target.value : "",
-      selectedAwayTeamId: organizationTeamSide === "away" ? event.target.value : "",
-    });
-    autoDefaultPeriodLengthFromHomeTeam();
-    if (organizationTeamSide === "home") {
-      await loadManagedVenues();
-      setVenueMode(allManagedArenas.length ? "managed" : "external");
-    }
-  };
-  document.getElementById(`game-${organizationTeamSide === "home" ? "away" : "home"}-team`).onchange = async () => {
+  document.getElementById(`game-${organizationTeamSide}-team`).onchange =
+    async (event) => {
+      populateGameTeamDropdowns({
+        selectedHomeTeamId:
+          organizationTeamSide === "home" ? event.target.value : "",
+        selectedAwayTeamId:
+          organizationTeamSide === "away" ? event.target.value : "",
+      });
+      autoDefaultPeriodLengthFromHomeTeam();
+      if (organizationTeamSide === "home") {
+        await loadManagedVenues();
+        setVenueMode(allManagedArenas.length ? "managed" : "external");
+      }
+    };
+  document.getElementById(
+    `game-${organizationTeamSide === "home" ? "away" : "home"}-team`,
+  ).onchange = async () => {
     autoDefaultPeriodLengthFromHomeTeam();
     if (organizationTeamSide === "away") {
       await loadManagedVenues();
@@ -430,10 +592,20 @@ function wireOrganizationTeamChange() {
   };
 }
 
-function populateScheduleDropdowns({ selectedHomeTeamId = "", selectedAwayTeamId = "" } = {}) {
-  const organizationTeamSide = document.getElementById("game-organization-team-side")?.value === "away" ? "away" : "home";
-  populateGameOrganizationDropdown(organizationTeamSide === "home" ? selectedHomeTeamId : selectedAwayTeamId);
-  populateOpponentOrganizationDropdown(organizationTeamSide === "home" ? selectedAwayTeamId : selectedHomeTeamId);
+function populateScheduleDropdowns({
+  selectedHomeTeamId = "",
+  selectedAwayTeamId = "",
+} = {}) {
+  const organizationTeamSide =
+    document.getElementById("game-organization-team-side")?.value === "away"
+      ? "away"
+      : "home";
+  populateGameOrganizationDropdown(
+    organizationTeamSide === "home" ? selectedHomeTeamId : selectedAwayTeamId,
+  );
+  populateOpponentOrganizationDropdown(
+    organizationTeamSide === "home" ? selectedAwayTeamId : selectedHomeTeamId,
+  );
   populateGameTeamDropdowns({ selectedHomeTeamId, selectedAwayTeamId });
   wireGameOrganizationFilter();
   wireOrganizationTeamChange();
@@ -462,7 +634,8 @@ function populateOfficialsSelect(selectId, role, placeholder) {
 
   el.innerHTML = `<option value="">${placeholder}</option>`;
   filtered.forEach((o) => {
-    const label = o.displayName || `${o.firstName || ""} ${o.lastName || ""}`.trim();
+    const label =
+      o.displayName || `${o.firstName || ""} ${o.lastName || ""}`.trim();
     el.innerHTML += `<option value="${o.officialId}">${label}</option>`;
   });
 }
@@ -492,7 +665,8 @@ function syncOfficialSelectOptions() {
         return;
       }
 
-      option.disabled = selectedValues.has(option.value) && option.value !== currentValue;
+      option.disabled =
+        selectedValues.has(option.value) && option.value !== currentValue;
     });
   });
 }
@@ -534,7 +708,8 @@ function setPeriodLengthControls(value) {
 
   select.value = "custom";
   customWrap.style.display = "";
-  customInput.value = Number.isFinite(parsed) && parsed > 0 ? String(parsed) : "";
+  customInput.value =
+    Number.isFinite(parsed) && parsed > 0 ? String(parsed) : "";
 }
 
 function getSelectedPeriodLengthMinutes() {
@@ -593,7 +768,9 @@ function initDateTimePickers() {
     timeInput.classList.add("nf-input");
     dateInput.placeholder = "";
     timeInput.placeholder = "";
-    console.warn("flatpickr not available; falling back to native date/time pickers.");
+    console.warn(
+      "flatpickr not available; falling back to native date/time pickers.",
+    );
     return;
   }
 
@@ -662,8 +839,14 @@ function setGameTimeInputValue(value) {
 }
 
 function getGameDateInputValue() {
-  if (gameDatePicker?.selectedDates?.[0] && typeof window.flatpickr?.formatDate === "function") {
-    return window.flatpickr.formatDate(gameDatePicker.selectedDates[0], "Y-m-d");
+  if (
+    gameDatePicker?.selectedDates?.[0] &&
+    typeof window.flatpickr?.formatDate === "function"
+  ) {
+    return window.flatpickr.formatDate(
+      gameDatePicker.selectedDates[0],
+      "Y-m-d",
+    );
   }
 
   const raw = (document.getElementById("game-date")?.value || "").trim();
@@ -685,7 +868,10 @@ function getGameDateInputValue() {
 }
 
 function getGameTimeInputValue() {
-  if (gameTimePicker?.selectedDates?.[0] && typeof window.flatpickr?.formatDate === "function") {
+  if (
+    gameTimePicker?.selectedDates?.[0] &&
+    typeof window.flatpickr?.formatDate === "function"
+  ) {
     return window.flatpickr.formatDate(gameTimePicker.selectedDates[0], "H:i");
   }
 
@@ -744,8 +930,13 @@ function populateScheduleFilters() {
         teamFilter.innerHTML += `<option value="${t.teamId}">${teamLabel(t)}</option>`;
       });
 
-    const selectedTeam = allTeams.find((team) => team.teamId === selectedTeamId);
-    if (selectedTeam && (!selectedOrgId || selectedTeam.organizationId === selectedOrgId)) {
+    const selectedTeam = allTeams.find(
+      (team) => team.teamId === selectedTeamId,
+    );
+    if (
+      selectedTeam &&
+      (!selectedOrgId || selectedTeam.organizationId === selectedOrgId)
+    ) {
       teamFilter.value = selectedTeamId;
     }
   }
@@ -754,7 +945,9 @@ function populateScheduleFilters() {
   const levelFilter = document.getElementById("filter-game-level");
   if (levelFilter) {
     const levels = new Map();
-    allTeams.forEach((t) => { if (t.levelId && t.levelName) levels.set(t.levelId, t.levelName); });
+    allTeams.forEach((t) => {
+      if (t.levelId && t.levelName) levels.set(t.levelId, t.levelName);
+    });
     levelFilter.innerHTML = `<option value="">Level: All</option>`;
     [...levels.entries()]
       .sort((a, b) => a[1].localeCompare(b[1]))
@@ -767,7 +960,8 @@ function populateScheduleFilters() {
   if (teamTypeFilter) {
     const typeOptions = new Map();
     getTeamsForOrganization(selectedOrgId).forEach((t) => {
-      const teamType = normalizeTeamTypeValue(t.teamType) || normalizeTeamTypeValue(t.gender);
+      const teamType =
+        normalizeTeamTypeValue(t.teamType) || normalizeTeamTypeValue(t.gender);
       if (teamType) typeOptions.set(teamType, teamType);
     });
 
@@ -859,7 +1053,9 @@ function formatOfficialName(value) {
 }
 
 function normalizeStatusGroup(statusLabel) {
-  const normalized = String(statusLabel || "").trim().toLowerCase();
+  const normalized = String(statusLabel || "")
+    .trim()
+    .toLowerCase();
 
   if (normalized === "cancelled" || normalized === "postponed") {
     return "Cancelled / Postponed";
@@ -873,7 +1069,11 @@ function normalizeStatusGroup(statusLabel) {
     return "Scheduled";
   }
 
-  if (normalized === "final" || normalized === "completed" || normalized === "closed") {
+  if (
+    normalized === "final" ||
+    normalized === "completed" ||
+    normalized === "closed"
+  ) {
     return "Final";
   }
 
@@ -898,11 +1098,14 @@ function getMonthGroupLabel(dt) {
 // FILTERS
 // =========================================================
 function applyGameFilters() {
-  const search = document.getElementById("games-search-bar")?.value.toLowerCase() ?? "";
-  const organizationId = document.getElementById("filter-game-org")?.value ?? "";
+  const search =
+    document.getElementById("games-search-bar")?.value.toLowerCase() ?? "";
+  const organizationId =
+    document.getElementById("filter-game-org")?.value ?? "";
   const teamId = document.getElementById("filter-game-team")?.value ?? "";
   const levelId = document.getElementById("filter-game-level")?.value ?? "";
-  const teamType = document.getElementById("filter-game-team-type")?.value ?? "";
+  const teamType =
+    document.getElementById("filter-game-team-type")?.value ?? "";
   const typeName = document.getElementById("filter-game-type")?.value ?? "";
   const status = document.getElementById("filter-game-status")?.value ?? "";
 
@@ -912,9 +1115,21 @@ function applyGameFilters() {
     const homeLabel = homeTeam ? teamLabel(homeTeam) : g.homeTeamName;
     const awayLabel = awayTeam ? teamLabel(awayTeam) : g.awayTeamName;
 
-    if (search && !homeLabel.toLowerCase().includes(search) && !awayLabel.toLowerCase().includes(search) && !g.arenaName?.toLowerCase().includes(search)) return false;
-    if (organizationId && homeTeam?.organizationId !== organizationId && awayTeam?.organizationId !== organizationId) return false;
-    if (teamId && g.homeTeamId !== teamId && g.awayTeamId !== teamId) return false;
+    if (
+      search &&
+      !homeLabel.toLowerCase().includes(search) &&
+      !awayLabel.toLowerCase().includes(search) &&
+      !g.arenaName?.toLowerCase().includes(search)
+    )
+      return false;
+    if (
+      organizationId &&
+      homeTeam?.organizationId !== organizationId &&
+      awayTeam?.organizationId !== organizationId
+    )
+      return false;
+    if (teamId && g.homeTeamId !== teamId && g.awayTeamId !== teamId)
+      return false;
     if (levelId) {
       const homeLevelMatch = homeTeam?.levelId === levelId;
       const awayLevelMatch = awayTeam?.levelId === levelId;
@@ -922,10 +1137,12 @@ function applyGameFilters() {
     }
     if (teamType) {
       const homeType = homeTeam
-        ? normalizeTeamTypeValue(homeTeam.teamType) || normalizeTeamTypeValue(homeTeam.gender)
+        ? normalizeTeamTypeValue(homeTeam.teamType) ||
+          normalizeTeamTypeValue(homeTeam.gender)
         : "";
       const awayType = awayTeam
-        ? normalizeTeamTypeValue(awayTeam.teamType) || normalizeTeamTypeValue(awayTeam.gender)
+        ? normalizeTeamTypeValue(awayTeam.teamType) ||
+          normalizeTeamTypeValue(awayTeam.gender)
         : "";
       if (homeType !== teamType && awayType !== teamType) return false;
     }
@@ -938,7 +1155,15 @@ function applyGameFilters() {
 }
 
 function wireGameFilters() {
-  ["games-search-bar", "filter-game-org", "filter-game-team", "filter-game-level", "filter-game-team-type", "filter-game-type", "filter-game-status"].forEach((id) => {
+  [
+    "games-search-bar",
+    "filter-game-org",
+    "filter-game-team",
+    "filter-game-level",
+    "filter-game-team-type",
+    "filter-game-type",
+    "filter-game-status",
+  ].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
 
@@ -964,7 +1189,7 @@ function wireGameFilters() {
 async function loadGames() {
   try {
     const res = await authFetch(`/games`);
-    
+
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -1001,7 +1226,9 @@ function renderGamesGrouped(list) {
 
   const statusKeys = [
     ...STATUS_GROUP_ORDER.filter((status) => groups.has(status)),
-    ...[...groups.keys()].filter((status) => !STATUS_GROUP_ORDER.includes(status)),
+    ...[...groups.keys()].filter(
+      (status) => !STATUS_GROUP_ORDER.includes(status),
+    ),
   ];
 
   container.innerHTML = statusKeys
@@ -1023,7 +1250,9 @@ function renderGamesGrouped(list) {
             .map((g) => {
               const statusLabel = String(g.status || "");
               const statusNormalized = statusLabel.trim().toLowerCase();
-              const canDownloadFinalPdf = statusNormalized === "final" || statusNormalized === "completed";
+              const canDownloadFinalPdf =
+                statusNormalized === "final" ||
+                statusNormalized === "completed";
               const homeTeam = allTeams.find((t) => t.teamId === g.homeTeamId);
               const awayTeam = allTeams.find((t) => t.teamId === g.awayTeamId);
               const homeLabel = homeTeam ? teamLabel(homeTeam) : g.homeTeamName;
@@ -1050,11 +1279,15 @@ function renderGamesGrouped(list) {
                   </div>
 
                   <div class="schedule-game-actions">
-                    ${canDownloadFinalPdf ? `
+                    ${
+                      canDownloadFinalPdf
+                        ? `
                     <button class="nf-btn-icon pdf" data-id="${g.gameId}" title="Download Final PDF">
                       <i class="fa fa-file-pdf"></i>
                     </button>
-                    ` : ""}
+                    `
+                        : ""
+                    }
                     <button class="nf-btn-icon edit" data-id="${g.gameId}" title="Edit">
                       <i class="fa fa-edit"></i>
                     </button>
@@ -1149,7 +1382,7 @@ async function downloadFinalPdf(gameId) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `NetFront-GameSummary-${gameId}.pdf`;
+    a.download = `TipIn-GameSummary-${gameId}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1167,7 +1400,8 @@ async function openAddGame(options = {}) {
   currentGameId = null;
 
   initDateTimePickers();
-  document.getElementById("game-organization-team-side").value = options.organizationTeamSide === "away" ? "away" : "home";
+  document.getElementById("game-organization-team-side").value =
+    options.organizationTeamSide === "away" ? "away" : "home";
   populateScheduleDropdowns(options);
 
   document.getElementById("gameModalTitle").textContent = "Add Game";
@@ -1216,14 +1450,21 @@ async function openEditGame(id) {
 
     document.getElementById("game-organization-team-side").value = "home";
     populateGameOrganizationDropdown(g.homeTeamId);
-    populateGameTeamDropdowns({ selectedHomeTeamId: g.homeTeamId, selectedAwayTeamId: g.awayTeamId });
+    populateGameTeamDropdowns({
+      selectedHomeTeamId: g.homeTeamId,
+      selectedAwayTeamId: g.awayTeamId,
+    });
     document.getElementById("game-home-team").value = g.homeTeamId;
     document.getElementById("game-away-team").value = g.awayTeamId;
     setGameDateInputValue(formatInputDate(g.gameDateTime));
     setGameTimeInputValue(formatInputTime(g.gameDateTime));
 
-    document.getElementById("game-arena-custom").value = g.arenaId ? "" : (g.arenaName || "");
-    document.getElementById("game-rink-custom").value = g.rinkId ? "" : (g.rinkName || "");
+    document.getElementById("game-arena-custom").value = g.arenaId
+      ? ""
+      : g.arenaName || "";
+    document.getElementById("game-rink-custom").value = g.rinkId
+      ? ""
+      : g.rinkName || "";
     document.getElementById("game-venue-address").value = g.venueAddress || "";
     await loadManagedVenues(g.arenaId || "", g.rinkId || "");
     setVenueMode(g.arenaId && g.rinkId ? "managed" : "external");
@@ -1231,10 +1472,14 @@ async function openEditGame(id) {
 
     document.getElementById("game-type").value = g.gameTypeId;
     document.getElementById("game-round").value = g.gameRoundId ?? "";
-    document.getElementById("game-referee-1").value = g.referee1OfficialId ?? "";
-    document.getElementById("game-referee-2").value = g.referee2OfficialId ?? "";
-    document.getElementById("game-linesman-1").value = g.linesman1OfficialId ?? "";
-    document.getElementById("game-linesman-2").value = g.linesman2OfficialId ?? "";
+    document.getElementById("game-referee-1").value =
+      g.referee1OfficialId ?? "";
+    document.getElementById("game-referee-2").value =
+      g.referee2OfficialId ?? "";
+    document.getElementById("game-linesman-1").value =
+      g.linesman1OfficialId ?? "";
+    document.getElementById("game-linesman-2").value =
+      g.linesman2OfficialId ?? "";
     setPeriodLengthControls(g.periodLengthMinutes);
     document.getElementById("game-notes").value = g.notes ?? "";
     document.getElementById("game-status").value = g.status;
@@ -1265,19 +1510,36 @@ async function saveGame() {
     homeTeamId: document.getElementById("game-home-team").value,
     awayTeamId: document.getElementById("game-away-team").value,
     gameDateTime,
-    arenaId: venueMode === "managed" ? document.getElementById("game-arena-id").value || null : null,
-    rinkId: venueMode === "managed" ? document.getElementById("game-rink-id").value || null : null,
-    arenaName: venueMode === "external" ? document.getElementById("game-arena-custom").value : "",
-    rinkName: venueMode === "external" ? document.getElementById("game-rink-custom").value : "",
-    venueAddress: venueMode === "external" ? document.getElementById("game-venue-address").value || null : null,
+    arenaId:
+      venueMode === "managed"
+        ? document.getElementById("game-arena-id").value || null
+        : null,
+    rinkId:
+      venueMode === "managed"
+        ? document.getElementById("game-rink-id").value || null
+        : null,
+    arenaName:
+      venueMode === "external"
+        ? document.getElementById("game-arena-custom").value
+        : "",
+    rinkName:
+      venueMode === "external"
+        ? document.getElementById("game-rink-custom").value
+        : "",
+    venueAddress:
+      venueMode === "external"
+        ? document.getElementById("game-venue-address").value || null
+        : null,
     gameTypeId: parseInt(document.getElementById("game-type").value),
     gameRoundId: document.getElementById("game-round").value
       ? parseInt(document.getElementById("game-round").value)
       : null,
     referee1OfficialId: document.getElementById("game-referee-1").value || null,
     referee2OfficialId: document.getElementById("game-referee-2").value || null,
-    linesman1OfficialId: document.getElementById("game-linesman-1").value || null,
-    linesman2OfficialId: document.getElementById("game-linesman-2").value || null,
+    linesman1OfficialId:
+      document.getElementById("game-linesman-1").value || null,
+    linesman2OfficialId:
+      document.getElementById("game-linesman-2").value || null,
     periodLengthMinutes: getSelectedPeriodLengthMinutes(),
     notes: document.getElementById("game-notes").value,
     status: document.getElementById("game-status").value,
@@ -1299,14 +1561,15 @@ async function saveGame() {
   }
 
   if (hasDuplicateOfficials()) {
-    showMessage("Each official can only be assigned once per schedule", "error");
+    showMessage(
+      "Each official can only be assigned once per schedule",
+      "error",
+    );
     return;
   }
 
   const method = currentGameId ? "PUT" : "POST";
-  const url = currentGameId
-    ? `/games/${currentGameId}`
-    : `/games`;
+  const url = currentGameId ? `/games/${currentGameId}` : `/games`;
 
   const res = await authFetch(url, {
     method,
@@ -1368,16 +1631,20 @@ async function initSchedulesPage() {
   if (!document.getElementById("gamesGroupedList")) return;
 
   window.__schedulesPageInitialized = true;
-document.getElementById("btnAddGame").onclick = openAddGame;
+  document.getElementById("btnAddGame").onclick = openAddGame;
 
   document.getElementById("gameSave").onclick = saveGame;
   document.getElementById("gameCancel").onclick = closeGameModal;
   document.getElementById("scheduleArenaSave").onclick = saveScheduleArena;
-  document.getElementById("scheduleArenaCancel").onclick = () => closeScheduleFacilityModal("Arena");
-  document.getElementById("scheduleArenaClose").onclick = () => closeScheduleFacilityModal("Arena");
+  document.getElementById("scheduleArenaCancel").onclick = () =>
+    closeScheduleFacilityModal("Arena");
+  document.getElementById("scheduleArenaClose").onclick = () =>
+    closeScheduleFacilityModal("Arena");
   document.getElementById("scheduleRinkSave").onclick = saveScheduleRink;
-  document.getElementById("scheduleRinkCancel").onclick = () => closeScheduleFacilityModal("Rink");
-  document.getElementById("scheduleRinkClose").onclick = () => closeScheduleFacilityModal("Rink");
+  document.getElementById("scheduleRinkCancel").onclick = () =>
+    closeScheduleFacilityModal("Rink");
+  document.getElementById("scheduleRinkClose").onclick = () =>
+    closeScheduleFacilityModal("Rink");
 
   document.getElementById("gameDeleteConfirm").onclick = confirmDeleteGame;
   document.getElementById("gameDeleteCancel").onclick = closeDeleteGameModal;

@@ -42,14 +42,20 @@ function toStatusKey(status?: string | null): string {
 }
 
 function normalizeTeamType(teamType?: string | null): string {
-  const value = String(teamType || "").trim().toLowerCase();
+  const value = String(teamType || "")
+    .trim()
+    .toLowerCase();
   if (value === "girls") return "Girls";
   if (value === "boys") return "Boys";
   return String(teamType || "").trim();
 }
 
 function isUpcomingStatus(status?: string | null): boolean {
-  return !CLOSED_STATUSES.has(String(status || "SCHEDULED").trim().toUpperCase());
+  return !CLOSED_STATUSES.has(
+    String(status || "SCHEDULED")
+      .trim()
+      .toUpperCase(),
+  );
 }
 
 function isLiveStatus(status?: string | null): boolean {
@@ -60,7 +66,10 @@ function displayTeamName(team?: ApiTeam) {
   return String(team?.name || "Team").trim() || "Team";
 }
 
-function displayTeamNameWithMascot(teamName: string, mascot?: string | null): string {
+function displayTeamNameWithMascot(
+  teamName: string,
+  mascot?: string | null,
+): string {
   const base = String(teamName || "").trim() || "Team";
   const mascotText = String(mascot || "").trim();
   if (!mascotText) return base;
@@ -101,7 +110,9 @@ function pickCurrentSeasonId(seasons: Awaited<ReturnType<typeof getSeasons>>) {
   });
   if (activeInRange?.seasonId) return activeInRange.seasonId;
 
-  const anyActive = seasons.find((season) => season?.isActive && season?.seasonId);
+  const anyActive = seasons.find(
+    (season) => season?.isActive && season?.seasonId,
+  );
   if (anyActive?.seasonId) return anyActive.seasonId;
 
   const sortedByEnd = [...seasons].sort((a, b) => {
@@ -124,7 +135,9 @@ async function loadScopedTeams(filters: GameViewFilters): Promise<{
   ]);
 
   const requestedSeasonId = String(filters.seasonId || "");
-  const seasonId = seasons.some((season) => String(season.seasonId) === requestedSeasonId)
+  const seasonId = seasons.some(
+    (season) => String(season.seasonId) === requestedSeasonId,
+  )
     ? requestedSeasonId
     : pickCurrentSeasonId(seasons);
 
@@ -168,7 +181,9 @@ function buildScorePreviewFromSummary(
   let awayScore = 0;
 
   for (const goal of summary.goals || []) {
-    const teamKey = String(goal.teamName || "").trim().toLowerCase();
+    const teamKey = String(goal.teamName || "")
+      .trim()
+      .toLowerCase();
     if (teamKey === homeKey) homeScore += 1;
     if (teamKey === awayKey) awayScore += 1;
   }
@@ -216,7 +231,9 @@ export async function fetchFilterData(
   const leagueOptions = Array.from(
     new Map(
       (organizations || [])
-        .filter((organization) => organization.leagueId && organization.leagueName)
+        .filter(
+          (organization) => organization.leagueId && organization.leagueName,
+        )
         .map((organization) => [
           String(organization.leagueId),
           {
@@ -250,15 +267,20 @@ export async function fetchNextGamesByTeam(
   filters: GameViewFilters,
 ): Promise<NextGameCardModel[]> {
   const scoped = await loadScopedTeams(filters);
-  const teamMap = new Map(scoped.teams.map((team) => [String(team.teamId), team]));
-  const filteredTeamIds = new Set(scoped.teams.map((team) => String(team.teamId)));
+  const teamMap = new Map(
+    scoped.teams.map((team) => [String(team.teamId), team]),
+  );
+  const filteredTeamIds = new Set(
+    scoped.teams.map((team) => String(team.teamId)),
+  );
   const games = await getGames(scoped.seasonId);
 
   const gameCandidates = (games || [])
     .filter((game) => {
       const homeId = String(game.homeTeamId || "");
       const awayId = String(game.awayTeamId || "");
-      if (!filteredTeamIds.has(homeId) && !filteredTeamIds.has(awayId)) return false;
+      if (!filteredTeamIds.has(homeId) && !filteredTeamIds.has(awayId))
+        return false;
 
       return isLiveStatus(game.status);
     })
@@ -266,7 +288,9 @@ export async function fetchNextGamesByTeam(
       const aLive = isLiveStatus(a.status) ? 0 : 1;
       const bLive = isLiveStatus(b.status) ? 0 : 1;
       if (aLive !== bLive) return aLive - bLive;
-      return new Date(a.gameDateTime).getTime() - new Date(b.gameDateTime).getTime();
+      return (
+        new Date(a.gameDateTime).getTime() - new Date(b.gameDateTime).getTime()
+      );
     });
 
   const cardCandidates: Array<NextGameCardModel | null> = await Promise.all(
@@ -309,13 +333,9 @@ export async function fetchNextGamesByTeam(
         matchupLabel: buildMatchupLabel(
           awayDisplay,
           homeDisplay,
-          buildTeamContextLabel(
-            homeTeam || awayTeam,
-          ),
+          buildTeamContextLabel(homeTeam || awayTeam),
         ),
-        teamContextLabel: buildTeamContextLabel(
-          homeTeam || awayTeam,
-        ),
+        teamContextLabel: buildTeamContextLabel(homeTeam || awayTeam),
         startTimeIso: new Date(game.gameDateTime).toISOString(),
         status,
         isLive: isLiveStatus(status),
@@ -336,17 +356,24 @@ export async function fetchUpcomingSchedule(
   filters: GameViewFilters,
 ): Promise<UpcomingScheduleItemModel[]> {
   const scoped = await loadScopedTeams(filters);
-  const teamMap = new Map(scoped.teams.map((team) => [String(team.teamId), team]));
-  const filteredTeamIds = new Set(scoped.teams.map((team) => String(team.teamId)));
+  const teamMap = new Map(
+    scoped.teams.map((team) => [String(team.teamId), team]),
+  );
+  const filteredTeamIds = new Set(
+    scoped.teams.map((team) => String(team.teamId)),
+  );
 
   const games = await getGames(scoped.seasonId);
   return (games || [])
     .filter((game) => {
       const homeId = String(game.homeTeamId || "");
       const awayId = String(game.awayTeamId || "");
-      if (!filteredTeamIds.has(homeId) && !filteredTeamIds.has(awayId)) return false;
+      if (!filteredTeamIds.has(homeId) && !filteredTeamIds.has(awayId))
+        return false;
 
-      const status = String(game.status || "").trim().toUpperCase();
+      const status = String(game.status || "")
+        .trim()
+        .toUpperCase();
       if (status !== "SCHEDULED") return false;
 
       const startMs = new Date(game.gameDateTime).getTime();
@@ -395,16 +422,25 @@ export async function fetchLastFinalGamesByTeam(
   filters: GameViewFilters,
 ): Promise<LastFinalGameItemModel[]> {
   const scoped = await loadScopedTeams(filters);
-  const teamMap = new Map(scoped.teams.map((team) => [String(team.teamId), team]));
-  const filteredTeamIds = new Set(scoped.teams.map((team) => String(team.teamId)));
+  const teamMap = new Map(
+    scoped.teams.map((team) => [String(team.teamId), team]),
+  );
+  const filteredTeamIds = new Set(
+    scoped.teams.map((team) => String(team.teamId)),
+  );
   const games = await getGames(scoped.seasonId);
 
   const finalGames = (games || [])
     .filter((game) => {
       const homeId = String(game.homeTeamId || "");
       const awayId = String(game.awayTeamId || "");
-      if (!filteredTeamIds.has(homeId) && !filteredTeamIds.has(awayId)) return false;
-      return FINAL_STATUSES.has(String(game.status || "").trim().toUpperCase());
+      if (!filteredTeamIds.has(homeId) && !filteredTeamIds.has(awayId))
+        return false;
+      return FINAL_STATUSES.has(
+        String(game.status || "")
+          .trim()
+          .toUpperCase(),
+      );
     })
     .sort(
       (a, b) =>
@@ -463,7 +499,7 @@ export async function fetchLastFinalGamesByTeam(
   );
 
   return rows.sort(
-      (a, b) =>
-        new Date(b.gameDateIso).getTime() - new Date(a.gameDateIso).getTime(),
-    );
+    (a, b) =>
+      new Date(b.gameDateIso).getTime() - new Date(a.gameDateIso).getTime(),
+  );
 }

@@ -773,6 +773,15 @@ function toOfficialRoleLabel(role: string) {
   return roleMap[role] ?? role;
 }
 
+function normalizeOfficialAssignmentRole(role: string): string {
+  const compact = role.replace(/\s+/g, "");
+  return OFFICIAL_ASSIGNMENT_ROLES.includes(
+    compact as (typeof OFFICIAL_ASSIGNMENT_ROLES)[number],
+  )
+    ? compact
+    : role.trim();
+}
+
 function buildMobileSignatureToken(role: string, officialName: string) {
   const stamp = new Date().toISOString();
   return `mobile-tap-sign:${stamp}:${role}:${officialName || "unassigned"}`;
@@ -5555,13 +5564,14 @@ export default function App() {
       ? ((payload as Record<string, unknown>).officials as unknown[])
       : [];
 
-    return rawOfficials.map((entry) => {
+    const normalizedOfficials = rawOfficials.map((entry) => {
       const row = entry as Record<string, unknown>;
+      const rawRole =
+        (typeof row.role === "string" && row.role) ||
+        (typeof row.Role === "string" && row.Role) ||
+        "Official";
       return {
-        role:
-          (typeof row.role === "string" && row.role) ||
-          (typeof row.Role === "string" && row.Role) ||
-          "Official",
+        role: normalizeOfficialAssignmentRole(rawRole),
         officialName:
           (typeof row.officialName === "string" && row.officialName) ||
           (typeof row.OfficialName === "string" && row.OfficialName) ||
@@ -5590,6 +5600,15 @@ export default function App() {
           null,
       } as OfficialVerification;
     });
+    const officialsByRole = new Map<string, OfficialVerification>();
+    normalizedOfficials.forEach((official) => {
+      if (!officialsByRole.has(official.role)) officialsByRole.set(official.role, official);
+    });
+    return [...officialsByRole.values()].sort(
+      (left, right) =>
+        OFFICIAL_ASSIGNMENT_ROLES.indexOf(left.role as (typeof OFFICIAL_ASSIGNMENT_ROLES)[number]) -
+        OFFICIAL_ASSIGNMENT_ROLES.indexOf(right.role as (typeof OFFICIAL_ASSIGNMENT_ROLES)[number]),
+    );
   }
 
   async function fetchOfficialOptions(gameId: string) {

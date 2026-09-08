@@ -176,7 +176,7 @@ export function GameManagerMarketingScreen() {
         </div>
       </section>
 
-      <section className="game-manager-marketing-step game-manager-marketing-step-reverse">
+      <section className="game-manager-marketing-step game-manager-marketing-step-reverse game-manager-marketing-step-gameplay">
         <div className="game-manager-marketing-step-copy">
           <span>02 / During the game</span>
           <h2>Record the moment once. Let the system carry it.</h2>
@@ -191,7 +191,7 @@ export function GameManagerMarketingScreen() {
             <li>Immediate GameView updates for fans</li>
           </ul>
         </div>
-        <div className="game-manager-marketing-device-pair">
+        <div className="game-manager-marketing-device-pair game-manager-marketing-device-pair-large">
           <figure>
             <img src={goalImage} alt="Adding a goal in TipIn Game Manager" />
             <figcaption>Goal entry</figcaption>

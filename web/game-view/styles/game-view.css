@@ -379,6 +379,12 @@ body,
   order: 2;
 }
 
+.game-manager-marketing-step-gameplay {
+  gap: clamp(32px, 5vw, 72px);
+  grid-template-columns: minmax(620px, 1.35fr) minmax(280px, 0.65fr);
+  max-width: 1380px;
+}
+
 .game-manager-marketing-step-copy ul {
   color: #dce8fa;
   display: grid;
@@ -410,6 +416,14 @@ body,
 
 .game-manager-marketing-device-pair figure:nth-child(2) {
   margin-top: 54px;
+}
+
+.game-manager-marketing-device-pair-large {
+  gap: 22px;
+}
+
+.game-manager-marketing-device-pair-large figure:nth-child(2) {
+  margin-top: 34px;
 }
 
 .game-manager-marketing-device-pair figcaption {

@@ -549,8 +549,11 @@ export async function getSeasons(): Promise<ApiSeason[]> {
   return extractListPayload(payload, "seasons").map(normalizeSeason);
 }
 
-export async function getGames(): Promise<ApiGameListItem[]> {
-  const payload = await getJson<unknown>("/public/gameview/games");
+export async function getGames(seasonId?: string): Promise<ApiGameListItem[]> {
+  const query = seasonId
+    ? `?seasonId=${encodeURIComponent(seasonId)}`
+    : "";
+  const payload = await getJson<unknown>(`/public/gameview/games${query}`);
   return extractListPayload(payload, "games").map(normalizeGameListItem);
 }
 
